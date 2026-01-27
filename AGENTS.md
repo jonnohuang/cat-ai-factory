@@ -1,75 +1,92 @@
 # Agent Operating Guide
 
-This document defines the responsibilities, permissions, and boundaries of each agent in the Cat AI Factory system.
+This document defines the responsibilities, permissions, and operational boundaries
+of each agent in the Cat AI Factory system.
 
----
+The design intentionally mirrors production ML and data platforms, where planning,
+orchestration, and execution are strictly separated and enforced by infrastructure,
+not prompts.
+
+------------------------------------------------------------
 
 ## Core Rule
 
-> **Agents communicate ONLY via deterministic file contracts files.**  
+> **Agents communicate ONLY via deterministic file-based contracts.**
 
 There is:
-- no implicit state
+- no implicit shared state
 - no UI-driven coordination
 - no direct agent-to-agent RPC
 
-This mirrors production ML systems where planning, execution, and rendering
-are deliberately separated.
+All coordination occurs through explicit artifacts written to disk. This enforces
+reproducibility, debuggability, and clear failure modes—core requirements in
+production ML systems.
 
----
+------------------------------------------------------------
 
 ## Agents
 
 ### 🦞 Clawdbot — Planner Agent
 
-**Role**
-- Translates high-level intent (PRD, inbox messages) into structured work
-- Produces `job.json` files
+**Purpose**  
+Translates high-level intent into structured, machine-readable work contracts.
+
+**Responsibilities**
+- Interpret product intent (`PRD.json`) and external instructions
+- Generate deterministic `job.json` contracts
+- Validate structure and required fields
 
 **Inputs**
 - `/sandbox/PRD.json`
-- `/sandbox/inbox/*.json` (optional)
+- `/sandbox/inbox/*.json` (optional external instructions)
 
 **Outputs**
 - `/sandbox/jobs/*.job.json`
 
-**Allowed Actions**
-- Read-only access to repo source code
-- Write job files to `/sandbox/jobs`
+**Permissions**
+- Read-only access to repository source code
+- Write access limited to `/sandbox/jobs`
 
-**Disallowed**
-- Network calls beyond configured LLM APIs
+**Explicitly Disallowed**
 - File writes outside `/sandbox`
-- Financial or account-level actions
+- Network access beyond configured LLM APIs
+- Financial, purchasing, or account-level actions
 
----
+------------------------------------------------------------
 
 ### 🧠 Ralph Loop — Orchestrator Agent
 
-**Role**
-- Interprets job contracts
-- Coordinates execution via a control-loop over job contracts
-- (Future) approval gates & retries
+**Purpose**  
+Acts as the control plane for execution, reconciling desired state with system actions.
+
+**Responsibilities**
+- Interpret `job.json` contracts
+- Decide which execution steps should run and in what order
+- Enforce sequencing, retries, and (future) approval gates
+- Track execution intent without performing work directly
 
 **Inputs**
 - `/sandbox/jobs/*.job.json`
 
 **Outputs**
 - Execution decisions
-- Status summaries (future)
+- Status summaries and transitions (future)
 
-**Note**
-Ralph Loop implements a control-plane pattern: it reconciles desired state
-(job contracts) with execution steps, rather than directly performing work.
+**Design Note**  
+Ralph Loop implements a **control-loop / reconciler pattern**. It compares desired
+state (job contracts) with observed state and coordinates execution accordingly,
+rather than embedding business logic or performing side effects itself.
 
-
----
+------------------------------------------------------------
 
 ### 🛠 Worker — Renderer
 
-**Role**
-- Executes deterministic transforms
-- Renders final video artifacts
+**Purpose**  
+Execute deterministic, CPU-bound transformations to produce final artifacts.
+
+**Responsibilities**
+- Render videos and captions from job contracts
+- Perform no planning or decision-making
 
 **Inputs**
 - `/sandbox/jobs/*.job.json`
@@ -81,17 +98,20 @@ Ralph Loop implements a control-plane pattern: it reconciles desired state
 
 **Characteristics**
 - No LLM access
-- Fully deterministic
-- Idempotent
+- Fully deterministic and idempotent
 - CPU-bound execution
+- Safe to retry without side effects
 
----
+------------------------------------------------------------
 
 ### 📬 Telegram Bridge — Message Ingress
 
-**Role**
-- Receives external text instructions
-- Converts them into file-based tasks
+**Purpose**  
+Provide a controlled external input channel for human instructions.
+
+**Responsibilities**
+- Receive external text messages
+- Translate messages into file-based instruction artifacts
 
 **Inputs**
 - Telegram messages
@@ -99,20 +119,24 @@ Ralph Loop implements a control-plane pattern: it reconciles desired state
 **Outputs**
 - `/sandbox/inbox/*.json`
 
-**Security**
+**Security Constraints**
 - No write access outside `/sandbox`
 - No direct agent invocation
+- No execution authority
 
----
+------------------------------------------------------------
 
 ## Safety & Guardrails
 
 - All write access confined to `/sandbox`
 - No agent can modify source code at runtime
-- No autonomous purchasing or payments
-- Explicit human confirmation required for sensitive actions
+- No autonomous financial transactions
+- Explicit human confirmation required for sensitive or destructive actions
 
----
+These constraints are enforced by container boundaries and filesystem permissions,
+not by agent prompts.
+
+------------------------------------------------------------
 
 ## Failure Philosophy
 
@@ -120,22 +144,25 @@ Ralph Loop implements a control-plane pattern: it reconciles desired state
 - Fail loud
 - Never partially mutate state
 
-If a required asset is missing, the pipeline exits without side effects.
+If required inputs are missing or invalid, the pipeline exits immediately without
+producing side effects or partial artifacts.
 
----
+------------------------------------------------------------
 
 ## Design Rationale
 
-This agent model mirrors production ML systems where:
-- planning ≠ execution
-- LLMs are advisory, not authoritative
-- infra enforces boundaries, not prompts
+This agent model reflects production ML and data platforms where:
+- planning ≠ orchestration ≠ execution
+- LLMs are advisory components, not authorities
+- infrastructure enforces correctness, safety, and boundaries
 
----
+The goal is predictability and operability, not autonomous behavior.
+
+------------------------------------------------------------
 
 ## Future Extensions
 
-- Approval workflow agent
-- Cost-aware scheduling
-- Multi-niche routing
-- Cloud-native agent execution
+- Explicit approval workflow agent
+- Cost-aware scheduling and throttling
+- Multi-niche routing and specialization
+- Cloud-native agent execution on GCP
