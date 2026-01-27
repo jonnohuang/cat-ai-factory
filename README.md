@@ -106,7 +106,7 @@ LOCAL (today)
         |                         /sandbox/output/*.mp4
         |
         v
-  Ralph (orchestrator; reads job contract and coordinates steps)
+  Ralph Loop(orchestrator; reads job contract and coordinates steps)
 
 Optional ingress:
   Telegram Bot -> /sandbox/inbox/*.json
@@ -234,7 +234,7 @@ Key ML-Infra concepts demonstrated:
 
 Recommended split for reliability and cost control:
 
-1) Cloud Run: Orchestrator (LLM planning / job generation)
+1) Cloud Run: Orchestrator (Ralph Loop;LLM planning / job generation)
 - Generates structured job.json
 - Writes job.json to GCS
 - Updates Firestore status
@@ -336,6 +336,19 @@ This provides a clear story for ML Infra / MLOps interviews:
 - event-driven processing
 - artifact lineage and job state tracking
 
+------------------------------------------------------------
 
+## Tech Stack
 
+Core technologies used in this project:
+
+- **Python 3.11** – orchestration logic, job generation, message bridges
+- **Docker & Docker Compose** – sandboxed local development and reproducible execution
+- **FFmpeg** – deterministic video rendering and caption burn-in
+- **AI Agents** – planner/orchestrator pattern (Clawdbot + Ralph Loop)
+- **Telegram Bot API** – external instruction ingress (optional)
+- **Google Cloud Platform (target)** – Cloud Run, Pub/Sub, GCS, Firestore, Secret Manager
+- **Terraform (planned)** – infrastructure-as-code for cloud deployment
+
+The system is designed to be **headless, deterministic, and cloud-ready**, mirroring production ML infrastructure patterns rather than demo-only agent setups.
 

@@ -44,11 +44,11 @@ are deliberately separated.
 
 ---
 
-### 🧠 Ralph — Orchestrator Agent
+### 🧠 Ralph Loop — Orchestrator Agent
 
 **Role**
 - Interprets job contracts
-- Coordinates which steps should run
+- Coordinates execution via a control-loop over job contracts
 - (Future) approval gates & retries
 
 **Inputs**
@@ -59,7 +59,9 @@ are deliberately separated.
 - Status summaries (future)
 
 **Note**
-Currently minimal; designed for expansion.
+Ralph Loop implements a control-plane pattern: it reconciles desired state
+(job contracts) with execution steps, rather than directly performing work.
+
 
 ---
 
