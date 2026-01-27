@@ -1,0 +1,23 @@
+# Secrets
+.env
+
+# Sandbox runtime data
+sandbox/output/
+sandbox/logs/
+sandbox/inbox/
+sandbox/outbox/
+sandbox/jobs/cat-*.job.json
+
+# OS / editor
+.DS_Store
+__pycache__/
+*.pyc
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+**/.terraform/
+
+
+# Clawdbot runtime workspace
+sandbox/home/

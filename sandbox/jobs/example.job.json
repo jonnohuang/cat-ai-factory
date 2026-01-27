@@ -1,0 +1,26 @@
+{
+  "job_id": "cat-2026-01-27",
+  "date": "2026-01-27",
+  "niche": "cute lifelike cat doing funny activities",
+  "video": { "length_seconds": 20, "aspect_ratio": "9:16", "fps": 30, "resolution": "1080x1920" },
+  "script": {
+    "hook": "This cat tried to steal a snack… and got OUTPLAYED.",
+    "voiceover": "He tiptoes in like a professional thief… pauses… checks the coast… and then—BOOP. The snack slides away like it has its own brain. He stares. He calculates. He tries again. Same result. Finally he looks at the camera like: are you seeing this?",
+    "ending": "He walks away pretending he didn’t care."
+  },
+  "shots": [
+    { "t": 0, "visual": "kitchen floor", "action": "cat sneaks in", "caption": "Sneaky mode: ON" },
+    { "t": 3, "visual": "snack on floor", "action": "cat reaches paw", "caption": "Almost got it…" },
+    { "t": 6, "visual": "snack slides", "action": "cat freezes", "caption": "WAIT—WHAT?!" },
+    { "t": 10, "visual": "cat tries again", "action": "fails again", "caption": "This snack is cursed 💀" },
+    { "t": 14, "visual": "cat side-eye", "action": "looks at camera", "caption": "You saw that, right?" },
+    { "t": 18, "visual": "cat walks away", "action": "acts unbothered", "caption": "I meant to do that." }
+  ],
+  "captions": ["Sneaky mode: ON", "Almost got it…", "WAIT—WHAT?!", "This snack is cursed", "You saw that, right?", "I meant to do that."],
+  "hashtags": ["#cat", "#cute", "#funnycat", "#catvideos", "#shorts"],
+  "render": {
+    "background_asset": "assets/bg.mp4",
+    "subtitle_style": "big_bottom",
+    "output_basename": "cat-2026-01-27"
+  }
+}

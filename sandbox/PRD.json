@@ -1,0 +1,22 @@
+{
+  "project": "cat-ai-factory",
+  "goal": "Generate 1 daily short: cute lifelike cat doing funny activities + upload packs.",
+  "niche": "cute lifelike cat doing funny activities",
+  "constraints": {
+    "length_seconds": [15, 35],
+    "aspect_ratio": "9:16",
+    "tone": ["cute", "funny", "wholesome"],
+    "avoid": ["violence", "animal cruelty", "politics", "copyrighted characters"]
+  },
+  "daily_workflow": [
+    "Generate job.json (hook, script, shots, captions, hashtags)",
+    "Render via template (FFmpeg) using local asset library",
+    "Write upload packs for YouTube/IG/TikTok/Facebook/X/Telegram"
+  ],
+  "tasks": [
+    {"id": "T1", "title": "Define job.json schema", "status": "todo"},
+    {"id": "T2", "title": "Implement orchestrator to generate job.json daily", "status": "todo"},
+    {"id": "T3", "title": "Implement worker renderer (FFmpeg template)", "status": "todo"},
+    {"id": "T4", "title": "Generate upload packs per platform", "status": "todo"}
+  ]
+}

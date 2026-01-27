@@ -1,0 +1,65 @@
+services:
+  clawdbot:
+    build:
+      context: .
+      dockerfile: repo/docker/clawdbot/Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      # Make "~" resolve inside the mounted sandbox so setup persists
+      - HOME=/sandbox/home
+
+      # Security posture
+      - CLAWDBOT_GATEWAY_BIND=loopback
+      - CLAWDBOT_GATEWAY_AUTH_MODE=token
+      - CLAWDBOT_GATEWAY_TOKEN=${CLAWDBOT_GATEWAY_TOKEN}
+    volumes:
+      - ./sandbox:/sandbox
+    ports:
+      # Bind only to localhost on the Mac, not the LAN
+      - "127.0.0.1:18789:18789"
+    mem_limit: 2g
+    cpus: "2.0"
+    restart: unless-stopped
+
+  ralph:
+    build:
+      context: .
+      dockerfile: repo/docker/ralph/Dockerfile
+    volumes:
+      - ./repo:/repo:ro
+      - ./sandbox:/sandbox
+    mem_limit: 1g
+    cpus: "1.0"
+
+  telegram:
+    image: python:3.11-slim
+    working_dir: /repo
+    env_file:
+      - ./.env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./repo:/repo:ro
+      - ./sandbox:/sandbox
+    command: >
+      bash -lc "pip install --no-cache-dir python-telegram-bot==21.6
+      && python /repo/tools/telegram_bridge.py"
+    mem_limit: 512m
+    cpus: "0.5"
+    restart: unless-stopped
+
+  worker:
+    image: python:3.11-slim
+    working_dir: /repo
+    volumes:
+      - ./repo:/repo:ro
+      - ./sandbox:/sandbox
+    command: >
+      bash -lc "apt-get update && apt-get install -y --no-install-recommends ffmpeg
+      && rm -rf /var/lib/apt/lists/*
+      && python /repo/tools/generate_job.py
+      && python /repo/worker/render_ffmpeg.py"
+    mem_limit: 3g
+    cpus: "2.0"
