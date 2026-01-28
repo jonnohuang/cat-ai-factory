@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Only run if .env exists
+if [ ! -f ".env" ]; then
+  exit 0
+fi
+
+echo "🔍 Running .env / .env.example / .gitignore verification..."
+
+# 1) .env.example must exist
+if [ ! -f ".env.example" ]; then
+  echo "❌ .env exists but .env.example is missing."
+  exit 1
+fi
+
+# 2) .gitignore must ignore .env
+if ! grep -qE '^\s*\.env\s*$' .gitignore; then
+  echo "❌ .gitignore does not include '.env'."
+  exit 1
+fi
+
+# 3) .env.example must not contain real-looking values
+if grep -E '=(.+)' .env.example | grep -vE '=(changeme|<.*>)' >/dev/null; then
+  echo "❌ .env.example appears to contain real values."
+  echo "   Use placeholders like 'changeme' only."
+  exit 1
+fi
+
+# 4) All keys in .env must exist in .env.example
+ENV_KEYS=$(grep -E '^[A-Z0-9_]+=' .env | cut -d= -f1 | sort -u)
+EXAMPLE_KEYS=$(grep -E '^[A-Z0-9_]+=' .env.example | cut -d= -f1 | sort -u)
+
+MISSING_KEYS=$(comm -23 <(echo "$ENV_KEYS") <(echo "$EXAMPLE_KEYS"))
+
+if [ -n "$MISSING_KEYS" ]; then
+  echo "❌ .env contains keys missing from .env.example:"
+  echo "$MISSING_KEYS"
+  exit 1
+fi
+
+echo "✅ .env / .env.example / .gitignore checks passed."

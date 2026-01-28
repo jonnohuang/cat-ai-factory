@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG_FILE="$1"
+MSG="$(cat "$MSG_FILE")"
+
+CHANGED="$(git diff --cached --name-only)"
+
+# If these files change, we expect a decision/doc update
+TRIGGERS=(
+  '^docs/master\.md$'
+  '^AGENTS\.md$'
+  '^README\.md$'
+  '^docker-compose\.yml$'
+  '^infra/terraform/'
+)
+
+NEEDS_DOC_UPDATE=0
+for t in "${TRIGGERS[@]}"; do
+  if echo "$CHANGED" | grep -E "$t" >/dev/null 2>&1; then
+    NEEDS_DOC_UPDATE=1
+    break
+  fi
+done
+
+if [ "$NEEDS_DOC_UPDATE" -eq 1 ]; then
+  if ! echo "$CHANGED" | grep -E '^docs/(decisions|memory)\.md$' >/dev/null 2>&1; then
+    echo "⚠️ Commit-msg note: You changed core architecture/infra/docs but did not stage docs/decisions.md or docs/memory.md."
+    echo "   Consider adding an ADR entry or updating memory.md."
+    echo "   (This is a warning, not a hard block.)"
+  fi
+fi
+
+# Encourage conventional-ish messages
+if ! echo "$MSG" | grep -E '^(Docs|Infra|Agent|Pipeline|Security|Chore|Fix|Feat):' >/dev/null 2>&1; then
+  echo "⚠️ Commit-msg suggestion: start message with a scope prefix, e.g.:"
+  echo "   Docs: ... | Infra: ... | Agent: ... | Pipeline: ... | Security: ..."
+fi
+
+exit 0
