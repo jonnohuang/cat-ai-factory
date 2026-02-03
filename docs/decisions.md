@@ -8,6 +8,27 @@ Guidelines:
 - Include context, decision, consequences
 - Link to relevant docs (README.md, AGENTS.md, docs/master.md, docs/memory.md)
 
+# Example on adding new ADR:
+
+cat >> docs/decisions.md <<'EOF'
+
+------------------------------------------------------------
+
+## ADR-000X — <Title>
+Date: YYYY-MM-DD
+Status: Proposed | Accepted | Deprecated
+
+Context:
+Decision:
+Consequences:
+References:
+
+EOF
+
+=======================================
+# ADR Records
+=======================================
+
 ------------------------------------------------------------
 
 ## ADR-0001 — File-based agent coordination (contracts over RPC)
