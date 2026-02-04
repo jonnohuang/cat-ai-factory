@@ -1,11 +1,13 @@
 # Cat AI Factory 🐱🎬
 A headless, agent-driven AI content factory for short-form video generation
 
+**Start here:** `docs/architecture.md` (diagram-first architecture)
+
 ------------------------------------------------------------
 
 ## Overview
 
-Cat AI Factory is a local-first, headless AI agent system that generates short-form vertical videos (Reels / Shorts) through a fully automated, reproducible pipeline.
+Cat AI Factory is a local-first, headless agent system that generates short-form vertical videos (Reels / Shorts) through a reproducible pipeline.
 
 The project is intentionally designed as an **infrastructure-focused system**, demonstrating how AI agents can be operationalized safely and deterministically rather than as UI-driven demos.
 
@@ -31,9 +33,12 @@ guardrails, and deployability—similar to production ML systems.
 
 ## High-Level Architecture
 
+**Diagram-first details:** `docs/architecture.md`
+
 PRD / Instructions  
 → Planner Agent (Clawdbot)  
-→ job.json (structured contract)  
+→ `job.json` (structured contract)  
+→ Control Plane (Ralph Loop orchestrator)  
 → Worker (FFmpeg Renderer)  
 → MP4 + captions  
 
@@ -41,9 +46,11 @@ Optional ingress:
 
 Telegram Message  
 → Message Bridge  
-→ /sandbox/inbox  
+→ `/sandbox/inbox`
 
 All agent interaction happens through **files**, not shared memory, RPC, or browser UIs.
+
+Frameworks (LangGraph, etc.) are treated as **adapters**, not foundations. RAG is **planner-only**.
 
 ------------------------------------------------------------
 
@@ -51,6 +58,7 @@ All agent interaction happens through **files**, not shared memory, RPC, or brow
 
 - Headless-first: no required UI or dashboard
 - Deterministic: outputs reproducible from inputs
+- Contract-driven: files are the source of truth
 - Sandboxed: containers write only to `/sandbox`
 - Secure by default:
   - loopback-only gateway
@@ -69,6 +77,13 @@ cat-ai-factory/
 ├── .env.example
 ├── .gitignore
 │
+├── docs/
+│   ├── architecture.md
+│   ├── master.md
+│   ├── decisions.md
+│   ├── memory.md
+│   └── chat-bootstrap.md
+│
 ├── repo/                    (source code, read-only to containers)
 │   ├── shared/              (schemas & contracts)
 │   ├── tools/               (generators & bridges)
@@ -82,54 +97,6 @@ cat-ai-factory/
 │   ├── inbox/               (external instructions, e.g. Telegram)
 │   ├── outbox/              (agent responses)
 │   └── logs/                (runtime logs)
-
-------------------------------------------------------------
-
-## Architecture Diagram
-
-LOCAL (today)
-
-  /sandbox/PRD.json
-        |
-        v
-  Planner Agent (Clawdbot)
-        |
-        v
-  /sandbox/jobs/*.job.json  ----->  Worker (FFmpeg renderer)
-        |                              |
-        |                              v
-        |                         /sandbox/output/*.mp4
-        |
-        v
-  Ralph Loop (orchestrator; reconciles job contracts and coordinates execution)
-
-Optional ingress:
-  Telegram Bot → /sandbox/inbox/*.json
-
-------------------------------------------------------------
-
-CLOUD (target GCP)
-
-  Cloud Scheduler
-        |
-        v
-      Pub/Sub (daily-jobs)
-        |
-        v
-     Cloud Run (Ralph Loop orchestrator)
-        |
-        +--> GCS: jobs/YYYY-MM-DD/job.json
-        |
-        +--> Firestore: jobs/{YYYY-MM-DD} status=PLANNED
-        |
-        +--> Pub/Sub (render-jobs)
-               |
-               v
-     Worker (Cloud Run Job, VM, or local worker)
-        |
-        +--> GCS: output/YYYY-MM-DD/final.mp4
-        |
-        +--> Firestore: status=RENDERED
 
 ------------------------------------------------------------
 
@@ -183,7 +150,7 @@ safety, reproducibility, and real-world deployability.
 
 ------------------------------------------------------------
 
-## Roadmap
+## Roadmap (Non-Binding)
 
 - Replace stub generator with Gemini (Vertex AI)
 - Upload pack generation per platform

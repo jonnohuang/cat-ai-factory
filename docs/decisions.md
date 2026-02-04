@@ -1,12 +1,19 @@
 # Architecture Decision Records (ADR)
 
 This file logs key architectural decisions for Cat AI Factory.
+
+**Authority & hierarchy**
+- `docs/decisions.md` is the binding record of architectural decisions (append-only).
+- `docs/master.md` captures invariants and rationale.
+- `docs/architecture.md` is diagram-first and explanatory; it must align with ADRs (it does not override them).
+- `docs/memory.md` is historical context only.
+
 Format: short, dated ADR entries. Append new ADRs as decisions are made.
 
 Guidelines:
 - One decision per ADR
 - Include context, decision, consequences
-- Link to relevant docs (README.md, AGENTS.md, docs/master.md, docs/memory.md)
+- Link to relevant docs (README.md, AGENTS.md, docs/master.md, docs/memory.md, docs/architecture.md)
 
 # Example on adding new ADR:
 
