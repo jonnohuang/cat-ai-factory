@@ -41,6 +41,7 @@ def make_job(date: str):
         t += 3
 
     job = {
+        "schema_version": "v1",
         "job_id": f"cat-{date}",
         "date": date,
         "niche": niche,
