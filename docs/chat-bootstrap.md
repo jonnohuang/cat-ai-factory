@@ -91,7 +91,7 @@ If the role is not explicitly stated, **ask before proceeding**.
 ## File Operations
 - When creating or editing files, ALWAYS provide copy-pasteable commands:
   - cat > path/to/file <<'EOF' ... EOF
-  - cat >> path/to/file <<'EOF' ... EOF (#for ADR)
+  - cat >> path/to/file <<'EOF' ... EOF (#for decision ADR or memory.md)
 - Never output large files inline without a `cat` command
 - Use safe CLI edits (e.g., perl -pi -e ...) only when necessary
 - Do not write outside allowed paths (especially `sandbox/**`)
