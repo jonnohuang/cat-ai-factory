@@ -92,9 +92,9 @@ Status: Optional but recommended (portfolio demo)
 
 Scope:
 - Add a small demo pack under:
-  docs: minimal “how to run demo” notes
-  assets: `sandbox/assets/demo/`
-  jobs: `sandbox/jobs/demo-*.job.json`
+  - assets: `sandbox/assets/demo/`
+  - jobs: `sandbox/jobs/demo-*.job.json`
+  - docs: minimal “how to run demo” notes
 - Include 2–4 canonical “cat activity” examples aligned with Shorts/Reels style.
 - No schema changes.
 - No pipeline logic changes.
