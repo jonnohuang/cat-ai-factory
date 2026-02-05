@@ -71,8 +71,8 @@ flowchart TB
   subgraph W[Worker Plane — Renderer (deterministic; no LLM)]
     WORK[FFmpeg Worker\n(idempotent execution)]
     ASSETS[/sandbox/assets/*/]
-    OUTMP4[/sandbox/output/*.mp4/]
-    OUTSRT[/sandbox/output/*.srt/]
+    OUTMP4[/sandbox/output/<job-id>/final.mp4/]
+    OUTSRT[/sandbox/output/<job-id>/final.srt/]
     LOGS[/sandbox/logs/*/]
 
     ASSETS --> WORK
