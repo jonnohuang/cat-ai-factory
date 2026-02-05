@@ -24,14 +24,27 @@ for p in "${BLOCK_PATTERNS[@]}"; do
 done
 
 # Secret sniff (exclude docs/ and .env.example; allow placeholders)
+# IMPORTANT: scan only *added* lines from staged diffs to avoid false positives on removed text.
+# - Keep exclusions: docs/, scripts/githooks/, .env.example
+# - Match keywords: API_KEY / SECRET / TOKEN / private key header
+# - Allow placeholders: =changeme or =<...>
+SECRET_RE='API[_-]?KEY|SECRET|TOKEN|BEGIN PRIVATE KEY'
+
 if git diff --cached --name-only \
   | grep -Ev '^(docs/|scripts/githooks/|\.env\.example$)' \
-  | xargs -I{} git diff --cached {} \
-  | grep -Ei 'API[_-]?KEY|SECRET|TOKEN|BEGIN PRIVATE KEY' \
+  | while read -r f; do
+      # Print only added lines; drop diff headers like "+++ b/file"
+      git diff --cached -- "$f" \
+        | grep -E '^\+' \
+        | grep -vE '^\+\+\+' \
+        || true
+    done \
+  | grep -Ei "$SECRET_RE" \
   | grep -vE '=changeme|=<.*>' \
   >/dev/null 2>&1; then
-  echo "❌ Pre-commit blocked: potential secret detected outside docs/ or .env.example."
+  echo "❌ Pre-commit blocked: potential secret detected in ADDED lines outside docs/ or .env.example."
   echo "   Ensure no real secrets are committed."
+  echo "   Tip: move examples to docs/ or .env.example, or use '=changeme' / '=<PLACEHOLDER>'."
   exit 1
 fi
 
