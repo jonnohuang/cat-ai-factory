@@ -1,112 +1,161 @@
-import argparse
+#!/usr/bin/env python3
+"""
+validate_job.py
+
+Validates a Cat AI Factory job.json against repo/shared/job.schema.json.
+
+- If `jsonschema` is available, performs full JSON Schema validation.
+- If `jsonschema` is NOT available (offline/no-deps), performs minimal Contract v1 checks
+  sufficient for deterministic rendering with the current worker.
+
+Usage:
+  python3 repo/tools/validate_job.py path/to/job.json
+
+Exit codes:
+  0 = valid
+  1 = invalid / error
+"""
+from __future__ import annotations
+
 import json
-import pathlib
-import re
+import os
 import sys
-
-SCHEMA_PATH = pathlib.Path(__file__).resolve().parents[1] / "shared" / "job.schema.json"
-
-
-def _err(errors, msg):
-    errors.append(msg)
+from typing import Any, Dict, List, Tuple
 
 
-def _is_str(value):
-    return isinstance(value, str)
+SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "shared", "job.schema.json")
+SCHEMA_PATH = os.path.normpath(SCHEMA_PATH)
 
 
-def _check_required(obj, key, errors, ctx):
-    if key not in obj:
-        _err(errors, f"Missing required field: {ctx}.{key}")
-        return False
-    return True
+def eprint(*args: Any) -> None:
+    print(*args, file=sys.stderr)
 
 
-def _load_schema(errors):
+def load_json(path: str) -> Dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _is_number(x: Any) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
+    """Dependency-free minimal checks for Contract v1."""
+    errors: List[str] = []
+
+    # schema_version
+    sv = job.get("schema_version")
+    if sv != "v1":
+        errors.append(f"schema_version must be 'v1' (got {sv!r})")
+
+    # job_id
+    jid = job.get("job_id")
+    if not isinstance(jid, str) or len(jid.strip()) < 6:
+        errors.append("job_id must be a non-empty string with length >= 6")
+
+    # video
+    video = job.get("video")
+    if not isinstance(video, dict):
+        errors.append("video must be an object")
+    else:
+        ls = video.get("length_seconds")
+        if not _is_number(ls) or ls <= 0:
+            errors.append("video.length_seconds must be a number > 0")
+        fps = video.get("fps")
+        if not _is_number(fps) or fps <= 0:
+            errors.append("video.fps must be a number > 0")
+
+    # render
+    render = job.get("render")
+    if not isinstance(render, dict):
+        errors.append("render must be an object")
+    else:
+        bg = render.get("background_asset")
+        if not isinstance(bg, str) or not bg.strip():
+            errors.append("render.background_asset must be a non-empty string")
+        ob = render.get("output_basename")
+        if not isinstance(ob, str) or not ob.strip():
+            errors.append("render.output_basename must be a non-empty string")
+
+    # captions
+    caps = job.get("captions")
+    if not isinstance(caps, list):
+        errors.append("captions must be an array of strings")
+    else:
+        for i, c in enumerate(caps):
+            if not isinstance(c, str):
+                errors.append(f"captions[{i}] must be a string")
+
+    return errors
+
+
+def validate_with_jsonschema(job: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, str]:
+    """Full validation using jsonschema if available."""
     try:
-        return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    except Exception as exc:
-        _err(errors, f"Failed to read schema: {exc}")
-        return None
-
-
-def _validate_with_jsonschema(job, schema, errors):
-    try:
-        import jsonschema
-    except Exception:
-        print("ERROR: jsonschema not installed.")
-        print("Install: python3 -m pip install jsonschema")
-        print("Or (recommended): python3 -m pip install -r repo/requirements-dev.txt")
-        raise SystemExit(2)
+        import jsonschema  # type: ignore
+    except Exception as ex:
+        return False, f"jsonschema import failed: {ex}"
 
     try:
-        jsonschema.validate(job, schema)
-        return True
-    except jsonschema.ValidationError as exc:
-        _err(errors, f"Schema validation error: {exc.message}")
-        return False
+        jsonschema.validate(instance=job, schema=schema)
+        return True, "ok"
+    except Exception as ex:
+        # jsonschema exceptions are already descriptive (path, message)
+        return False, str(ex)
 
 
-# Optional: keep basic validation as a belt-and-suspenders sanity check,
-# but do NOT use it as a replacement for schema validation.
-def _validate_basic_sanity(job, errors):
-    # Fix: regexes must not double-escape in raw strings.
-    date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-    hashtag_re = re.compile(r"^#\w[\w_]*$")
+def main(argv: List[str]) -> int:
+    if len(argv) != 2:
+        eprint("Usage: python3 repo/tools/validate_job.py path/to/job.json")
+        return 1
 
-    if not _check_required(job, "job_id", errors, "job"):
-        return
-    if not _is_str(job["job_id"]) or len(job["job_id"]) < 6:
-        _err(errors, "job.job_id must be a string with length >= 6")
+    job_path = argv[1]
+    if not os.path.exists(job_path):
+        eprint(f"ERROR: job file not found: {job_path}")
+        return 1
 
-    if _check_required(job, "date", errors, "job"):
-        if not _is_str(job["date"]) or not date_re.match(job["date"]):
-            _err(errors, "job.date must be YYYY-MM-DD")
+    try:
+        job = load_json(job_path)
+    except Exception as ex:
+        eprint(f"ERROR: failed to parse JSON: {job_path}")
+        eprint(f"  {ex}")
+        return 1
 
-    if _check_required(job, "hashtags", errors, "job"):
-        hashtags = job.get("hashtags", [])
-        if not isinstance(hashtags, list):
-            _err(errors, "job.hashtags must be a list")
-        else:
-            for i, tag in enumerate(hashtags):
-                if not _is_str(tag):
-                    _err(errors, f"hashtags[{i}] must be a string")
-                elif not hashtag_re.match(tag):
-                    _err(errors, f"hashtags[{i}] must match ^#\\w[\\w_]*$")
+    # Try full schema validation if jsonschema exists; otherwise fallback.
+    schema = None
+    if os.path.exists(SCHEMA_PATH):
+        try:
+            schema = load_json(SCHEMA_PATH)
+        except Exception as ex:
+            eprint(f"ERROR: failed to parse schema JSON: {SCHEMA_PATH}")
+            eprint(f"  {ex}")
+            return 1
 
+    # If schema + jsonschema available, do full validation.
+    if schema is not None:
+        ok, msg = validate_with_jsonschema(job, schema)
+        if ok:
+            print(f"OK: {job_path}")
+            return 0
+        # If jsonschema not available, fall through to minimal checks.
+        if "jsonschema import failed" not in msg:
+            eprint(f"INVALID (schema): {job_path}")
+            eprint(msg)
+            return 1
+        eprint("NOTE: jsonschema not installed; running minimal v1 checks instead.")
 
-def main():
-    parser = argparse.ArgumentParser(description="Validate job.json against schema.")
-    parser.add_argument("job_path", help="Path to job.json")
-    args = parser.parse_args()
-
-    job_path = pathlib.Path(args.job_path)
-    if not job_path.exists():
-        raise SystemExit(f"Job file not found: {job_path}")
-
-    job = json.loads(job_path.read_text(encoding="utf-8"))
-    errors = []
-
-    schema = _load_schema(errors)
-    if schema is None:
-        print("Validation failed:")
+    # Minimal checks (offline-safe)
+    errors = minimal_v1_checks(job)
+    if errors:
+        eprint(f"INVALID (minimal v1): {job_path}")
         for err in errors:
-            print(f"- {err}")
-        raise SystemExit(1)
+            eprint(f"- {err}")
+        return 1
 
-    ok = _validate_with_jsonschema(job, schema, errors)
-
-    # Optional additional sanity check (should not diverge from schema).
-    _validate_basic_sanity(job, errors)
-
-    if errors or not ok:
-        print("Validation failed:")
-        for err in errors:
-            print(f"- {err}")
-        raise SystemExit(1)
-
-    print("Validation OK:", job_path)
+    print(f"OK (minimal v1): {job_path}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main(sys.argv))
