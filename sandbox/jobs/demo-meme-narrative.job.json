@@ -1,0 +1,26 @@
+{
+  "job_id": "demo-meme-narrative-v1",
+  "date": "2026-02-05",
+  "niche": "meme style cat narrative demo",
+  "video": { "length_seconds": 12, "aspect_ratio": "9:16", "fps": 30, "resolution": "1080x1920" },
+  "script": {
+    "hook": "This is the moment the plan goes off script.",
+    "voiceover": "It starts as a simple snack grab, but the snack refuses to cooperate. The cat pauses, recalculates, and chooses chaos anyway.",
+    "ending": "Moral: snacks have opinions."
+  },
+  "shots": [
+    { "t": 0, "visual": "floor", "action": "snack placed", "caption": "Setup" },
+    { "t": 2, "visual": "cat", "action": "slow approach", "caption": "Approach" },
+    { "t": 4, "visual": "snack", "action": "slides away", "caption": "Denied" },
+    { "t": 6, "visual": "cat", "action": "retries", "caption": "Retry" },
+    { "t": 8, "visual": "cat", "action": "dramatic pause", "caption": "Processing" },
+    { "t": 10, "visual": "cat leaves", "action": "exit", "caption": "Abort" }
+  ],
+  "captions": ["Setup", "Approach", "Denied", "Retry", "Processing", "Abort"],
+  "hashtags": ["#cat", "#meme", "#shorts", "#funny", "#pets"],
+  "render": {
+    "background_asset": "assets/demo/meme_narrative.mp4",
+    "subtitle_style": "big_bottom",
+    "output_basename": "demo-meme-narrative-v1"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "job_id": "demo-dialogue-reaction-v1",
+  "date": "2026-02-05",
+  "niche": "cat dialogue reaction demo",
+  "video": { "length_seconds": 12, "aspect_ratio": "9:16", "fps": 30, "resolution": "1080x1920" },
+  "script": {
+    "hook": "Two cats, one snack, and a serious pause.",
+    "voiceover": "One cat whispers the plan. The other cat stares like it did not sign up for this. A tiny pause, a big reaction, and suddenly the snack is the main character.",
+    "ending": "They both pretend it was a rehearsal."
+  },
+  "shots": [
+    { "t": 0, "visual": "kitchen counter", "action": "cat leans in", "caption": "Lean in" },
+    { "t": 2, "visual": "snack closeup", "action": "paw hovers", "caption": "Commitment" },
+    { "t": 4, "visual": "second cat", "action": "deadpan stare", "caption": "No comment" },
+    { "t": 6, "visual": "snack moves", "action": "both freeze", "caption": "Hold" },
+    { "t": 8, "visual": "cats", "action": "silent exchange", "caption": "You saw that" },
+    { "t": 10, "visual": "cats exit", "action": "walk off", "caption": "Reset" }
+  ],
+  "captions": ["Lean in", "Commitment", "No comment", "Hold", "You saw that", "Reset"],
+  "hashtags": ["#cat", "#funnycat", "#shorts", "#reaction", "#pets"],
+  "render": {
+    "background_asset": "assets/demo/dialogue_reaction.mp4",
+    "subtitle_style": "big_bottom",
+    "output_basename": "demo-dialogue-reaction-v1"
+  }
+}
