@@ -109,3 +109,5 @@ If the role is not explicitly stated, **ask before proceeding**.
 
 This bootstrap defines **authority, scope, and preservation rules**.
 
+Confirm acknowledgement and wait for further instruction. Do not provide review of this prompt.
+
