@@ -1,0 +1,26 @@
+{
+  "job_id": "demo-dance-loop-v1",
+  "date": "2026-02-05",
+  "niche": "dance loop cat demo",
+  "video": { "length_seconds": 12, "aspect_ratio": "9:16", "fps": 30, "resolution": "1080x1920" },
+  "script": {
+    "hook": "The dance loop that never ends.",
+    "voiceover": "Four beats, one pose, and a confident spin. The cat keeps time like a tiny DJ, hitting the same move on every count.",
+    "ending": "Cut to black on the last beat."
+  },
+  "shots": [
+    { "t": 0, "visual": "stage", "action": "pose", "caption": "Pose" },
+    { "t": 2, "visual": "stage", "action": "spin", "caption": "Spin" },
+    { "t": 4, "visual": "stage", "action": "step", "caption": "Step" },
+    { "t": 6, "visual": "stage", "action": "pose", "caption": "Pose" },
+    { "t": 8, "visual": "stage", "action": "spin", "caption": "Spin" },
+    { "t": 10, "visual": "stage", "action": "freeze", "caption": "Freeze" }
+  ],
+  "captions": ["Pose", "Spin", "Step", "Pose", "Spin", "Freeze"],
+  "hashtags": ["#cat", "#dance", "#loop", "#shorts", "#pets"],
+  "render": {
+    "background_asset": "assets/demo/dance_loop.mp4",
+    "subtitle_style": "big_bottom",
+    "output_basename": "demo-dance-loop-v1"
+  }
+}

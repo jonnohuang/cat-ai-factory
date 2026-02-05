@@ -36,6 +36,13 @@ For each job-id, artifacts are organized so lineage is obvious:
 
 ------------------------------------------------------------
 
+### Demo sample pack (optional)
+- Demo jobs: `demo-dialogue-reaction.job.json`, `demo-meme-narrative.job.json`, `demo-dance-loop.job.json`, `demo-flight-composite.job.json`.
+- Assets live under `/sandbox/assets/demo/` with provenance in `LICENSE.txt`.
+- Example run: `python3 repo/tools/local_v0_1_harness.py sandbox/jobs/demo-dialogue-reaction.job.json`.
+
+------------------------------------------------------------
+
 ## Non-goals (explicit)
 
 - Cloud deployment (Cloud Run / Pub/Sub / GCS / Firestore).
@@ -43,3 +50,13 @@ For each job-id, artifacts are organized so lineage is obvious:
 - Any LLM usage outside the Planner.
 - Any agent authority that modifies artifacts outside its allowed plane.
 
+## Optional: Demo sample pack (PR3.5)
+
+Demo jobs (bring your own `sandbox/assets/demo/bg.mp4`):
+- sandbox/jobs/demo-dialogue-reaction.job.json
+- sandbox/jobs/demo-meme-narrative.job.json
+- sandbox/jobs/demo-dance-loop.job.json
+- sandbox/jobs/demo-flight-composite.job.json
+
+Run one:
+- python3 repo/tools/local_v0_1_harness.py sandbox/jobs/demo-dialogue-reaction.job.json

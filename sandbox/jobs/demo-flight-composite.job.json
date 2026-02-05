@@ -1,0 +1,26 @@
+{
+  "job_id": "demo-flight-composite-v1",
+  "date": "2026-02-05",
+  "niche": "flight composite cat demo",
+  "video": { "length_seconds": 12, "aspect_ratio": "9:16", "fps": 30, "resolution": "1080x1920" },
+  "script": {
+    "hook": "A tiny launch, a big landing.",
+    "voiceover": "The cat lines up, counts down, and lifts off like a fuzzy rocket. The arc is perfect. The landing is dramatic.",
+    "ending": "Mission complete."
+  },
+  "shots": [
+    { "t": 0, "visual": "floor", "action": "crouch", "caption": "Ready" },
+    { "t": 2, "visual": "floor", "action": "launch", "caption": "Go" },
+    { "t": 4, "visual": "air", "action": "mid jump", "caption": "Arc" },
+    { "t": 6, "visual": "air", "action": "stretch", "caption": "Extend" },
+    { "t": 8, "visual": "ground", "action": "land", "caption": "Impact" },
+    { "t": 10, "visual": "ground", "action": "recover", "caption": "Stuck" }
+  ],
+  "captions": ["Ready", "Go", "Arc", "Extend", "Impact", "Stuck"],
+  "hashtags": ["#cat", "#jump", "#shorts", "#pets", "#action"],
+  "render": {
+    "background_asset": "assets/demo/flight_composite.mp4",
+    "subtitle_style": "big_bottom",
+    "output_basename": "demo-flight-composite-v1"
+  }
+}

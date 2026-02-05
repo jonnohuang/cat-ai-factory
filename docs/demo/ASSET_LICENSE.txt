@@ -1,0 +1,3 @@
+Demo assets in this folder are generated locally by the repo owner using FFmpeg test sources (e.g., testsrc, testsrc2, smptebars, color). These files are synthetic and may be redistributed with this repository.
+
+No privately sourced or third-party reference videos are included in this demo pack.
