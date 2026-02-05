@@ -138,3 +138,4 @@ Contracts          | Job schema                        | repo/shared/job.schema.
 - Agent roles & permissions: AGENTS.md
 - Chat governance: docs/chat-bootstrap.md
 - Historical context: docs/memory.md
+- Video creation direction: docs/video-creation.md
