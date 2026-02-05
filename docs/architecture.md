@@ -33,19 +33,6 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
 
 ------------------------------------------------------------
 
-## Contract v1 (Job)
-
-- The contract is defined in `repo/shared/job.schema.json`.
-- Every job must include `schema_version: "v1"` and a stable `job_id`.
-- Minimum fields required by the current worker:
-  - `render.background_asset`
-  - `render.output_basename`
-  - `captions` (array of strings)
-  - `video.length_seconds`
-  - `video.fps`
-
-------------------------------------------------------------
-
 ## Diagram 1 — Planes & Authority Boundaries
 
 flowchart TB
@@ -71,8 +58,8 @@ flowchart TB
   subgraph W[Worker Plane — Renderer (deterministic; no LLM)]
     WORK[FFmpeg Worker\n(idempotent execution)]
     ASSETS[/sandbox/assets/*/]
-    OUTMP4[/sandbox/output/<job-id>/final.mp4/]
-    OUTSRT[/sandbox/output/<job-id>/final.srt/]
+    OUTMP4[/sandbox/output/*.mp4/]
+    OUTSRT[/sandbox/output/*.srt/]
     LOGS[/sandbox/logs/*/]
 
     ASSETS --> WORK

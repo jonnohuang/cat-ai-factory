@@ -22,9 +22,9 @@ This project showcases practical ML-infrastructure skills beyond model training:
 - Event-driven orchestration patterns (scheduler/queue → stateless compute → artifacts)
 - Deterministic, testable contracts (`job.json`) with reproducible outputs
 - Clear separation of concerns: planning (LLM) vs execution (renderer)
-- Secure-by-default agent operation (sandboxed writes, loopback-only gateway, credential auth)
+- Secure-by-default agent operation (sandboxed writes, loopback-only gateway, token auth)
 - Artifact lineage and state tracking (jobs, outputs, status progression)
-- A realistic migration path to GCP (Cloud Run, Pub/Sub, GCS, Firestore, managed vault, IAM)
+- A realistic migration path to GCP (Cloud Run, Pub/Sub, GCS, Firestore, Secret Manager, IAM)
 
 In short, it demonstrates how to operationalize an AI agent workflow with real infra hygiene,
 guardrails, and deployability—similar to production ML systems.
@@ -62,8 +62,8 @@ Frameworks (LangGraph, etc.) are treated as **adapters**, not foundations. RAG i
 - Sandboxed: containers write only to `/sandbox`
 - Secure by default:
   - loopback-only gateway
-  - credential-based authentication
-  - credentials never committed
+  - token-based authentication
+  - secrets never committed
 - Cloud-ready: clean mapping to GCP services
 
 ------------------------------------------------------------
@@ -111,7 +111,7 @@ Setup:
 1. Copy environment template  
    cp .env.example .env
 
-2. Fill in API credentials in `.env` (DO NOT COMMIT)
+2. Fill in API tokens in `.env` (DO NOT COMMIT)
 
 3. Start services  
    docker compose up -d
@@ -127,10 +127,10 @@ Outputs are written to:
 ## Security Model
 
 - Agent gateway bound to loopback only
-- Credential-based authentication required
+- Token-based authentication required
 - No LAN or public exposure
 - Containers have no access to the host home directory
-- Sensitive config loaded via `.env` only
+- Secrets loaded via `.env` only
 - `.env` excluded from Git
 
 This mirrors real-world production agent security practices.
@@ -169,7 +169,7 @@ Key ML-infra concepts demonstrated:
 - Event-driven workflows (Scheduler + Pub/Sub)
 - Stateless compute (Cloud Run)
 - Artifact versioning (GCS)
-- Managed vaults (vault service + IAM)
+- Secure secrets (Secret Manager + IAM)
 - Observability (Cloud Logging, Error Reporting)
 - Reproducible deployments (CI/CD + IaC)
 
@@ -185,7 +185,7 @@ is CPU-heavy and benefits from controlled, deterministic execution.
 - FFmpeg – deterministic video rendering and caption burn-in
 - AI Agents – planner/orchestrator pattern (Clawdbot + Ralph Loop)
 - Telegram Bot API – optional external instruction ingress
-- Google Cloud Platform (target) – Cloud Run, Pub/Sub, GCS, Firestore, managed vault
+- Google Cloud Platform (target) – Cloud Run, Pub/Sub, GCS, Firestore, Secret Manager
 - Terraform (planned) – infrastructure-as-code
 
 ------------------------------------------------------------

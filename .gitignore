@@ -2,6 +2,7 @@
 .env
 
 # Sandbox runtime data
+sandbox/assets/
 sandbox/output/
 sandbox/logs/
 sandbox/inbox/
