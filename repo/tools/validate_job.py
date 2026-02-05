@@ -1,89 +1,161 @@
+#!/usr/bin/env python3
+"""
+validate_job.py
+
+Validates a Cat AI Factory job.json against repo/shared/job.schema.json.
+
+- If `jsonschema` is available, performs full JSON Schema validation.
+- If `jsonschema` is NOT available (offline/no-deps), performs minimal Contract v1 checks
+  sufficient for deterministic rendering with the current worker.
+
+Usage:
+  python3 repo/tools/validate_job.py path/to/job.json
+
+Exit codes:
+  0 = valid
+  1 = invalid / error
+"""
+from __future__ import annotations
+
 import json
-import pathlib
-import re
+import os
 import sys
+from typing import Any, Dict, List, Tuple
 
-DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-HASHTAG_RE = re.compile(r"^#\w[\w_]*$")
 
-def fail(msg: str) -> None:
-    raise SystemExit(msg)
+SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "shared", "job.schema.json")
+SCHEMA_PATH = os.path.normpath(SCHEMA_PATH)
 
-def require_fields(obj: dict, fields: list[str], ctx: str) -> None:
-    for field in fields:
-        if field not in obj:
-            fail(f"Missing required field {ctx}.{field}")
 
-def validate_job(job: dict) -> None:
-    require_fields(job, ["job_id", "date", "niche", "video", "script", "shots", "captions", "hashtags", "render"], "job")
-    if not isinstance(job["job_id"], str) or len(job["job_id"]) < 6:
-        fail("job.job_id must be a string with length >= 6")
-    if not isinstance(job["date"], str) or not DATE_RE.match(job["date"]):
-        fail("job.date must be YYYY-MM-DD")
-    if not isinstance(job["niche"], str):
-        fail("job.niche must be a string")
+def eprint(*args: Any) -> None:
+    print(*args, file=sys.stderr)
 
-    video = job["video"]
-    require_fields(video, ["length_seconds", "aspect_ratio", "fps", "resolution"], "video")
-    if not isinstance(video["length_seconds"], int) or not (10 <= video["length_seconds"] <= 60):
-        fail("video.length_seconds must be int 10..60")
-    if video["aspect_ratio"] != "9:16":
-        fail("video.aspect_ratio must be 9:16")
-    if not isinstance(video["fps"], int) or not (24 <= video["fps"] <= 60):
-        fail("video.fps must be int 24..60")
-    if video["resolution"] != "1080x1920":
-        fail("video.resolution must be 1080x1920")
 
-    script = job["script"]
-    require_fields(script, ["hook", "voiceover", "ending"], "script")
-    for field, min_len, max_len in [("hook", 3, 120), ("voiceover", 20, 900), ("ending", 3, 120)]:
-        val = script[field]
-        if not isinstance(val, str) or not (min_len <= len(val) <= max_len):
-            fail(f"script.{field} length must be {min_len}..{max_len}")
+def load_json(path: str) -> Dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-    shots = job["shots"]
-    if not isinstance(shots, list) or not (6 <= len(shots) <= 14):
-        fail("shots must be list length 6..14")
-    for idx, shot in enumerate(shots):
-        if not isinstance(shot, dict):
-            fail(f"shots[{idx}] must be an object")
-        require_fields(shot, ["t", "visual", "action", "caption"], f"shots[{idx}]")
-        if not isinstance(shot["t"], int) or not (0 <= shot["t"] <= 60):
-            fail(f"shots[{idx}].t must be int 0..60")
-        for key in ["visual", "action", "caption"]:
-            if not isinstance(shot[key], str):
-                fail(f"shots[{idx}].{key} must be a string")
 
-    captions = job["captions"]
-    if not isinstance(captions, list) or not (4 <= len(captions) <= 24):
-        fail("captions must be list length 4..24")
-    for idx, cap in enumerate(captions):
-        if not isinstance(cap, str) or not (1 <= len(cap) <= 80):
-            fail(f"captions[{idx}] length must be 1..80")
+def _is_number(x: Any) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
 
-    hashtags = job["hashtags"]
-    if not isinstance(hashtags, list) or not (3 <= len(hashtags) <= 20):
-        fail("hashtags must be list length 3..20")
-    for idx, tag in enumerate(hashtags):
-        if not isinstance(tag, str) or not HASHTAG_RE.match(tag):
-            fail(f"hashtags[{idx}] must match {HASHTAG_RE.pattern}")
 
-    render = job["render"]
-    require_fields(render, ["background_asset", "subtitle_style", "output_basename"], "render")
-    if not isinstance(render["background_asset"], str):
-        fail("render.background_asset must be a string")
-    if render["subtitle_style"] not in ["big_bottom", "karaoke_bottom"]:
-        fail("render.subtitle_style must be big_bottom or karaoke_bottom")
-    if not isinstance(render["output_basename"], str):
-        fail("render.output_basename must be a string")
+def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
+    """Dependency-free minimal checks for Contract v1."""
+    errors: List[str] = []
 
-def main() -> None:
-    if len(sys.argv) != 2:
-        raise SystemExit("Usage: python3 repo/tools/validate_job.py /sandbox/jobs/<job>.job.json")
-    path = pathlib.Path(sys.argv[1])
-    job = json.loads(path.read_text(encoding="utf-8"))
-    validate_job(job)
-    print("OK")
+    # schema_version
+    sv = job.get("schema_version")
+    if sv != "v1":
+        errors.append(f"schema_version must be 'v1' (got {sv!r})")
+
+    # job_id
+    jid = job.get("job_id")
+    if not isinstance(jid, str) or len(jid.strip()) < 6:
+        errors.append("job_id must be a non-empty string with length >= 6")
+
+    # video
+    video = job.get("video")
+    if not isinstance(video, dict):
+        errors.append("video must be an object")
+    else:
+        ls = video.get("length_seconds")
+        if not _is_number(ls) or ls <= 0:
+            errors.append("video.length_seconds must be a number > 0")
+        fps = video.get("fps")
+        if not _is_number(fps) or fps <= 0:
+            errors.append("video.fps must be a number > 0")
+
+    # render
+    render = job.get("render")
+    if not isinstance(render, dict):
+        errors.append("render must be an object")
+    else:
+        bg = render.get("background_asset")
+        if not isinstance(bg, str) or not bg.strip():
+            errors.append("render.background_asset must be a non-empty string")
+        ob = render.get("output_basename")
+        if not isinstance(ob, str) or not ob.strip():
+            errors.append("render.output_basename must be a non-empty string")
+
+    # captions
+    caps = job.get("captions")
+    if not isinstance(caps, list):
+        errors.append("captions must be an array of strings")
+    else:
+        for i, c in enumerate(caps):
+            if not isinstance(c, str):
+                errors.append(f"captions[{i}] must be a string")
+
+    return errors
+
+
+def validate_with_jsonschema(job: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, str]:
+    """Full validation using jsonschema if available."""
+    try:
+        import jsonschema  # type: ignore
+    except Exception as ex:
+        return False, f"jsonschema import failed: {ex}"
+
+    try:
+        jsonschema.validate(instance=job, schema=schema)
+        return True, "ok"
+    except Exception as ex:
+        # jsonschema exceptions are already descriptive (path, message)
+        return False, str(ex)
+
+
+def main(argv: List[str]) -> int:
+    if len(argv) != 2:
+        eprint("Usage: python3 repo/tools/validate_job.py path/to/job.json")
+        return 1
+
+    job_path = argv[1]
+    if not os.path.exists(job_path):
+        eprint(f"ERROR: job file not found: {job_path}")
+        return 1
+
+    try:
+        job = load_json(job_path)
+    except Exception as ex:
+        eprint(f"ERROR: failed to parse JSON: {job_path}")
+        eprint(f"  {ex}")
+        return 1
+
+    # Try full schema validation if jsonschema exists; otherwise fallback.
+    schema = None
+    if os.path.exists(SCHEMA_PATH):
+        try:
+            schema = load_json(SCHEMA_PATH)
+        except Exception as ex:
+            eprint(f"ERROR: failed to parse schema JSON: {SCHEMA_PATH}")
+            eprint(f"  {ex}")
+            return 1
+
+    # If schema + jsonschema available, do full validation.
+    if schema is not None:
+        ok, msg = validate_with_jsonschema(job, schema)
+        if ok:
+            print(f"OK: {job_path}")
+            return 0
+        # If jsonschema not available, fall through to minimal checks.
+        if "jsonschema import failed" not in msg:
+            eprint(f"INVALID (schema): {job_path}")
+            eprint(msg)
+            return 1
+        eprint("NOTE: jsonschema not installed; running minimal v1 checks instead.")
+
+    # Minimal checks (offline-safe)
+    errors = minimal_v1_checks(job)
+    if errors:
+        eprint(f"INVALID (minimal v1): {job_path}")
+        for err in errors:
+            eprint(f"- {err}")
+        return 1
+
+    print(f"OK (minimal v1): {job_path}")
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main(sys.argv))
