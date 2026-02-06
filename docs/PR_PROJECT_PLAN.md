@@ -24,6 +24,23 @@ Each PR is intentionally scoped and independently defensible.
 
 ------------------------------------------------------------
 
+## Scope Reminder: Ops/Distribution is Outside the Factory
+
+Cat AI Factory’s core invariant is the three-plane factory:
+
+Planner (Clawdbot) → Control Plane (Ralph Loop) → Worker (FFmpeg)
+
+Ops/Distribution (e.g., n8n workflows, approval gates, publishing integrations)
+is an **external automation layer**. It may consume events and artifacts, but it must:
+
+- NOT replace Clawdbot or Ralph Loop
+- NOT mutate `job.json`
+- NOT modify worker outputs under `/sandbox/output/<job_id>/...`
+- Emit derived dist artifacts instead (e.g., `/dist/<job_id>/<platform>.json`)
+- Enforce idempotency for publishing keyed by `{job_id, platform}`
+
+------------------------------------------------------------
+
 ## Phase 0 — Governance & Documentation (Completed)
 
 Purpose: establish authority, invariants, and navigability.
@@ -119,6 +136,8 @@ Purpose: demonstrate real agent orchestration without sacrificing safety.
 Scope:
 - Explicit job lifecycle states
 - Deterministic reconciliation loop
+- Logs-only state artifacts under `/sandbox/logs/<job_id>/**`
+- Fast-path completion when outputs already exist + lineage passes
 
 Outcome:
 - Control-plane semantics are explicit and testable
@@ -160,11 +179,61 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 3 — CLOUD v0.3 Migration (Optional / Stretch)
+## Phase 3 — Ops/Distribution v0.2+ (Optional but Portfolio-Strong)
+
+Purpose: demonstrate real-world “agent → human approval → publishing” workflows without contaminating core determinism.
+
+### PR-7 — Publish contracts + idempotency model (docs + minimal data shapes)
+Scope:
+- Define minimal publish event payload fields:
+  - job_id
+  - completion status
+  - artifact pointers (paths/URIs)
+  - lineage status
+- Define Firestore document shapes (cloud mapping) for:
+  - jobs/{job_id}
+  - publishes/{job_id} (or publishes/{job_id}_{platform})
+- Define idempotency keys:
+  - {job_id, platform}
+- No changes to job.json schema.
+
+Outcome:
+- Explicit publish semantics
+- Retry-safe publishing model
+- Clean boundary: factory outputs vs dist artifacts
+
+---
+
+### PR-8 — Publish pipeline MVP (YouTube first) + approval gate (n8n-friendly)
+Scope:
+- Human approval gate (Slack/Discord/email)
+- Publish adapter writes derived dist artifacts only:
+  - /dist/<job_id>/youtube.json
+- Stores platform_post_id + post_url keyed by {job_id, platform}
+- Must not modify worker outputs.
+
+Outcome:
+- End-to-end “COMPLETED → approved → published” workflow
+- Strong portfolio signal without breaking determinism
+
+---
+
+### PR-9 — Expand publishing adapters (IG / TikTok / X)
+Scope:
+- Add adapters incrementally per platform
+- Maintain idempotency + derived dist artifacts
+- Keep human approval default (configurable)
+
+Outcome:
+- Multi-platform distribution layer with clean semantics
+
+------------------------------------------------------------
+
+## Phase 4 — CLOUD v0.3 Migration (Optional / Stretch)
 
 Purpose: show cloud literacy and clean mapping; do not compromise LOCAL guarantees.
 
-### PR-7 — Cloud artifact layout
+### PR-10 — Cloud artifact layout
 Scope:
 - GCS path conventions
 - Firestore job state schema
@@ -172,14 +241,14 @@ Scope:
 
 ---
 
-### PR-8 — Cloud Run orchestration stub
+### PR-11 — Cloud Run orchestration stub
 Scope:
 - Minimal Cloud Run deployment for orchestrator
 - No new semantics; same contracts and states
 
 ---
 
-### PR-9 — CI/CD skeleton
+### PR-12 — CI/CD skeleton
 Scope:
 - Lint + harness execution
 - No auto-deploy required
@@ -194,5 +263,4 @@ The project is considered **portfolio-complete** when:
 - All invariants remain intact
 - LOCAL v0.1 can be verified with a single command
 
-Phases 2 and 3 are optional enhancements and should not compromise Phase 1 guarantees.
-
+Phases 2+ are optional enhancements and should not compromise Phase 1 guarantees.

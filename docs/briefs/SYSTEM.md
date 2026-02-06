@@ -44,3 +44,18 @@ Three-plane separation is non-negotiable:
 
 See: `docs/architecture.md`
 
+
+------------------------------------------------------------
+
+## Ops/Distribution (Outside the Factory)
+
+Publishing and distribution automation (e.g., n8n workflows + platform adapters) is **outside** the core factory.
+It may consume events and immutable artifacts for notifications, approval, and posting.
+
+Hard constraints:
+- Must not mutate `job.json`.
+- Must not modify worker outputs under `/sandbox/output/<job_id>/...`.
+- If platform-specific formatting is needed, emit derived dist artifacts:
+  - `/dist/<job_id>/<platform>.json`
+- Publishing should be gated by human approval and must be idempotent via `{job_id, platform}` keys.
+
