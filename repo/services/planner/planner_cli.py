@@ -126,21 +126,19 @@ def _choose_job_id(
 def _print_debug(provider: Any) -> None:
     provider_name = provider.__class__.__name__
     model = getattr(provider, "model", "unknown")
-    raw_text = ""
+    raw_len = 0
+
     if hasattr(provider, "debug_snapshot"):
         snapshot = provider.debug_snapshot()
-        raw_text = snapshot.get("raw_text", "") if isinstance(snapshot, dict) else ""
-        provider_name = snapshot.get("provider", provider_name)
-        model = snapshot.get("model", model)
-    print(f"DEBUG provider={provider_name} model={model}", file=sys.stderr)
-    if raw_text:
-        snippet = raw_text[:240].replace("\n", " ")
-        print(
-            f"DEBUG raw_text_len={len(raw_text)} raw_text_snippet={snippet}",
-            file=sys.stderr,
-        )
-    else:
-        print("DEBUG raw_text_len=0 raw_text_snippet=", file=sys.stderr)
+        if isinstance(snapshot, dict):
+            provider_name = snapshot.get("provider", provider_name)
+            model = snapshot.get("model", model)
+            raw_len = int(snapshot.get("raw_text_len", 0) or 0)
+
+    print(
+        f"DEBUG provider={provider_name} model={model} raw_text_len={raw_len}",
+        file=sys.stderr,
+    )
 
 
 def main(argv: List[str]) -> int:
