@@ -82,7 +82,12 @@ cat-ai-factory/
 │   ├── master.md
 │   ├── decisions.md
 │   ├── memory.md
-│   └── chat-bootstrap.md
+│   ├── chat-bootstrap.md
+│   └── briefs/
+│       ├── BOOTSTRAP-BASE.md
+│       ├── BOOTSTRAP-ARCH.md
+│       ├── BOOTSTRAP-IMPL.md
+│       └── BOOTSTRAP-CODEX.md
 │
 ├── repo/                    (source code, read-only to containers)
 │   ├── shared/              (schemas & contracts)
@@ -97,6 +102,56 @@ cat-ai-factory/
 │   ├── inbox/               (external instructions, e.g. Telegram)
 │   ├── outbox/              (agent responses)
 │   └── logs/                (runtime logs)
+
+------------------------------------------------------------
+
+## How to Bootstrap a New Chat (ARCH / IMPL / CODEX)
+
+This repo is designed to be worked on using **role-separated chats**:
+
+- ARCH = decisions + contracts + doc structure
+- IMPL = debugging + edge cases + implementation review
+- CODEX = file-writing implementation (PR-sized diffs only)
+
+### Always send 2 messages at the start of a new chat
+
+1) Base bootstrap (project constitution)
+- docs/chat-bootstrap.md
+
+2) Role bootstrap (pick exactly one)
+- docs/briefs/BOOTSTRAP-ARCH.md
+- docs/briefs/BOOTSTRAP-IMPL.md
+- docs/briefs/BOOTSTRAP-CODEX.md
+
+This keeps invariants consistent, while letting each role stay ultra-focused.
+
+### Standard handoff packet (send after the 2 bootstraps)
+
+Send this in order:
+
+1) PR context
+- PR name + goal (1–2 lines)
+- In scope / out of scope
+- Binding decisions (if any)
+
+2) Repo tree (scoped)
+Do NOT paste the full repo tree. Use one of:
+- tree -L 2 repo/services/orchestrator repo/tools repo/worker docs
+- tree -L 3 repo/services repo/tools repo/worker docs | sed -n '1,200p'
+
+3) Working state
+- git status
+- git diff (only relevant files)
+
+4) Authoritative docs (only if needed)
+- ARCH: docs/master.md, docs/decisions.md, docs/architecture.md
+- IMPL: docs/architecture.md + the relevant PR plan section
+- CODEX: PR prompt + file touch list + invariants (avoid dumping full docs)
+
+5) For debugging runs
+- exact CLI command
+- stdout/stderr
+- state.json + last 30 lines of events.ndjson
 
 ------------------------------------------------------------
 

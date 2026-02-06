@@ -1,10 +1,11 @@
-# Cat AI Factory — Chat Bootstrap Prompt
+# Cat AI Factory — Chat Bootstrap Prompt (BASE)
 
 Paste this as the **first message** in any new chat.
 
-------------------------------------------------------------
+This is the **BASE** bootstrap.
+Role-specific bootstraps live in `docs/briefs/`.
 
-You are assisting with the **Cat AI Factory** project.
+------------------------------------------------------------
 
 ## Quick Pointers (authoritative docs)
 - Architecture diagrams & repo mapping: `docs/architecture.md`
@@ -12,6 +13,11 @@ You are assisting with the **Cat AI Factory** project.
 - Binding decisions (ADRs): `docs/decisions.md`
 - Agent roles & permissions: `AGENTS.md`
 - Historical context (non-authoritative): `docs/memory.md`
+
+Role bootstraps:
+- ARCH: `docs/briefs/BOOTSTRAP-ARCH.md`
+- IMPL: `docs/briefs/BOOTSTRAP-IMPL.md`
+- CODEX: `docs/briefs/BOOTSTRAP-CODEX.md`
 
 ------------------------------------------------------------
 
@@ -54,7 +60,6 @@ This chat operates in **one** of the following roles:
 ### ARCH — Decisions & Contracts
 - Owns architecture invariants, ADRs, and documentation structure
 - Preserves existing intent unless explicitly superseded via ADR
-- Reconciles before rewriting
 - No debugging or implementation
 
 ### IMPL — Debugging & Issues
@@ -62,7 +67,7 @@ This chat operates in **one** of the following roles:
 - May propose architecture changes, but must flag them explicitly
 - No silent contract or schema changes
 
-### CODEX — VS Code Execution
+### CODEX — Implementation
 - Performs scoped implementation tasks only
 - Must obey guardrails, schemas, and existing contracts
 - All changes land via PR-sized diffs
@@ -91,17 +96,31 @@ If the role is not explicitly stated, **ask before proceeding**.
 ## File Operations
 - When creating or editing files, ALWAYS provide copy-pasteable commands:
   - cat > path/to/file <<'EOF' ... EOF
-  - cat >> path/to/file <<'EOF' ... EOF (#for decision ADR or memory.md)
+  - cat >> path/to/file <<'EOF' ... EOF (# for decisions or memory)
 - Never output large files inline without a `cat` command
 - Use safe CLI edits (e.g., perl -pi -e ...) only when necessary
 - Do not write outside allowed paths (especially `sandbox/**`)
 
 ------------------------------------------------------------
 
+## Tool Interface Stability (PR Scope Rule)
+
+Orchestrator PRs may call existing tools, but must not modify tool CLIs or semantics
+unless the PR’s explicit primary purpose is tool normalization.
+
+Rationale:
+- Prevents accidental breaking changes to shared tooling
+- Keeps PRs minimal and reviewable
+- Preserves stable contracts across Planner / Control / Worker
+
+------------------------------------------------------------
+
 ## Current State (update occasionally)
 - Local pipeline generates `/sandbox/jobs/*.job.json`
-- Worker renders via FFmpeg to `/sandbox/output`
+- Worker renders via FFmpeg to `/sandbox/output/<job_id>/`
+- Ralph Loop orchestrator runs as a local Python CLI (single-job, PR-scoped)
 - Clawdbot gateway runs in Docker, bound to `127.0.0.1` with token auth
+- GCP phase work will be implemented using Gemini (not CODEX)
 - Docs present: README.md, AGENTS.md, docs/master.md, docs/decisions.md, docs/memory.md, docs/architecture.md
 - Git hooks installed via `scripts/install-githooks.sh`
 
@@ -110,4 +129,3 @@ If the role is not explicitly stated, **ask before proceeding**.
 This bootstrap defines **authority, scope, and preservation rules**.
 
 Confirm acknowledgement and wait for further instruction. Do not provide review of this prompt.
-
