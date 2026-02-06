@@ -3,6 +3,11 @@ A headless, agent-driven AI content factory for short-form video generation
 
 **Start here:** `docs/architecture.md` (diagram-first architecture)
 
+Key docs:
+- `docs/system-requirements.md` (what must be true)
+- `docs/PR_PROJECT_PLAN.md` (roadmap / PR sizing)
+- `docs/decisions.md` (binding ADRs)
+
 ------------------------------------------------------------
 
 ## Overview

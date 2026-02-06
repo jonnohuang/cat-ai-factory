@@ -133,3 +133,31 @@ The answer is: **clear contracts, separation of concerns, and infra-enforced gua
 
 Future work must preserve the three-plane invariant. Binding commitments belong in ADRs.
 
+
+------------------------------------------------------------
+
+## Ops/Distribution Layer (Outside the Factory)
+
+Publishing and distribution workflows are inherently nondeterministic (external APIs).
+They must remain **outside** the core factory invariant (Planner / Control Plane / Worker).
+
+Ops/Distribution may be implemented using tools like:
+- n8n (triggers, notifications, approval gates)
+- Slack/Discord/email integrations
+- Cloud Run publisher adapters
+- Pub/Sub event routing
+- Firestore status tracking
+
+Hard constraints:
+- Ops/Distribution is NOT a replacement for Clawdbot (Planner) or Ralph Loop (Control Plane).
+- Ops/Distribution must NOT mutate `job.json`.
+- Ops/Distribution must NOT modify worker outputs under:
+  - `/sandbox/output/<job_id>/final.mp4`
+  - `/sandbox/output/<job_id>/final.srt`
+  - `/sandbox/output/<job_id>/result.json`
+- If platform-specific formatting is needed, write derived **dist artifacts**:
+  - `/dist/<job_id>/<platform>.json`
+  - (cloud equivalent: `gs://.../dist/<job_id>/<platform>.json`)
+- Publishing should be gated by human approval by default.
+- Publishing must be idempotent: store `platform_post_id` / `post_url` keyed by `{job_id, platform}` to prevent double-posting.
+
