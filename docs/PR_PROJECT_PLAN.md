@@ -164,7 +164,7 @@ Scope:
 - Introduce a planner adapter interface (frameworks are adapters, not foundations)
 - Add a Gemini adapter using Google AI Studio API key (LOCAL, no OAuth)
 - Planner target is autonomous planning (no long-term human-in-loop)
-- Support planner-only RAG provider abstraction (optional, pluggable)
+- (Optional seam) planner-only RAG provider abstraction (pluggable; does not affect orchestrator/worker)
 - Adapters must produce the same `job.json` schema (contract remains stable)
 
 Hard constraints:
@@ -182,6 +182,17 @@ Outcome:
 - Autonomous planning with a real Gemini integration
 - Framework alignment without lock-in
 - Strong portfolio signal: “adapters, not foundations”
+
+---
+
+### PR-5.1 — Planner prompt-injection hardening + debug redaction
+Scope:
+- Add planner prompt guardrails (PRD/inbox treated as untrusted; JSON-only)
+- Ensure debug surfaces never print model raw text (len-only) and never print secrets
+
+Outcome:
+- Reduced leakage risk
+- Stronger production safety posture
 
 ---
 
