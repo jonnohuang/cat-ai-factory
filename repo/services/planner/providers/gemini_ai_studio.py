@@ -15,10 +15,10 @@ from ..util.redact import redact_text
 
 
 class GeminiAIStudioProvider(PlannerProvider):
-    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-1.5-flash") -> None:
+    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-2.5-flash") -> None:
         env_name = "GEMINI_" + "API" + "_" + "KEY"
         self.api_key = api_key or os.environ.get(env_name)
-        self.model = model
+        self.model = os.environ.get("GEMINI_MODEL", model)
         self._last_raw_text: Optional[str] = None
 
     def plan(self, prd: Dict[str, Any], inbox: Optional[List[Dict[str, Any]]]) -> Dict[str, Any]:
@@ -27,6 +27,15 @@ class GeminiAIStudioProvider(PlannerProvider):
             raise ValueError(f"{env_name} is required")
         prompt = _build_prompt(prd, inbox or [])
         raw = self._generate_content(prompt)
+        if _looks_truncated(raw):
+            repair_prompt = _build_repair_prompt(prompt, raw)
+            repaired = self._generate_content(repair_prompt)
+            self._last_raw_text = repaired
+            job = extract_json_object(repaired)
+            ok, err = _validate_job(job)
+            if not ok:
+                raise RuntimeError(f"Job failed validation after repair: {err}")
+            return job
         self._last_raw_text = raw
 
         try:
@@ -62,7 +71,7 @@ class GeminiAIStudioProvider(PlannerProvider):
         url = base + "?" + urllib.parse.urlencode({"key": self.api_key})
         payload = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 1400},
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 4096},
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
@@ -154,13 +163,23 @@ def _build_prompt(prd: Dict[str, Any], inbox: List[Dict[str, Any]]) -> str:
 
 def _build_repair_prompt(original_prompt: str, prior_response: str) -> str:
     return (
-        "Your previous response was not valid JSON.\n"
-        "Return ONLY a single JSON object. No markdown, no code fences, no commentary.\n\n"
-        "Original prompt (for reference):\n"
-        f"{original_prompt}\n\n"
-        "Previous response (for repair):\n"
+        "You are a JSON repair tool.\n"
+        "Return ONE valid JSON object ONLY.\n"
+        "- No markdown\n"
+        "- No code fences\n"
+        "- No commentary\n"
+        "- No trailing commas\n"
+        "- Use double quotes for all strings\n"
+        "- Escape any embedded double quotes inside strings (\\\")\n"
+        "- Do NOT change the intended content; only fix JSON validity/escaping\n\n"
+        "Previous response to repair:\n"
         f"{prior_response}\n"
     )
+
+
+def _looks_truncated(raw: str) -> bool:
+    s = raw.strip()
+    return ("{" in s) and ("}" not in s)
 
 
 def _build_schema_fix_prompt(original_prompt: str, prior_response: str, error_text: str) -> str:
