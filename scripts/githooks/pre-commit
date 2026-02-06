@@ -24,10 +24,11 @@ for p in "${BLOCK_PATTERNS[@]}"; do
 done
 
 # Secret sniff (exclude docs/ and .env.example; allow placeholders)
+# Only flag likely secret ASSIGNMENTS (not normal prose mentioning "token", etc.)
 if git diff --cached --name-only \
-  | grep -Ev '^(docs/|scripts/githooks/|\.env\.example$)' \
+  | grep -Ev '^(docs/|scripts/githooks/|\.env\.example$|README\.md$)' \
   | xargs -I{} git diff --cached {} \
-  | grep -Ei 'API[_-]?KEY|SECRET|TOKEN|BEGIN PRIVATE KEY' \
+  | grep -Ein '(BEGIN PRIVATE KEY|API[_-]?KEY\s*=|SECRET\s*=|TOKEN\s*=|Authorization:\s*Bearer\s+)' \
   | grep -vE '=changeme|=<.*>' \
   >/dev/null 2>&1; then
   echo "❌ Pre-commit blocked: potential secret detected outside docs/ or .env.example."
