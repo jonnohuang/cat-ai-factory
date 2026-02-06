@@ -24,16 +24,24 @@ for p in "${BLOCK_PATTERNS[@]}"; do
 done
 
 # Secret sniff (exclude docs/ and .env.example; allow placeholders)
-# Only flag likely secret ASSIGNMENTS (not normal prose mentioning "token", etc.)
-if git diff --cached --name-only \
-  | grep -Ev '^(docs/|scripts/githooks/|\.env\.example$|README\.md$)' \
-  | xargs -I{} git diff --cached {} \
-  | grep -Ein '(BEGIN PRIVATE KEY|API[_-]?KEY\s*=|SECRET\s*=|TOKEN\s*=|Authorization:\s*Bearer\s+)' \
-  | grep -vE '=changeme|=<.*>' \
-  >/dev/null 2>&1; then
-  echo "❌ Pre-commit blocked: potential secret detected outside docs/ or .env.example."
-  echo "   Ensure no real secrets are committed."
-  exit 1
+# IMPORTANT: we only flag likely secret *values* (assignments), not words in prose.
+FILES_TO_SCAN="$(git diff --cached --name-only \
+  | grep -Ev '^(docs/|scripts/githooks/|\.env\.example$)' || true)"
+
+if [[ -n "$FILES_TO_SCAN" ]]; then
+  # Patterns:
+  # - Private key blocks
+  # - Authorization: Bearer <token-like>
+  # - KEY/TOKEN/SECRET assigned a non-trivial value (>=12 chars)
+  if echo "$FILES_TO_SCAN" \
+    | xargs -I{} git diff --cached {} \
+    | grep -EIn '(BEGIN (RSA |EC )?PRIVATE KEY|Authorization:[[:space:]]*Bearer[[:space:]]+[A-Za-z0-9._-]{12,}|(^|[^A-Za-z0-9_])(API[_-]?KEY|TOKEN|SECRET)[[:space:]]*=[[:space:]]*[^[:space:]]{12,})' \
+    | grep -vE '=changeme\b|=<.*>\b|=YOUR_[A-Z0-9_]+\b|=[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]\b' \
+    >/dev/null 2>&1; then
+    echo "❌ Pre-commit blocked: potential secret value detected outside docs/ or .env.example."
+    echo "   Ensure no real secrets are committed."
+    exit 1
+  fi
 fi
 
 echo "✅ Pre-commit checks passed."
