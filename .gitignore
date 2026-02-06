@@ -22,3 +22,5 @@ __pycache__/
 
 # Clawdbot runtime workspace
 sandbox/home/
+sandbox/jobs/*.job.json
+sandbox/jobs/*.tmp

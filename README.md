@@ -121,7 +121,7 @@ This repo is designed to be worked on using **role-separated chats**:
 ### Always send 2 messages at the start of a new chat
 
 1) Base bootstrap (project constitution)
-- docs/chat-bootstrap.md
+- docs/chat-bootstrap.md (for CODEX chat, add the CODEX name as the first line, as its name is derived from first prompt and can not be modified)
 
 2) Role bootstrap (pick exactly one)
 - docs/briefs/BOOTSTRAP-ARCH.md
@@ -212,45 +212,8 @@ safety, reproducibility, and real-world deployability.
 
 ## Roadmap (Non-Binding)
 
-- Replace stub generator with Gemini (Vertex AI)
+- Add Vertex AI planner provider (mandatory portfolio)
 - Upload pack generation per platform
 - Event-driven orchestration (new inbox message → render)
 - GCP deployment (Cloud Run, GCS, Scheduler)
 - Approval gates for high-risk actions (e.g. purchasing)
-
-------------------------------------------------------------
-
-## GCP Deployment (ML Infra Portfolio Version)
-
-This section outlines a clean migration path from local-first development to a
-cloud-operated pipeline on Google Cloud Platform.
-
-Key ML-infra concepts demonstrated:
-- Event-driven workflows (Scheduler + Pub/Sub)
-- Stateless compute (Cloud Run)
-- Artifact versioning (GCS)
-- Secure secrets (Secret Manager + IAM)
-- Observability (Cloud Logging, Error Reporting)
-- Reproducible deployments (CI/CD + IaC)
-
-Rendering is intentionally separated from orchestration because video rendering
-is CPU-heavy and benefits from controlled, deterministic execution.
-
-------------------------------------------------------------
-
-## Tech Stack
-
-- Python 3.11 – orchestration logic, job generation, message bridges
-- Docker & Docker Compose – sandboxed, reproducible local execution
-- FFmpeg – deterministic video rendering and caption burn-in
-- AI Agents – planner/orchestrator pattern (Clawdbot + Ralph Loop)
-- Telegram Bot API – optional external instruction ingress
-- Google Cloud Platform (target) – Cloud Run, Pub/Sub, GCS, Firestore, Secret Manager
-- Terraform (planned) – infrastructure-as-code
-
-------------------------------------------------------------
-
-## Disclaimer
-
-This project does NOT perform autonomous financial transactions.
-All potentially destructive actions require explicit human confirmation.
