@@ -9,19 +9,27 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
-from .base import PlannerProvider
+from .base import BaseProvider
 from ..util.json_extract import extract_json_object
 from ..util.redact import redact_text
 
 
-class GeminiAIStudioProvider(PlannerProvider):
-    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-2.5-flash") -> None:
+class GeminiAIStudioProvider(BaseProvider):
+    @property
+    def name(self) -> str:
+        return "ai_studio"
+
+    @property
+    def default_model(self) -> str:
+        return "gemini-1.5-flash"
+
+    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-1.5-flash") -> None:
         env_name = "GEMINI_" + "API" + "_" + "KEY"
         self.api_key = api_key or os.environ.get(env_name)
         self.model = os.environ.get("GEMINI_MODEL", model)
         self._last_raw_text: Optional[str] = None
 
-    def plan(self, prd: Dict[str, Any], inbox: Optional[List[Dict[str, Any]]]) -> Dict[str, Any]:
+    def generate_job(self, prd: Dict[str, Any], inbox: Optional[List[Dict[str, Any]]]) -> Dict[str, Any]:
         if not self.api_key:
             env_name = "GEMINI_" + "API" + "_" + "KEY"
             raise ValueError(f"{env_name} is required")

@@ -1,18 +1,27 @@
 from __future__ import annotations
 
-from typing import Dict, Type
+from typing import Dict, List, Type
 
-from .base import PlannerProvider
+from .base import BaseProvider
 from .gemini_ai_studio import GeminiAIStudioProvider
 
 
-PROVIDERS: Dict[str, Type[PlannerProvider]] = {
-    "gemini_ai_studio": GeminiAIStudioProvider,
+PROVIDERS: Dict[str, Type[BaseProvider]] = {
+    "ai_studio": GeminiAIStudioProvider,
 }
 
 
-def get_provider(name: str) -> PlannerProvider:
+def get_provider(name: str) -> BaseProvider:
+    """
+    Retrieves an initialized planner provider instance by name.
+    """
     provider_cls = PROVIDERS.get(name)
     if provider_cls is None:
-        raise ValueError(f"Unknown provider: {name}")
+        known_providers = ", ".join(PROVIDERS.keys())
+        raise ValueError(f"Unknown provider: {name}. Available: {known_providers}")
     return provider_cls()
+
+
+def list_providers() -> List[str]:
+    """Returns a list of available provider names."""
+    return sorted(PROVIDERS.keys())
