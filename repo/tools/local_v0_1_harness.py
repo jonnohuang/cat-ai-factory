@@ -134,6 +134,8 @@ def main():
 
         summary["status"] = "ok"
 
+        summary["qc"] = run_qc_step(job_id, str(job_file), sandbox_root)
+
         summary_path = logs_dir / "harness_summary.json"
         summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
 
@@ -159,6 +161,38 @@ def main():
         print("Harness failed:", exc)
         print(f"Summary: {summary_path}")
         return 1
+
+
+def run_qc_step(job_id: str, job_path: str, sandbox_root: pathlib.Path) -> dict:
+    qc_summary = {
+        "ran": True,
+        "status": "ERROR",
+        "summary_path": f"sandbox/logs/{job_id}/qc/qc_summary.json",
+        "log_path": f"sandbox/logs/{job_id}/qc/qc.log",
+        "exit_code": -1,
+        "details": "QC step not run",
+    }
+    try:
+        cmd = ["python3", "-m", "repo.tools.qc_verify", job_path, "--sandbox-root", str(sandbox_root)]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+        qc_summary["exit_code"] = result.returncode
+        if result.returncode == 0:
+            qc_summary["status"] = "PASS"
+            qc_summary["details"] = "QC passed."
+        elif result.returncode == 2:
+            qc_summary["status"] = "FAIL"
+            qc_summary["details"] = "QC checks failed."
+        else:
+            qc_summary["status"] = "ERROR"
+            qc_summary["details"] = f"QC tool returned an unexpected exit code. Stderr: {result.stderr.strip()}"
+
+    except FileNotFoundError:
+        qc_summary["details"] = "QC tool not found or python3 is not in PATH."
+    except Exception as e:
+        qc_summary["details"] = f"An exception occurred while running QC: {e}"
+
+    return qc_summary
 
 
 if __name__ == "__main__":

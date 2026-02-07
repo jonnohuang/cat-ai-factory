@@ -1,4 +1,4 @@
-# PR6 — Verification / QC Agent
+# PR6 — Verification / qc_verify
 
 PR6 adds a deterministic, read-only QC gate for a single job contract and its artifacts.
 
