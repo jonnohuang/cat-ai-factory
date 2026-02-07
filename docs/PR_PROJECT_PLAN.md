@@ -213,6 +213,8 @@ Outcome:
 ---
 
 ### PR-6 — Verification / QC agent
+Status: Completed
+
 Scope:
 - Deterministic, read-only evaluator
 - Contract + output conformance checks
