@@ -213,7 +213,7 @@ Outcome:
 ---
 
 ### PR-6 — Verification / QC agent
-Status: Completed
+Status: DONE
 
 Scope:
 - Deterministic, read-only evaluator
@@ -222,6 +222,21 @@ Scope:
 
 Outcome:
 - Production-grade quality gates without autonomy creep
+
+---
+
+### PR-6.1 — Harness-only QC integration (reporting-only)
+Status: DONE
+
+Scope:
+- Integrate `qc_verify.py` into `local_v0_1_harness.py`.
+- QC is additive reporting only; does not change harness PASS/FAIL gating.
+- QC results (exit code, artifact paths) are recorded in `harness_summary.json`.
+- Update docs to reflect QC artifact paths and correct tool name (`qc_verify`).
+
+Outcome:
+- QC is a first-class reporting surface in the local development harness.
+- Clear separation of concerns: harness gating vs. QC checks.
 
 ------------------------------------------------------------
 
