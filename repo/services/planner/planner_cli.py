@@ -9,7 +9,7 @@ import sys
 import tempfile
 from typing import Any, Dict, List, Optional, Tuple
 
-from .providers import get_provider
+from .providers import get_provider, list_providers
 from .util.redact import redact_text
 
 
@@ -145,10 +145,13 @@ def _print_debug(provider: Any) -> None:
 
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Cat AI Factory planner CLI")
-    parser.add_argument("--prd", required=True, help="Path to PRD.json")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--prd", help="Path to PRD.json")
+    group.add_argument("--prompt", help="A simple text prompt to generate a job from")
+
     parser.add_argument("--inbox", default="sandbox/inbox", help="Inbox directory (optional)")
     parser.add_argument("--out", default="sandbox/jobs", help="Output directory for job.json")
-    parser.add_argument("--provider", default="gemini_ai_studio", help="Planner provider")
+    parser.add_argument("--provider", default="ai_studio", choices=list_providers(), help="Planner provider")
     parser.add_argument("--job-id", default=None, help="Optional job_id override")
     parser.add_argument("--debug", action="store_true", help="Print safe debug info")
 
@@ -156,10 +159,14 @@ def main(argv: List[str]) -> int:
 
     provider = None
     try:
-        prd = _load_json(args.prd)
+        if args.prompt:
+            prd = {"prompt": args.prompt}
+        else:
+            prd = _load_json(args.prd)
+
         inbox_list, inbox_with_names = _load_inbox(args.inbox)
         provider = get_provider(args.provider)
-        job = provider.plan(prd, inbox_list)
+        job = provider.generate_job(prd, inbox_list)
         if not isinstance(job, dict):
             raise RuntimeError("Provider returned non-object JSON")
 
