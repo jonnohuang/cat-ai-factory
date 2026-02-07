@@ -213,6 +213,8 @@ Notes:
 | Worker | Input assets | (runtime) | /sandbox/assets/** | N/A | Worker reads assets from sandbox only |
 | Verification | Lineage verifier (QC) | repo/tools/lineage_verify.py | (writes logs only when invoked) | CLI tool | Deterministic read-only verification of required artifacts |
 | Verification | Job validator (QC) | repo/tools/validate_job.py | (writes logs only when invoked) | CLI tool | Deterministic validation of job.json against schema (or minimal checks) |
+| Verification | QC verifier (QC gate) | repo/tools/qc_verify.py | (writes logs only when invoked) | CLI tool | Deterministic, read-only QC gate: composes schema validation + lineage verification + output conformance; writes qc artifacts under /sandbox/logs/<job_id>/qc/ |
+
 | Ingress (optional) | Telegram bridge | repo/tools/telegram_bridge.py | /sandbox/inbox/ | Instruction artifacts | Ingress only; no execution authority |
 | Contracts | Job schema | repo/shared/job.schema.json | N/A | JSON Schema | Central contract definition for job.json |
 

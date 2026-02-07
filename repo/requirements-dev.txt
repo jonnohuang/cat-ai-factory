@@ -1,1 +1,24 @@
-jsonschema>=4.0.0
+# Cat AI Factory — Dev Requirements
+#
+# This file is for LOCAL development tooling and lightweight runtime deps.
+# It intentionally avoids heavy frameworks and cloud SDK lock-in.
+#
+# Install:
+#   pip install -r repo/requirements-dev.txt
+
+# --- Core validation ---
+jsonschema>=4.21.0
+
+# --- Local env / secrets (runtime injected; never committed) ---
+python-dotenv>=1.0.1
+
+# --- HTTP client (planner providers / adapters) ---
+requests>=2.31.0
+
+# --- Dev/test tooling ---
+pytest>=8.0.0
+ruff>=0.3.0
+black>=24.1.0
+
+# --- Optional: static typing (keep lightweight) ---
+mypy>=1.8.0
