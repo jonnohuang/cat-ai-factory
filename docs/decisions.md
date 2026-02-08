@@ -340,3 +340,193 @@ This structure is idiomatic for Firestore, enabling transactional updates to a p
 
 References:
 - docs/cloud-mapping-firestore.md
+------------------------------------------------------------
+
+## ADR-0014 — Daily multi-lane output strategy (A/B/C lanes; deterministic worker)
+Date: 2026-02-08
+Status: Accepted
+
+Context:
+- Daily volume (3 clips/day) is a core goal under strict budget constraints.
+- Full AI video generation for all clips is too expensive; we need a scalable, deterministic approach.
+- The Worker must remain deterministic and LLM-free; nondeterministic generation (if any) must stay outside the Worker.
+
+Decision:
+- CAF adopts a multi-lane production strategy for daily output:
+  - Lane A: `ai_video` (premium, expensive; video generation via external provider; gated by budget)
+  - Lane B: `image_motion` (cheap/scalable; seed frames + deterministic FFmpeg motion presets)
+  - Lane C: `template_remix` (near-free/scalable; deterministic FFmpeg recipes using existing clips/templates)
+- Default daily recommendation: A=0, B=1, C=2 (policy; adjustable via human plan brief).
+- Lanes are a contract-level concept used by Planner + Ops/Distribution; the core 3-plane invariant remains unchanged.
+
+Consequences:
+- Enables high output volume without violating determinism constraints.
+- Requires lane-aware planning and lane-specific expected artifact definitions.
+- Lane A introduces paid-provider integration and therefore must be budget-gated and explicitly opt-in.
+
+References:
+- docs/master.md
+- docs/system-requirements.md
+- docs/PR_PROJECT_PLAN.md
+- docs/architecture.md
+
+------------------------------------------------------------
+
+## ADR-0015 — Promotion toolkit is artifact-only (bundle-first; no platform posting required)
+Date: 2026-02-08
+Status: Accepted
+
+Context:
+- “Algorithm farming” requires repeatable promotion artifacts (copy/hashtags/schedule/checklists) while avoiding ToS-risky automation.
+- Many platforms (especially IG/TikTok) have unreliable or policy-sensitive automated posting.
+- The project must remain safe, deterministic, and portfolio-credible.
+
+Decision:
+- Promotion/publishing is implemented as an artifact-only toolkit by default:
+  - generate platform-ready export bundles and checklists
+  - do not require automated posting to be considered “complete”
+- Automated posting is OPTIONAL per platform and must be:
+  - explicit opt-in
+  - implemented only via official APIs
+  - credentials handled out-of-repo (Secret Manager in cloud later)
+
+Consequences:
+- Guarantees a usable workflow even when automation is infeasible.
+- Makes manual posting fast (<2 minutes/clip) using bundles only.
+- Keeps Ops/Distribution outside the factory invariant and avoids autonomy creep.
+
+References:
+- docs/PR_PROJECT_PLAN.md
+- docs/architecture.md
+
+------------------------------------------------------------
+
+## ADR-0016 — Hero cats are metadata (not agents)
+Date: 2026-02-08
+Status: Accepted
+
+Context:
+- Recurring characters improve hook clarity, recognition, and series continuity.
+- We want a structured “cast” without introducing story memory, lore engines, or agent autonomy.
+
+Decision:
+- Hero cats are represented as registry metadata only (e.g., `character_registry`), not as agents.
+- Planner may use hero cat metadata to generate copy/series tags and maintain continuity.
+- No persistent “character memory” system is introduced as a requirement.
+
+Consequences:
+- Improves content continuity while keeping the system simple and deterministic.
+- Requires schemas/validators for registries, but avoids complex stateful behavior.
+
+References:
+- docs/PR_PROJECT_PLAN.md
+- docs/master.md
+
+------------------------------------------------------------
+
+## ADR-0017 — LangGraph is planner-only (adapter; must not replace Ralph or Worker)
+Date: 2026-02-08
+Status: Accepted
+
+Context:
+- A LangGraph workflow demo is a desired portfolio signal.
+- Introducing frameworks must not undermine the 3-plane separation or turn frameworks into foundations.
+
+Decision:
+- LangGraph (and similar orchestration frameworks) may be used only within the Planner plane as an adapter/workflow wrapper.
+- LangGraph must NOT:
+  - replace Ralph Loop (control-plane reconciler)
+  - introduce agent-to-agent RPC across planes
+  - create non-file-bus coupling
+
+Consequences:
+- Enables a clear “Google demo” story while preserving architecture invariants.
+- Requires explicit boundaries and documentation to avoid framework creep.
+
+References:
+- docs/master.md
+- docs/architecture.md
+- docs/decisions.md (ADR-0001, ADR-0002)
+
+------------------------------------------------------------
+
+## ADR-0018 — Seedance (or any additional video provider) is optional and adapter-gated
+Date: 2026-02-08
+Status: Accepted
+
+Context:
+- Additional providers (e.g., Seedance) may be useful for Lane A experimentation.
+- The core system must not depend on optional providers.
+
+Decision:
+- Any additional video generation provider is:
+  - implemented behind the existing provider interface
+  - config-gated and optional
+  - not required for the core roadmap or local determinism guarantees
+- Worker remains deterministic and does not call providers.
+
+Consequences:
+- Keeps the roadmap flexible without adding mandatory dependencies.
+- Prevents provider choices from becoming architectural foundations.
+
+References:
+- docs/decisions.md (ADR-0006)
+- docs/PR_PROJECT_PLAN.md
+
+------------------------------------------------------------
+
+## ADR-0019 — Multilingual support via language maps (enable en + zh-Hans; defer es)
+Date: 2026-02-08
+Status: Accepted
+
+Context:
+- Captions carry most humor and meaning; English + Simplified Chinese are required early.
+- We want future China-platform readiness without multiplying operational overhead now.
+- We need extensibility to N languages without repeated schema redesigns.
+
+Decision:
+- Enable exactly two languages by default:
+  - English: `en`
+  - Simplified Chinese: `zh-Hans`
+- Contracts that carry user-facing copy should use language-map structures:
+  - e.g., `{ "en": "...", "zh-Hans": "..." }` or `{ "en": [...], "zh-Hans": [...] }`
+- Spanish (`es`) is explicitly deferred until there is evidence/need.
+
+Consequences:
+- Keeps early operations manageable while ensuring extensibility.
+- Requires schema patterns and bundle output conventions to support multiple languages.
+
+References:
+- docs/PR_PROJECT_PLAN.md
+- docs/master.md
+
+------------------------------------------------------------
+
+## ADR-0020 — Audio is represented as a plan + optional bundled assets (no music generation v1)
+Date: 2026-02-08
+Status: Accepted
+
+Context:
+- Audio strongly impacts Shorts/Reels/TikTok performance.
+- Automated trending-music selection and music generation are costly and/or risk policy issues.
+- We need a workflow that supports manual platform-native audio while remaining deterministic.
+
+Decision:
+- Audio is represented as:
+  1) an “audio plan” (strategy + notes), and
+  2) optional bundled audio assets (e.g., SFX stingers, optional VO tracks)
+- v1 explicitly excludes:
+  - music generation
+  - automated trending-audio selection
+  - scraping platform trends
+- If/when TTS is added later, voiceover assets are per-language (e.g., `voiceover.en.wav`, `voiceover.zh-Hans.wav`).
+
+Consequences:
+- Preserves determinism and avoids policy-sensitive automation.
+- Adds clarity to manual posting via bundle artifacts.
+- Encourages platform-native audio usage while keeping the system artifact-driven.
+
+References:
+- docs/PR_PROJECT_PLAN.md
+- docs/system-requirements.md
+

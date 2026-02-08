@@ -123,6 +123,7 @@ Rationale:
 - GCP phase work will be implemented using Gemini (not CODEX)
 - Docs present: README.md, AGENTS.md, docs/master.md, docs/decisions.md, docs/memory.md, docs/architecture.md
 - Git hooks installed via `scripts/install-githooks.sh`
+- Milestone briefs: `docs/briefs/MILESTONE-daily-v0.2.md`
 
 ------------------------------------------------------------
 

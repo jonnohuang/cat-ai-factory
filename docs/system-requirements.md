@@ -1,7 +1,7 @@
 # Cat AI Factory — System Requirements (Human-Readable)
 
 This document summarizes **what the system must do** (requirements) and **what it must never do**
-(non-goals / guardrails). It is reviewer-facing and intended to stay short.
+(non-goals / guardrails). It is reviewer-facing and intentionally short.
 
 Authority:
 - Binding invariants and rationale: `docs/master.md`
@@ -13,7 +13,7 @@ Authority:
 
 ## 1) System Summary
 
-Cat AI Factory is a **headless, file-contract, deterministic** pipeline for generating short-form videos.
+Cat AI Factory is a **headless, file-contract, deterministic** content factory for producing short-form videos.
 
 Core invariant:
 Planner (Clawdbot) → Control Plane (Ralph Loop) → Worker (FFmpeg)
@@ -31,7 +31,7 @@ Planner (Clawdbot) → Control Plane (Ralph Loop) → Worker (FFmpeg)
 - Planner MUST NOT write any other artifacts (no outputs, logs, assets).
 
 ### FR-02 — Deterministic orchestration
-- Ralph Loop MUST reconcile a single job deterministically.
+- Ralph Loop MUST reconcile a job deterministically.
 - Ralph Loop MUST write only state/log artifacts under `/sandbox/logs/<job_id>/**`.
 - Ralph Loop MUST NOT mutate `job.json`.
 - Ralph Loop MUST support retries without changing outputs.
@@ -45,35 +45,136 @@ Planner (Clawdbot) → Control Plane (Ralph Loop) → Worker (FFmpeg)
 ### FR-04 — Artifact lineage verification
 - The system MUST support deterministic verification that required artifacts exist and are consistent:
   - job → outputs → logs/state (lineage)
-- Determinism checking across environments is OPTIONAL (strict-mode / harness-only).
+- Determinism checking across environments is OPTIONAL (harness-only).
 
 ### FR-05 — Planner autonomy target
-- The long-term target is **fully autonomous planning** (no human-in-loop planner).
+- The long-term target is **autonomous planning** (no human-in-loop planner).
 - Human approval gates may exist for nondeterministic external actions (e.g., publishing), not for core planning.
 
 ### FR-06 — LLM provider strategy (phased)
-- LOCAL (PR5): Planner calls Gemini via **Google AI Studio API key**.
+- LOCAL: Planner calls Gemini via **Google AI Studio API key**.
   - API key injected at runtime; never committed.
-  - No OAuth required for PR5 model calls.
+  - No OAuth required for local model calls.
 - CLOUD (later): The final portfolio state MUST include **Vertex AI** as a first-class provider option.
 
-### FR-07 — Seed image generation capability (phased)
-- Planner SHOULD be able to generate or request seed images for the pipeline.
-- In PR5: this may be a stub/interface (or AI Studio implementation), but MUST remain outside the Worker.
-- In cloud phase: Vertex AI image generation may be added as a provider option.
-- Any image generation is nondeterministic and MUST NOT be implemented inside the Worker.
+### FR-07 — Style selection (manifest + deterministic best-effort)
+- The system MUST support a style reference mechanism that allows a human to provide preferred style examples.
+- The canonical local mechanism is a **style manifest** under `/sandbox/assets/manifest.json`.
+- Planner MAY read the manifest to select a style deterministically (best-effort), without requiring schema changes.
+- The system MUST NOT overwrite an existing manifest file.
+- Remote adapters (e.g., Telegram) MAY update the manifest only via explicit user intent (never implicitly).
 
-### FR-08 — Remote instruction + status viewing (adapter)
-- A mobile/remote adapter (Telegram recommended) MAY be added later.
-- Telegram adapter MUST:
-  - write requests/instructions into `/sandbox/inbox/`
-  - read status from `/sandbox/logs/<job_id>/state.json`
-  - NOT bypass the file-bus
-  - NOT mutate outputs
+### FR-08 — Multi-lane daily output strategy (required)
+The system MUST support multiple production lanes for daily output.
 
-### FR-09 — Ops/Distribution (outside factory)
-- Ops/Distribution automation (e.g., n8n, publishing adapters) MUST remain outside core planes.
-- It may consume events/artifacts and write derived dist artifacts, but MUST NOT modify worker outputs.
+- Lane A: `ai_video` (premium / expensive)
+  - Video generation via cloud providers (Vertex AI) is allowed in this lane only.
+- Lane B: `image_motion` (cheap / scalable)
+  - 1–3 seed frames + deterministic FFmpeg motion presets.
+- Lane C: `template_remix` (near-free / scalable)
+  - Uses existing templates/clips + deterministic FFmpeg recipes.
+
+Constraints:
+- Worker MUST remain deterministic in all lanes.
+- Planner MAY choose lane mix based on a daily plan brief and budget guardrails.
+
+### FR-09 — Telegram = daily plan brief ingress (required)
+Telegram is the human-facing ingress for daily planning and approvals.
+
+- Telegram MUST remain an adapter:
+  - writes requests into `/sandbox/inbox/`
+  - reads status from `/sandbox/logs/<job_id>/state.json`
+  - reads publish status from `/sandbox/dist_artifacts/<job_id>/<platform>.state.json`
+- Telegram MUST NOT bypass the file-bus.
+- Telegram MUST NOT mutate worker outputs or `job.json`.
+
+### FR-10 — Ops/Distribution is outside the factory (required)
+Ops/Distribution automation (e.g., runners, publisher adapters, bundles) MUST remain outside the three-plane factory.
+
+It MAY:
+- read factory outputs under `/sandbox/output/<job_id>/`
+- write derived artifacts under `/sandbox/dist_artifacts/<job_id>/`
+
+It MUST NOT:
+- modify worker outputs
+- modify `job.json`
+
+### FR-11 — Approval-gated distribution (required)
+- Distribution MUST be approval-gated by default via inbox artifacts:
+  - `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`
+- A deterministic local distribution runner MUST be able to:
+  - poll file-bus artifacts
+  - detect approvals
+  - invoke publisher adapters
+  - remain idempotent
+
+### FR-12 — Publisher adapter interface (bundle-first; required pre-cloud)
+Before cloud migration, the system MUST support a publisher adapter interface and platform modules for:
+
+- YouTube
+- Instagram
+- TikTok
+- X
+
+Constraints:
+- v1 publisher adapters MUST be **bundle-first**:
+  - produce export bundles + copy artifacts + posting checklists
+  - allow manual posting in <2 minutes per clip
+- Upload automation is OPTIONAL per platform.
+- No credentials committed to repo.
+- No browser automation.
+
+### FR-13 — Promotion toolkit is artifacts-only (required)
+The system MUST support “promotion automation” as artifact generation only:
+
+- schedule windows
+- platform caption variants
+- hashtag variants
+- pinned comment suggestions (where applicable)
+- export bundles per platform
+
+Non-goals:
+- no posting automation required
+- no engagement automation
+- no scraping analytics
+
+### FR-14 — Hero cats are metadata (required)
+The system MUST support a small “hero cat cast” registry.
+
+- Hero cats are metadata, NOT agents.
+- Planner uses character metadata for copy/series continuity.
+- No story-memory engine is required.
+
+### FR-15 — LangGraph demo requirement (planner-only; required)
+The project MUST include a LangGraph workflow demo for recruiter signaling.
+
+Constraints:
+- LangGraph MUST be planner-plane only (workflow adapter).
+- LangGraph MUST NOT replace Ralph Loop or the Worker.
+
+### FR-16 — Multilingual support (EN + zh-Hans now; extensible)
+The system MUST support multilingual copy for captions and platform text.
+
+- Exactly two languages enabled initially:
+  - English: `en`
+  - Simplified Chinese: `zh-Hans`
+- Contracts MUST support N languages via language-map structures.
+- Spanish (`es`) is explicitly deferred.
+
+### FR-17 — Audio included in export bundles (required)
+Audio is part of the posting workflow.
+
+- Every clip export bundle MUST include:
+  - `audio_plan.json`
+  - `audio_notes.txt`
+- Audio is represented as:
+  1) audio strategy metadata, and
+  2) optional bundled audio assets (SFX stingers, optional voiceover track)
+
+Non-goals (v1):
+- no music generation
+- no automated trending-music selection
+- no scraping platform trends
 
 ------------------------------------------------------------
 
@@ -86,6 +187,7 @@ Planner (Clawdbot) → Control Plane (Ralph Loop) → Worker (FFmpeg)
 ### NFR-02 — Idempotency and retry-safety
 - Control Plane retries MUST NOT introduce duplicate side effects.
 - Worker reruns MUST be safe and overwrite outputs atomically (as designed in v0.1).
+- Distribution publishing MUST be idempotent per `{job_id, platform}`.
 
 ### NFR-03 — Portability
 - Local execution MUST work on a personal Mac via Docker sandboxing.
@@ -143,4 +245,5 @@ Budget guardrails are required to prevent runaway autonomous costs.
 - No autonomous financial transactions.
 - No secrets in Git; no secrets printed in logs.
 - No schema changes unless explicitly required (ADR required if semantics change).
-
+- No engagement automation (likes/comments/follows).
+- No scraping analytics.

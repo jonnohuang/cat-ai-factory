@@ -1,74 +1,120 @@
 # GUARDRAILS — Cat AI Factory (Prompt Brief)
 
 This is a **non-authoritative** guardrail brief for onboarding and prompting.
-Authoritative sources: `docs/master.md`, `docs/decisions.md`, `AGENTS.md`.
+
+Authoritative sources:
+- Invariants & rationale: `docs/master.md`
+- Binding decisions (ADRs): `docs/decisions.md`
+- Agent permissions: `AGENTS.md`
+- Diagrams + repo mapping: `docs/architecture.md`
 
 ------------------------------------------------------------
 
 ## Hard invariants (do not violate)
 
-### Three-plane separation
+### 1) Three-plane separation (absolute)
 - Planner produces contracts only.
 - Control Plane orchestrates deterministically.
 - Worker executes deterministically (no LLM usage).
 
-### Files are the bus
+No plane may “borrow” responsibilities from another plane.
+
+### 2) Files are the bus
 - No shared memory.
 - No agent-to-agent RPC.
 - Coordination happens through explicit artifacts on disk.
+
+### 3) Determinism is enforced by boundaries
+- Only the Planner is nondeterministic.
+- Control Plane + Worker must be retry-safe and deterministic.
+
+------------------------------------------------------------
+
+## Strict write boundaries (absolute)
+
+### Planner (Clawdbot)
+- Allowed writes: `/sandbox/jobs/*.job.json`
+- Forbidden writes: everything else
+
+### Control Plane (Ralph Loop)
+- Allowed writes: `/sandbox/logs/<job_id>/**`
+- Forbidden writes: `/sandbox/jobs/**`, `/sandbox/output/**`, `/sandbox/assets/**`
+
+### Worker (FFmpeg renderer)
+- Allowed writes: `/sandbox/output/<job_id>/**`
+- Forbidden writes: `/sandbox/jobs/**`, `/sandbox/assets/**`
+- (Worker logs may be captured under `/sandbox/logs/<job_id>/**` via redirected stdout/stderr,
+  but the Worker itself must not treat logs as a coordination channel.)
+
+### Ops/Distribution (post-factory)
+- Allowed writes: `/sandbox/dist_artifacts/<job_id>/**` (derived artifacts only)
+- Forbidden writes: `/sandbox/output/<job_id>/**`, `/sandbox/jobs/**`
 
 ------------------------------------------------------------
 
 ## Strict prohibitions
 
-### Planner (Clawdbot)
-- **No side effects.**
-- **No artifact writes** except `job.json` contracts in `/sandbox/jobs/`.
-- Must not modify outputs, logs, or assets.
+### Planner autonomy limits
+- Planner MUST NOT write outputs, logs, assets, dist artifacts, or state.
+- Planner MUST NOT “self-execute” worker actions.
+- Planner MUST NOT embed credentials or secrets into contracts.
 
-### RAG
-- **Planner-only.**
-- RAG must not move into orchestrator or worker.
+### RAG (planner-only)
+- RAG is planner-only.
+- RAG MUST NOT move into the Control Plane or Worker.
 
 ### Worker
-- **No LLM usage.**
-- Deterministic and idempotent rendering only.
+- Worker MUST NOT call any LLMs or external generation APIs.
+- Worker MUST remain deterministic and idempotent.
 
-### Verification / QC agents
-- **Deterministic, read-only evaluation only.**
-- May emit logs/results, but must not modify existing artifacts (jobs/assets/outputs).
+### Verification / QC
+- QC MUST be deterministic and read-only.
+- QC MAY emit logs/results, but MUST NOT modify jobs/assets/outputs.
+- QC MUST NOT “fix” artifacts.
 
-### Safety / social agents
-- **Advisory only.**
+### Safety / social advisors
+- Advisory only.
 - Cannot modify artifacts.
-- Cannot bypass orchestrator authority.
+- Cannot bypass approval gates or orchestrator authority.
 
 ------------------------------------------------------------
 
 ## Security constraints (non-negotiable)
 
 - Containers write only to `/sandbox`.
-- Repo/source mounted read-only.
-- Loopback-only gateway + token auth.
-- No secrets committed (use `.env`, not Git).
-
+- Repo/source is mounted read-only.
+- Loopback-only gateway + token auth (defense-in-depth).
+- Secrets must be runtime-injected only:
+  - local: `.env` / secret mount
+  - cloud: Secret Manager
+- No secrets committed to Git.
+- No secrets printed in logs (redact aggressively).
 
 ------------------------------------------------------------
 
 ## Ops/Distribution (Outside the Factory)
 
-Ops/Distribution is an external automation layer (e.g., n8n + publishing adapters).
-It is allowed to consume events and artifacts, but it must remain outside the core factory planes.
+Ops/Distribution is required pre-cloud, but it is still outside the factory.
 
 Hard constraints:
-- Ops/Distribution must NOT replace Clawdbot (Planner) or Ralph Loop (Control Plane).
-- Ops/Distribution must NOT mutate `job.json`.
-- Ops/Distribution must NOT modify worker outputs under:
+- Ops/Distribution MUST NOT replace Clawdbot (Planner) or Ralph Loop (Control Plane).
+- Ops/Distribution MUST NOT mutate `job.json`.
+- Ops/Distribution MUST NOT modify worker outputs under:
   - `/sandbox/output/<job_id>/final.mp4`
   - `/sandbox/output/<job_id>/final.srt`
   - `/sandbox/output/<job_id>/result.json`
-- Platform-specific formatting must emit derived dist artifacts:
-  - `sandbox/dist_artifacts/<job_id>/<platform>.json`
-- Publishing must be gated by human approval by default.
-- Publishing must be idempotent via `{job_id, platform}` keys (store platform_post_id/post_url).
+
+Platform-specific formatting MUST emit derived dist artifacts only:
+- `/sandbox/dist_artifacts/<job_id>/<platform>.json`
+- `/sandbox/dist_artifacts/<job_id>/<platform>.state.json`
+
+Publishing must be:
+- human-approved by default
+- idempotent via `{job_id, platform}` keys
+
+------------------------------------------------------------
+
+## If a task conflicts with these rules
+
+Stop immediately and escalate to ARCH for an ADR decision.
 

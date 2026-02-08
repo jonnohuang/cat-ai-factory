@@ -3,7 +3,7 @@
 Cat AI Factory is a headless, deterministic, file-contract agent system for generating short-form videos.
 It is designed to demonstrate production-grade agent operationalization: clear contracts, strict boundaries, and infra-enforced guardrails.
 
-This page is explanatory. Binding architectural changes must be recorded in docs/decisions.md.
+This page is explanatory. Binding architectural changes must be recorded in `docs/decisions.md`.
 
 ------------------------------------------------------------
 
@@ -28,8 +28,10 @@ This page is explanatory. Binding architectural changes must be recorded in docs
   - Read-only evaluation of contracts and outputs
   - May emit logs/results, but do not modify artifacts
 
-- Safety / social agents are advisory-only:
-  - Cannot modify artifacts or bypass orchestration authority
+- Ops/Distribution is outside the factory:
+  - External, nondeterministic workflows (approval, notifications, publishing)
+  - Must not mutate worker outputs
+  - Must emit derived distribution artifacts only
 
 ------------------------------------------------------------
 
@@ -82,14 +84,6 @@ flowchart TB
   JOB --> VERIFY
   OUTDIR --> VERIFY
   VERIFY -->|writes logs only| LOGS
-
-  subgraph S[Safety / Social (advisory-only; no writes)]
-    SAFETY[Safety Advisor]
-    SOCIAL[Social/Post Advisor]
-  end
-
-  ORCH --> SAFETY
-  ORCH --> SOCIAL
 
 Notes:
 - Canonical output/log directories are keyed by job_id derived from the job filename stem (<job-file>). This is the filesystem bus identity.
@@ -161,43 +155,66 @@ flowchart TB
     ORCH --> LOGS
   end
 
-  %% Event + status surfaces (cloud mapping)
-  subgraph CLOUD[Cloud Surfaces (v0.2+ mapping)]
+  %% Local derived artifacts (binding)
+  subgraph LOCAL_DIST[Local Derived Dist Artifacts (binding)]
+    INBOX[/sandbox/inbox/*.json\n(ingress + approvals)/]
+    DISTROOT[/sandbox/dist_artifacts/<job_id>/]
+    PAYLOAD[/sandbox/dist_artifacts/<job_id>/<platform>.json/]
+    STATE[/sandbox/dist_artifacts/<job_id>/<platform>.state.json/]
+  end
+
+  %% Cloud mapping (later)
+  subgraph CLOUD[Cloud Mapping (later)]
     GCS[(GCS\nimmutable artifacts)]
-    FS[(Firestore\njobs/{job_id}\n+ publishes/{job_id})]
+    FS[(Firestore\njobs/{job_id}\n+ publishes/{platform})]
     PS[(Pub/Sub\njob.completed, job.failed)]
   end
 
+  %% Core → local dist layer
+  OUTDIR -->|read-only| DISTROOT
+  LOGS -->|read-only| DISTROOT
+  INBOX -->|approval signals| DISTROOT
+
+  %% Local dist layer semantics
+  DISTROOT --> PAYLOAD
+  DISTROOT --> STATE
+
+  %% Cloud mapping (optional later)
   OUTDIR -->|sync/upload| GCS
   LOGS -->|sync/upload| GCS
-  ORCH -->|update status| FS
-  ORCH -->|emit event| PS
 
-  %% Ops/Distribution (outside factory)
+  %% Ops/Distribution layer (outside factory)
   subgraph OPS[Ops/Distribution (Outside the Factory)]
-    N8N[n8n\n(triggers + notify + approval)]
-    APPROVE[Human Approval Gate\n(Slack/Discord/Email)]
-    PUBLISH[Publisher Adapter\n(Cloud Run)\n(platform API calls)]
-    DIST[sandbox/dist_artifacts/<job_id>/<platform>.json\n(dist artifacts; derived only)/]
+    N8N[n8n / cron / scripts\n(triggers + notify + approval)]
+    APPROVE[Human Approval Gate\n(Telegram/Slack/Email)]
+    RUNNER[Local Distribution Runner\n(polls artifacts; deterministic)]
+    PUBLISH[Publisher Adapters\n(bundle-first; platform-specific)]
   end
 
-  PS --> N8N
-  FS --> N8N
-  N8N --> APPROVE
-  APPROVE -->|approved| PUBLISH
+  %% Local orchestration path (no always-on service required)
+  INBOX --> APPROVE
+  APPROVE -->|approved| RUNNER
+  RUNNER -->|invokes| PUBLISH
 
-  GCS -->|read-only artifacts| PUBLISH
-  PUBLISH -->|write dist artifacts| DIST
-  PUBLISH -->|store outcomes + idempotency| FS
+  %% Publisher outputs
+  OUTDIR -->|read-only| PUBLISH
+  PUBLISH -->|writes derived artifacts only| PAYLOAD
+  PUBLISH -->|writes idempotency state| STATE
 
   %% Guardrails (explicit)
-  N8N -. MUST NOT edit .-> OUTDIR
+  RUNNER -. MUST NOT edit .-> OUTDIR
   PUBLISH -. MUST NOT edit .-> OUTDIR
+  RUNNER -. MUST NOT edit .-> JOB
+  PUBLISH -. MUST NOT edit .-> JOB
 
 Notes:
-- Ops/Distribution may be nondeterministic (external APIs). It must remain outside core planes.
-- n8n is not a replacement for Clawdbot or Ralph Loop.
-- Platform formatting must produce new dist artifacts under sandbox/dist_artifacts/<job_id>/...; worker outputs are immutable.
+- Ops/Distribution is required before cloud migration: it provides real end-to-end workflows while preserving factory determinism.
+- Publisher adapters are bundle-first by default:
+  - they produce export bundles + checklists + copy artifacts
+  - upload automation is optional per platform (YouTube first)
+- Idempotency authority for publishing is:
+  - `/sandbox/dist_artifacts/<job_id>/<platform>.state.json`
+  - keyed by `{job_id, platform}`
 
 ------------------------------------------------------------
 
@@ -214,7 +231,9 @@ Notes:
 | Verification | Lineage verifier (QC) | repo/tools/lineage_verify.py | (writes logs only when invoked) | CLI tool | Deterministic read-only verification of required artifacts |
 | Verification | Job validator (QC) | repo/tools/validate_job.py | (writes logs only when invoked) | CLI tool | Deterministic validation of job.json against schema |
 | Verification | QC verifier (QC tool) | repo/tools/qc_verify.py | /sandbox/logs/<job_id>/qc/ | CLI tool | Deterministic, read-only QC summary: composes schema validation + lineage + output conformance |
-| Ingress (optional) | Telegram bridge | repo/tools/telegram_bridge.py | /sandbox/inbox/ | Instruction artifacts | Ingress only; no execution authority. Reads /sandbox/logs/<job_id>/state.json for status checks. |
+| Ingress (optional) | Telegram bridge | repo/tools/telegram_bridge.py | /sandbox/inbox/ | Instruction artifacts | Ingress only; no execution authority. Reads /sandbox/logs/<job_id>/state.json and /sandbox/dist_artifacts/<job_id>/<platform>.state.json for status checks. |
+| Ops/Distribution | Publisher adapters | repo/tools/publish_*.py | /sandbox/dist_artifacts/<job_id>/ | Derived artifacts only | Bundle-first; upload automation optional and opt-in |
+| Ops/Distribution | Local dist runner | repo/tools/dist_runner.py | /sandbox/dist_artifacts/<job_id>/ | CLI tool | Deterministic poller that invokes publisher adapters based on approval artifacts |
 | Contracts | Job schema | repo/shared/job.schema.json | N/A | JSON Schema | Central contract definition for job.json |
 
 ------------------------------------------------------------

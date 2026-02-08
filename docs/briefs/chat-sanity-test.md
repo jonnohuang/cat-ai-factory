@@ -8,7 +8,7 @@ Paste this into the Gemini extension Chat:
 Step 2: Diagnosis (Agent Mode: ON)
 Once it confirms, turn on Agent Mode and use this prompt:
 
-"Analyze @repo/services/planner/planner_cli.py. We need to normalize the provider interface so that the CLI doesn't care if it's using Gemini AI Studio or Vertex AI. Propose a plan to move any provider-specific logic out of the main CLI and into @repo/services/planner/providers/base.py or a specific provider file. Do not write yet, just propose the plan."
+"Read the files in the docs folder except briefs subfolder.  Read the AGENTS.md and README.md.  Confirm acknlowedge and wait"
 
 I have just bootstrapped you with the BASE and CODEX rules. Before we proceed with PR6.1, answer the following to verify your alignment:
 
@@ -30,3 +30,5 @@ Q2 Answer: It should name /sandbox/logs/cat-dance/qc/.
 Q3 Answer: It should explicitly say it strips .job.json to get cat-dance.
 
 Q4 Answer: It should say "No," because PR6.1 is an additive reporting integration. -->
+
+I will be sending you some files to bring you up to speed.  Confirm receipt and wait.

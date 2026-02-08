@@ -1,205 +1,260 @@
 # Agent Operating Guide
 
 This document defines the responsibilities, permissions, and operational boundaries
-of each agent in the Cat AI Factory system.
+of each agent and adapter in the Cat AI Factory system.
 
-The design mirrors production ML and data platforms: planning, orchestration,
-and execution are strictly separated and enforced by infrastructure—not prompts.
+The design mirrors production ML/data platforms: planning, orchestration, and execution
+are strictly separated and enforced by infrastructure—not prompts.
+
+This doc is explanatory. Binding architectural changes must be recorded in `docs/decisions.md`.
 
 ------------------------------------------------------------
 
 ## Core Rule
 
-> **Agents communicate ONLY via deterministic file-based contracts.**
+> **All coordination happens ONLY via deterministic file-based artifacts (“files-as-bus”).**
 
 There is:
 - no implicit shared state
 - no UI-driven coordination
-- no direct agent-to-agent RPC
+- no agent-to-agent RPC
+- no hidden background services required for correctness
 
-All coordination occurs through explicit artifacts written to disk. This enforces
-reproducibility, debuggability, and clear failure modes.
+All components communicate through explicit artifacts written to disk. This enforces
+reproducibility, debuggability, and clean failure modes.
 
 ------------------------------------------------------------
 
 ## Non-Negotiable Architecture (Three Planes)
 
 - **Planner (Clawdbot)**
-  - LLM-driven but constrained
-  - Produces versioned, validated `job.json`
+  - LLM-driven (nondeterministic) but constrained
+  - Produces versioned, validated `job.json` contracts
   - **No side effects, no artifact writes** (except job contracts)
 
 - **Control Plane (Ralph Loop)**
   - Deterministic reconciler/state machine
   - Coordinates execution, retries, audit logging, artifact lineage
+  - Writes logs/state only
 
 - **Worker (Renderer)**
   - Deterministic, CPU-bound execution (FFmpeg)
   - No LLM usage
   - Idempotent and retry-safe
 
-Frameworks (LangGraph, etc.), RAG, and auxiliary agents must be treated as **adapters**
+Frameworks (LangGraph, etc.), RAG, and auxiliary “agents” must be treated as **adapters**
 that preserve these plane boundaries. RAG is **planner-only**.
 
 ------------------------------------------------------------
 
-## Agents
+## Canonical Runtime Paths (Write Boundaries)
 
-### 🦞 Clawdbot — Planner Agent
+- **Planner writes only**
+  - `sandbox/jobs/*.job.json`
+
+- **Control Plane (Orchestrator) writes only**
+  - `sandbox/logs/<job_id>/**`
+
+- **Worker writes only**
+  - `sandbox/output/<job_id>/**`
+
+- **Ingress adapters write only**
+  - `sandbox/inbox/*.json`
+
+- **Ops/Distribution writes only derived artifacts**
+  - `sandbox/dist_artifacts/<job_id>/**`
+
+Hard rule:
+- No component may modify `job.json` after it is written.
+- No component outside the Worker may modify `sandbox/output/<job_id>/**`.
+
+------------------------------------------------------------
+
+## Components
+
+### 🦞 Clawdbot — Planner Agent (Planner Plane)
 
 **Purpose**  
 Translate high-level intent into structured, machine-readable work contracts.
 
 **Responsibilities**
-- Interpret product intent (`/sandbox/PRD.json`) and external instructions
-- Generate versioned `job.json` contracts
-- Validate structure and required fields
+- Interpret product intent (`sandbox/PRD.json`) + inbox instruction artifacts
+- Generate schema-valid `job.json` contracts
+- Validate contracts before writing (fail-loud)
 
 **Inputs**
-- `/sandbox/PRD.json`
-- `/sandbox/inbox/*.json` (optional external instructions)
-- Optional planner-only context (e.g., RAG)
+- `sandbox/PRD.json`
+- `sandbox/inbox/*.json` (optional external instructions)
+- Optional planner-only context (e.g., RAG, style manifest read-only)
 
 **Outputs**
-- `/sandbox/jobs/*.job.json`
+- `sandbox/jobs/<job_id>.job.json`
 
 **Permissions**
 - Read-only access to repository source code
-- Write access limited to `/sandbox/jobs`
+- Write access limited to `sandbox/jobs/`
 
 **Explicitly Disallowed**
-- File writes outside `/sandbox/jobs` (planner produces contracts only)
-- Modifying assets, outputs, or logs
-- Network access beyond configured LLM/RAG endpoints (if enabled)
-- Financial, purchasing, or account-level actions
+- Writing anywhere outside `sandbox/jobs/`
+- Mutating existing assets, outputs, logs, or dist artifacts
+- Implementing control-plane logic (no orchestration responsibilities)
+- Any worker execution or FFmpeg invocation
 
 ------------------------------------------------------------
 
-### 🧠 Ralph Loop — Orchestrator Agent (Control Plane)
+### 🧠 Ralph Loop — Orchestrator (Control Plane)
 
 **Purpose**  
-Act as the control plane, reconciling desired state with observed state and coordinating execution.
+Act as the deterministic control plane: reconcile desired state with observed state.
 
 **Responsibilities**
 - Interpret `job.json` contracts
-- Decide which deterministic execution steps should run and in what order
-- Enforce sequencing, retries, and (future) approval gates
-- Produce audit-friendly status/log outputs (as artifacts, not implicit state)
+- Determine which deterministic steps should run (and in what order)
+- Enforce retries and idempotency
+- Produce audit-friendly state/log artifacts
 
 **Inputs**
-- `/sandbox/jobs/*.job.json`
-- Observed artifacts (e.g., `/sandbox/output/`, `/sandbox/logs/`)
+- `sandbox/jobs/*.job.json`
+- Observed artifacts in:
+  - `sandbox/output/<job_id>/**`
+  - `sandbox/logs/<job_id>/**`
 
 **Outputs**
-- Execution decisions
-- Status summaries and transitions (as artifacts/logs, as implemented)
+- Logs/state only under:
+  - `sandbox/logs/<job_id>/**`
 
-**Design Note**  
-Ralph Loop implements a **control-loop / reconciler pattern**. It compares desired
-state (job contracts) with observed state and coordinates execution accordingly.
-It does not embed CPU-bound rendering or LLM planning inside the control plane.
+**Constraints**
+- MUST NOT mutate `job.json`
+- MUST NOT write worker outputs
+- Deterministic behavior only (no LLM calls)
 
 ------------------------------------------------------------
 
-### 🛠 Worker — Renderer (Data Plane)
+### 🛠 Worker — Renderer (FFmpeg) (Worker Plane / Data Plane)
 
 **Purpose**  
 Execute deterministic, CPU-bound transformations to produce final artifacts.
 
 **Responsibilities**
-- Render videos and captions from job contracts
-- Perform no planning or decision-making
+- Render videos/captions deterministically from:
+  - `job.json` + `sandbox/assets/**`
+- Write stable outputs and run metadata
 
 **Inputs**
-- `/sandbox/jobs/*.job.json`
-- `/sandbox/assets/*`
+- `sandbox/jobs/*.job.json`
+- `sandbox/assets/**`
 
 **Outputs**
-- `/sandbox/output/*.mp4` (or per-job output directory as defined)
-- `/sandbox/output/*.srt`
-- `/sandbox/logs/*` (run logs)
+- `sandbox/output/<job_id>/final.mp4`
+- `sandbox/output/<job_id>/final.srt` (if applicable)
+- `sandbox/output/<job_id>/result.json`
 
 **Characteristics**
 - No LLM access
 - Fully deterministic and idempotent
-- CPU-bound execution
 - Safe to retry without side effects
 
 ------------------------------------------------------------
 
-### ✅ Verification / QC Agent — Deterministic Evaluator (Optional)
+### ✅ QC Verifier — Deterministic, Read-Only Evaluator (QC / Verification)
 
 **Purpose**  
-Provide deterministic, read-only quality control over contracts and outputs.
+Provide deterministic quality control over contracts and produced artifacts.
 
 **Responsibilities**
-- Validate `job.json` against schema and required fields
-- Verify output conformance (e.g., presence, structure, checksums/tolerances if defined)
-- Emit results as logs/summary artifacts
+- Validate `job.json` (schema / required fields)
+- Verify artifact lineage and output conformance
+- Emit a summary + logs for auditing and human review
 
 **Inputs**
-- `/sandbox/jobs/*.job.json`
-- `/sandbox/output/*`
-- `/sandbox/logs/*`
+- `sandbox/jobs/*.job.json`
+- `sandbox/output/<job_id>/**`
+- `sandbox/logs/<job_id>/**`
 
 **Outputs**
-- QC results as logs or summary files under `/sandbox/logs/` (or equivalent)
+- Writes logs/summary only under:
+  - `sandbox/logs/<job_id>/qc/**` (or equivalent QC subdir)
 
 **Constraints**
-- Deterministic only (no LLM usage required)
-- **Read-only evaluation:** must not modify existing job/assets/output artifacts
+- Deterministic only (no LLM usage)
+- Read-only evaluation: MUST NOT modify existing artifacts (jobs/assets/outputs)
 
 ------------------------------------------------------------
 
-### 🛡 Safety / Social Advisors — Advisory Only (Optional)
+## Adapters (External Interfaces)
 
-**Purpose**  
-Provide advisory signals (risk flags, posting suggestions) without execution authority.
+Adapters are *not* authorities. They translate between external systems and the file-bus.
 
-**Responsibilities**
-- Flag risky actions for explicit human review (safety)
-- Suggest captions/metadata/posting plans (social)
+### 📬 Telegram Bridge — Ingress + Status (Adapter)
 
-**Constraints**
-- **No artifact mutation authority**
-- No bypass of orchestrator approvals
-- No direct invocation of worker or side effects
-
-These advisors exist to support safe operation and portfolio demonstration—not to extend autonomy.
-
-------------------------------------------------------------
-
-### 📬 Telegram Bridge — Message Ingress (Optional)
-
-**Purpose**  
-Provide a controlled external input channel for human instructions.
+**Purpose**
+- Provide a mobile supervisor surface (human-in-the-loop)
+- Write instruction artifacts into the file-bus and read status back
 
 **Responsibilities**
-- Receive external text messages
-- Translate messages into file-based instruction artifacts
+- Write inbox artifacts under `sandbox/inbox/`
+- Respond to the authorized user with:
+  - command acknowledgment
+  - status summaries (read-only)
 
-**Inputs**
-- Telegram messages
-
-**Outputs**
-- `/sandbox/inbox/*.json`
+**Typical Commands (implemented as inbox artifacts)**
+- `/plan <prompt>` → `sandbox/inbox/plan-<nonce>.json`
+- `/approve <job_id> [platform]` → `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`
+- `/reject <job_id> [platform] [reason]` → `sandbox/inbox/reject-<job_id>-<platform>-<nonce>.json`
+- `/status <job_id> [platform]` → reads:
+  - `sandbox/logs/<job_id>/state.json`
+  - `sandbox/dist_artifacts/<job_id>/<platform>.state.json` (if present)
+- `/help` → prints supported commands
 
 **Security Constraints**
-- No write access outside `/sandbox`
-- No direct agent invocation
-- No execution authority
+- Authorized sender check required (e.g., `TELEGRAM_ALLOWED_USER_ID`)
+- MUST NOT invoke worker or orchestrator directly
+- MUST NOT modify outputs or dist artifacts
+- MUST NOT overwrite or delete any existing files
+
+------------------------------------------------------------
+
+## Ops/Distribution (Outside the Factory)
+
+Ops/Distribution performs nondeterministic external work (platform posting, approvals, notifications).
+It must remain **outside** the core factory invariant (Planner / Control Plane / Worker).
+
+**Responsibilities**
+- Consume immutable outputs + plans
+- Produce derived artifacts for posting and/or publishing
+- Maintain idempotency keyed by `{job_id, platform}`
+
+**Writes**
+- Derived artifacts only under:
+  - `sandbox/dist_artifacts/<job_id>/**`
+
+**Idempotency Authority (Local)**
+- Publish state file:
+  - `sandbox/dist_artifacts/<job_id>/<platform>.state.json`
+- A terminal state (e.g., POSTED/PUBLISHED) prevents duplicate posting.
+
+**Approval Gate (Local)**
+- Approval artifacts arrive via inbox:
+  - `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`
+- Default posture: human approval required before posting/publishing.
+
+**Hard Constraints**
+- MUST NOT mutate `job.json`
+- MUST NOT modify `sandbox/output/<job_id>/**`
+- MUST NOT bypass file-bus semantics
+- Credentials/secrets must never be committed to Git or written to artifacts
 
 ------------------------------------------------------------
 
 ## Safety & Guardrails
 
-- All write access confined to `/sandbox`
+- All write access confined to `sandbox/**` (plus repo edits during development PRs)
 - No agent can modify source code at runtime
 - No autonomous financial transactions
-- Explicit human confirmation required for sensitive or destructive actions
+- External side effects must be approval-gated by default and idempotent
 
-These constraints are enforced by container boundaries and filesystem permissions,
-not by agent prompts.
+These constraints are enforced by container boundaries, filesystem permissions, and process discipline,
+not by prompts.
 
 ------------------------------------------------------------
 
@@ -209,17 +264,6 @@ not by agent prompts.
 - Fail loud
 - Never partially mutate state
 
-If required inputs are missing or invalid, the pipeline exits immediately without
-producing side effects or partial artifacts.
-
-------------------------------------------------------------
-
-## Design Rationale
-
-This agent model reflects production ML and data platforms where:
-- planning ≠ orchestration ≠ execution
-- LLMs are advisory components, not authorities
-- infrastructure enforces correctness, safety, and boundaries
-
-The goal is predictability and operability, not autonomous behavior.
+If required inputs are missing or invalid, the system exits immediately without producing
+partial or ambiguous artifacts.
 

@@ -1,42 +1,56 @@
 # Cat AI Factory 🐱🎬
-A headless, agent-driven AI content factory for short-form video generation
+A headless, agent-driven content factory for short-form vertical video (Shorts/Reels/TikTok)
 
-**Start here:** `docs/architecture.md` (diagram-first architecture)
+**Start here:** `docs/architecture.md` (diagram-first)
 
 Key docs:
 - `docs/system-requirements.md` (what must be true)
 - `docs/PR_PROJECT_PLAN.md` (roadmap / PR sizing)
 - `docs/decisions.md` (binding ADRs)
+- `docs/briefs/MILESTONE-daily-v0.2.md` (daily output workflow)
 
 ------------------------------------------------------------
 
 ## Overview
 
-Cat AI Factory is a local-first, headless agent system that generates short-form vertical videos (Reels / Shorts) through a reproducible pipeline.
+Cat AI Factory (CAF) is a local-first, headless agent system that generates short-form vertical videos through a reproducible, contract-driven pipeline.
 
-The project is intentionally designed as an **infrastructure-focused system**, demonstrating how AI agents can be operationalized safely and deterministically rather than as UI-driven demos.
+This is not a prompt demo or a UI chatbot.
+
+CAF is intentionally designed as an **infrastructure-focused system** that demonstrates how AI agents can be operationalized safely and deterministically, using production-style patterns:
+
+- strict separation of responsibilities
+- explicit file contracts
+- idempotent execution
+- artifact lineage + audit logs
+- safe boundaries for nondeterministic work (LLMs, publishing)
 
 The current niche is “cute lifelike cats doing funny activities”, but the architecture is content-agnostic.
 
 ------------------------------------------------------------
 
-## Why This Matters (ML Infra / MLOps Portfolio)
+## Why This Matters (ML Infra / Platform / MLOps Portfolio)
 
-This project showcases practical ML-infrastructure skills beyond model training:
+This project showcases ML-infrastructure skills beyond model training:
 
-- Event-driven orchestration patterns (scheduler/queue → stateless compute → artifacts)
-- Deterministic, testable contracts (`job.json`) with reproducible outputs
-- Clear separation of concerns: planning (LLM) vs execution (renderer)
-- Secure-by-default agent operation (sandboxed writes, loopback-only gateway, token auth)
-- Artifact lineage and state tracking (jobs, outputs, status progression)
-- A realistic migration path to GCP (Cloud Run, Pub/Sub, GCS, Firestore, Secret Manager, IAM)
-
-In short, it demonstrates how to operationalize an AI agent workflow with real infra hygiene,
-guardrails, and deployability—similar to production ML systems.
+- Contract-first pipelines (`job.json`) with schema validation
+- Deterministic orchestration (control-loop reconciler pattern)
+- Deterministic rendering (FFmpeg worker; retry-safe)
+- Artifact lineage, state tracking, and auditability
+- Secure-by-default agent operation:
+  - sandboxed writes
+  - loopback-only gateway
+  - token auth
+  - secrets never committed
+- A clean migration path to GCP (Cloud Run, Pub/Sub, GCS, Firestore, Secret Manager, IAM)
+- Realistic “Ops/Distribution” layer:
+  - approval-gated publishing
+  - bundle-first export modules per platform
+  - idempotent publish state keyed by `{job_id, platform}`
 
 ------------------------------------------------------------
 
-## High-Level Architecture
+## High-Level Architecture (3-plane invariant)
 
 **Diagram-first details:** `docs/architecture.md`
 
@@ -44,25 +58,26 @@ PRD / Instructions
 → Planner Agent (Clawdbot)  
 → `job.json` (structured contract)  
 → Control Plane (Ralph Loop orchestrator)  
-→ Worker (FFmpeg Renderer)  
+→ Worker (FFmpeg renderer)  
 → MP4 + captions  
 
 Optional ingress:
 
 Telegram Message  
-→ Message Bridge  
-→ `/sandbox/inbox`
+→ Telegram Bridge  
+→ `/sandbox/inbox/*.json`
 
-All agent interaction happens through **files**, not shared memory, RPC, or browser UIs.
+All coordination happens through **files**, not shared memory, RPC, or browser UIs.
 
-Frameworks (LangGraph, etc.) are treated as **adapters**, not foundations. RAG is **planner-only**.
+Frameworks (LangGraph, etc.) are treated as **adapters**, not foundations.
+RAG is **planner-only**.
 
 ------------------------------------------------------------
 
 ## Design Principles
 
 - Headless-first: no required UI or dashboard
-- Deterministic: outputs reproducible from inputs
+- Deterministic execution: outputs reproducible from inputs
 - Contract-driven: files are the source of truth
 - Sandboxed: containers write only to `/sandbox`
 - Secure by default:
@@ -70,6 +85,10 @@ Frameworks (LangGraph, etc.) are treated as **adapters**, not foundations. RAG i
   - token-based authentication
   - secrets never committed
 - Cloud-ready: clean mapping to GCP services
+- Ops/Distribution is outside the factory:
+  - derived artifacts only
+  - no mutation of worker outputs
+  - approval gates by default
 
 ------------------------------------------------------------
 
@@ -86,27 +105,51 @@ cat-ai-factory/
 │   ├── architecture.md
 │   ├── master.md
 │   ├── decisions.md
+│   ├── system-requirements.md
+│   ├── PR_PROJECT_PLAN.md
 │   ├── memory.md
 │   ├── chat-bootstrap.md
 │   └── briefs/
 │       ├── BOOTSTRAP-BASE.md
 │       ├── BOOTSTRAP-ARCH.md
 │       ├── BOOTSTRAP-IMPL.md
-│       └── BOOTSTRAP-CODEX.md
+│       ├── BOOTSTRAP-CODEX.md
+│       └── MILESTONE-daily-v0.2.md
 │
 ├── repo/                    (source code, read-only to containers)
 │   ├── shared/              (schemas & contracts)
-│   ├── tools/               (generators & bridges)
-│   ├── worker/              (render logic using FFmpeg)
+│   ├── services/            (orchestrator + planner)
+│   ├── tools/               (validators, bridges, publishers)
+│   └── worker/              (render logic using FFmpeg)
 │
 ├── sandbox/                 (ONLY writable runtime area)
 │   ├── PRD.json             (high-level product definition)
-│   ├── jobs/                (generated job.json files)
-│   ├── assets/              (input media: backgrounds, clips)
-│   ├── output/              (final MP4 + SRT outputs)
-│   ├── inbox/               (external instructions, e.g. Telegram)
+│   ├── jobs/                (generated job contracts)
+│   ├── assets/              (input media: clips, backgrounds, templates)
+│   ├── output/              (immutable worker outputs per job)
+│   ├── logs/                (orchestrator logs/state per job)
+│   ├── inbox/               (external instructions, approvals, plan briefs)
 │   ├── outbox/              (agent responses)
-│   └── logs/                (runtime logs)
+│   └── dist_artifacts/      (derived distribution artifacts; bundles, state)
+
+------------------------------------------------------------
+
+## Ops/Distribution (required before cloud)
+
+CAF includes a required “Ops/Distribution” layer which remains OUTSIDE the factory invariant.
+
+It is responsible for:
+- approvals (human-in-the-loop)
+- publisher adapters (bundle-first, platform-specific)
+- idempotent publish state tracking
+
+Hard constraints:
+- MUST NOT mutate `job.json`
+- MUST NOT modify worker outputs under `sandbox/output/<job_id>/...`
+- MUST emit derived artifacts only under:
+  - `sandbox/dist_artifacts/<job_id>/...`
+
+This is intentionally designed so cloud migration is a mapping exercise, not a redesign.
 
 ------------------------------------------------------------
 
@@ -121,42 +164,12 @@ This repo is designed to be worked on using **role-separated chats**:
 ### Always send 2 messages at the start of a new chat
 
 1) Base bootstrap (project constitution)
-- docs/chat-bootstrap.md (for CODEX chat, add the CODEX name as the first line, as its name is derived from first prompt and can not be modified)
+- `docs/chat-bootstrap.md`
 
 2) Role bootstrap (pick exactly one)
-- docs/briefs/BOOTSTRAP-ARCH.md
-- docs/briefs/BOOTSTRAP-IMPL.md
-- docs/briefs/BOOTSTRAP-CODEX.md
-
-This keeps invariants consistent, while letting each role stay ultra-focused.
-
-### Standard handoff packet (send after the 2 bootstraps)
-
-Send this in order:
-
-1) PR context
-- PR name + goal (1–2 lines)
-- In scope / out of scope
-- Binding decisions (if any)
-
-2) Repo tree (scoped)
-Do NOT paste the full repo tree. Use one of:
-- tree -L 2 repo/services/orchestrator repo/tools repo/worker docs
-- tree -L 3 repo/services repo/tools repo/worker docs | sed -n '1,200p'
-
-3) Working state
-- git status
-- git diff (only relevant files)
-
-4) Authoritative docs (only if needed)
-- ARCH: docs/master.md, docs/decisions.md, docs/architecture.md
-- IMPL: docs/architecture.md + the relevant PR plan section
-- CODEX: PR prompt + file touch list + invariants (avoid dumping full docs)
-
-5) For debugging runs
-- exact CLI command
-- stdout/stderr
-- state.json + last 30 lines of events.ndjson
+- `docs/briefs/BOOTSTRAP-ARCH.md`
+- `docs/briefs/BOOTSTRAP-IMPL.md`
+- `docs/briefs/BOOTSTRAP-CODEX.md`
 
 ------------------------------------------------------------
 
@@ -168,19 +181,18 @@ Prerequisites:
 - Docker Compose v2
 
 Setup:
-1. Copy environment template  
+1) Copy environment template  
    cp .env.example .env
 
-2. Fill in API tokens in `.env` (DO NOT COMMIT)
+2) Fill in API tokens in `.env` (DO NOT COMMIT)
 
-3. Start services  
+3) Start services  
    docker compose up -d
 
-Run the full pipeline:
-   docker compose run --rm worker
-
 Outputs are written to:
-   sandbox/output/
+- `sandbox/output/<job_id>/` (worker outputs)
+- `sandbox/logs/<job_id>/` (orchestrator state/logs)
+- `sandbox/dist_artifacts/<job_id>/` (publisher/bundle artifacts)
 
 ------------------------------------------------------------
 
@@ -193,27 +205,16 @@ Outputs are written to:
 - Secrets loaded via `.env` only
 - `.env` excluded from Git
 
-This mirrors real-world production agent security practices.
-
 ------------------------------------------------------------
 
 ## Why This Project Exists
 
 This project serves two purposes:
 
-1. A personal automation system for AI-generated content
-2. A portfolio demonstration of agent orchestration, infrastructure hygiene,
-   and ML-adjacent systems engineering
+1) A personal automation system for daily short-form content output
+2) A portfolio demonstration of agent orchestration, infrastructure hygiene,
+   and production-grade boundary enforcement
 
 The design intentionally avoids “magic demos” and instead emphasizes clarity,
-safety, reproducibility, and real-world deployability.
+safety, reproducibility, and deployability.
 
-------------------------------------------------------------
-
-## Roadmap (Non-Binding)
-
-- Add Vertex AI planner provider (mandatory portfolio)
-- Upload pack generation per platform
-- Event-driven orchestration (new inbox message → render)
-- GCP deployment (Cloud Run, GCS, Scheduler)
-- Approval gates for high-risk actions (e.g. purchasing)
