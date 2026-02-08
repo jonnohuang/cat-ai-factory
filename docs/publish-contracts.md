@@ -2,7 +2,7 @@
 
 **Status: Proposed (non-binding)**
 
-**Note:** The recommended defaults in this document have been accepted and are now binding. See `docs/decisions.md` (ADR-0010, ADR-0011, ADR-0012).
+**Note:** The recommended defaults in this document have been accepted and are now binding. See `docs/decisions.md` (ADR-0010..ADR-0013).
 
 This document outlines the proposed (non-binding) file contracts for the Ops/Distribution layer. This layer sits outside the core Planner/Control/Worker planes and is responsible for publishing content to external platforms.
 
@@ -36,21 +36,16 @@ This is the derived payload containing all information needed for a publisher ad
 {
   "job_id": "demo-dance-loop-v1",
   "platform": "youtube",
-  "publish_config": {
-    "title": "Cat Vibing to Lo-fi Beats",
-    "description": "Just a cat enjoying some music. #cat #lofi #vibes",
-    "tags": ["cat", "lofi", "chill"],
-    "privacy": "public"
+  "assets": {
+    "video_path": "/sandbox/output/demo-dance-loop-v1/final.mp4",
+    "caption_path": "/sandbox/output/demo-dance-loop-v1/final.srt"
   },
-  "artifact_pointers": {
-    "video": "../../output/demo-dance-loop-v1/final.mp4",
-    "subtitles": "../../output/demo-dance-loop-v1/final.srt",
-    "thumbnail": null
+  "metadata": {
+    "title": "Video for Job demo-dance-loop-v1",
+    "description": "Content generated for job_id: demo-dance-loop-v1",
+    "tags": ["cat-ai-factory", "ai-generated"]
   },
-  "lineage": {
-    "job_file": "../../jobs/demo-dance-loop-v1.job.json",
-    "qc_summary": "../../logs/demo-dance-loop-v1/qc/qc_summary.json"
-  }
+  "created_at": "2026-02-08T12:25:00Z"
 }
 ```
 
@@ -68,14 +63,14 @@ This file is the local source-of-truth for the publish state of a specific `{job
 {
   "job_id": "demo-dance-loop-v1",
   "platform": "youtube",
-  "idempotency_key": "demo-dance-loop-v1_youtube",
-  "status": "PUBLISHED",
-  "published_at": "2026-02-08T12:30:00Z",
+  "status": "POSTED",
+  "attempts": 1,
+  "last_attempt_at": "2026-02-08T12:30:00Z",
   "platform_post_id": "dQw4w9WgXcQ",
   "post_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 }
 ```
-- **Idempotency Key:** The canonical key for preventing duplicate work is the tuple `{job_id, platform}`.
+- **Idempotency Key:** The canonical key for preventing duplicate work is the tuple `{job_id, platform}`. Any string encoding (like "<job_id>_<platform>") is an optional, non-normative implementation detail.
 
 ---
 
@@ -101,3 +96,49 @@ Following the ingress model of `ADR-0009`, human or automated approvals are deli
 }
 ```
 This structure allows an orchestration tool (like n8n or a simple file watcher) to deterministically gate the creation of the publish payload and the invocation of the publisher itself.
+
+---
+
+## 5. Publishing Workflow (MVP Example)
+
+The `repo/tools/publish_youtube.py` script provides a local, dry-run implementation of the publishing workflow, governed by the binding contracts in `ADR-0010` through `ADR-0013`.
+
+### Step 1: Approve the Job for Publishing
+
+Create an approval artifact in the `sandbox/inbox/` directory. The script will deterministically select the lexicographically newest file matching the pattern.
+
+**Command:**
+```bash
+# Example for job_id 'demo-dance-loop-v1'
+TS=$(date +%s)
+cat > sandbox/inbox/approve-demo-dance-loop-v1-youtube-${TS}.json <<EOF
+{
+  "job_id": "demo-dance-loop-v1",
+  "platform": "youtube",
+  "approved": true,
+  "approved_at": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+  "approved_by": "user:local",
+  "source": "manual_cli",
+  "nonce": "${TS}"
+}
+EOF
+```
+
+### Step 2: Run the Publisher
+
+Execute the script, targeting the `job_id`. The script defaults to a safe `--dry-run` mode.
+
+**Command:**
+```bash
+python3 -m repo.tools.publish_youtube --job-id demo-dance-loop-v1
+```
+
+**On success, the script will:**
+1. Validate the approval artifact.
+2. Verify the required worker outputs exist (e.g., `sandbox/output/demo-dance-loop-v1/final.mp4`).
+3. Create the derived distribution artifacts:
+   - `sandbox/dist_artifacts/demo-dance-loop-v1/youtube.json` (the payload)
+   - `sandbox/dist_artifacts/demo-dance-loop-v1/youtube.state.json` (the idempotency lock)
+4. Print a dry-run message and exit `0`.
+
+Running the command a second time will result in a no-op due to the idempotency check against the `.state.json` file.
