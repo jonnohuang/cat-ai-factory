@@ -156,8 +156,8 @@ Hard constraints:
   - `/sandbox/output/<job_id>/final.srt`
   - `/sandbox/output/<job_id>/result.json`
 - If platform-specific formatting is needed, write derived **dist artifacts**:
-  - `/dist/<job_id>/<platform>.json`
-  - (cloud equivalent: `gs://.../dist/<job_id>/<platform>.json`)
+  - `sandbox/dist_artifacts/<job_id>/<platform>.json`
+  - (cloud equivalent: `gs://.../dist_artifacts/<job_id>/<platform>.json`)
 - Publishing should be gated by human approval by default.
 - Publishing must be idempotent: store `platform_post_id` / `post_url` keyed by `{job_id, platform}` to prevent double-posting.
 

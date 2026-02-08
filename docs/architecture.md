@@ -178,7 +178,7 @@ flowchart TB
     N8N[n8n\n(triggers + notify + approval)]
     APPROVE[Human Approval Gate\n(Slack/Discord/Email)]
     PUBLISH[Publisher Adapter\n(Cloud Run)\n(platform API calls)]
-    DIST[/dist/<job_id>/<platform>.json\n(dist artifacts; derived only)/]
+    DIST[sandbox/dist_artifacts/<job_id>/<platform>.json\n(dist artifacts; derived only)/]
   end
 
   PS --> N8N
@@ -197,7 +197,7 @@ flowchart TB
 Notes:
 - Ops/Distribution may be nondeterministic (external APIs). It must remain outside core planes.
 - n8n is not a replacement for Clawdbot or Ralph Loop.
-- Platform formatting must produce new dist artifacts under /dist/<job_id>/...; worker outputs are immutable.
+- Platform formatting must produce new dist artifacts under sandbox/dist_artifacts/<job_id>/...; worker outputs are immutable.
 
 ------------------------------------------------------------
 
