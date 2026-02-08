@@ -273,6 +273,26 @@ Outcome:
 
 ---
 
+### PR-8.1 — Bind publish/dist conventions via ADRs (dist_artifacts/)
+Status: DONE
+
+Scope:
+- Append ADRs to lock the Ops/Distribution derived artifact conventions:
+  - Local derived root: sandbox/dist_artifacts/<job_id>/
+  - Publish payload: sandbox/dist_artifacts/<job_id>/<platform>.json
+  - Idempotency authority: sandbox/dist_artifacts/<job_id>/<platform>.state.json
+  - Approval artifacts: sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json
+  - Canonical idempotency key: {job_id, platform}
+  - Firestore shape: jobs/{job_id}/publishes/{platform}
+- No code changes.
+- No job.json schema changes.
+
+Outcome:
+- Publish/idempotency conventions are binding and stable for PR9+.
+- Prevents drift in Ops/Distribution pathing and state authority.
+
+---
+
 ### PR-9 — Publish pipeline MVP (YouTube first) + approval gate (n8n-friendly)
 Scope:
 - Human approval gate (Slack/Discord/email)
