@@ -249,13 +249,36 @@ Status: DONE
 
 Scope:
 - Telegram writes requests into `/sandbox/inbox/*.json`
-- Telegram reads status from `/sandbox/logs/<job_id>/state.json`
+- Telegram reads status from:
+  - `/sandbox/logs/<job_id>/state.json` (factory status)
+  - `/sandbox/dist_artifacts/<job_id>/<platform>.state.json` (publish status)
+- Commands are implemented as inbox artifacts (file-bus), e.g.:
+  - `/plan <prompt>` → `plan-<nonce>.json`
+  - `/approve <job_id>` → `approve-<job_id>-youtube-<nonce>.json`
+  - `/reject <job_id> [reason]` → `reject-<job_id>-youtube-<nonce>.json`
+- Authorization enforced via `TELEGRAM_ALLOWED_USER_ID`
 - No bypass of file-bus semantics
-- No mutation of job.json or outputs
+- No mutation of job.json or worker outputs
 
 Outcome:
 - Mobile-friendly control surface
 - Clean adapter boundary (no orchestration contamination)
+
+---
+
+### PR-7.2 — Telegram supervisor UX (help + status query)
+Scope:
+- Add a `/help` command that lists available Telegram commands
+- Add `/status <job_id>`:
+  - Reads `/sandbox/logs/<job_id>/state.json`
+  - Reads `/sandbox/dist_artifacts/<job_id>/<platform>.state.json` if present
+  - Returns a human-readable summary to the authorized user
+- No artifact mutation beyond inbox writes
+- No orchestration triggers; status is purely informational
+
+Outcome:
+- A usable mobile supervisor surface for the factory
+- Status visibility without breaking determinism or introducing RPC coupling
 
 ---
 
@@ -307,7 +330,25 @@ Outcome:
 
 ---
 
-### PR-10 — Expand publishing adapters (IG / TikTok / X)
+### PR-10 — Local Distribution Runner (approval-gated automation)
+Scope:
+- Add a deterministic local runner that:
+  - polls the file-bus (inbox + logs + dist_artifacts)
+  - detects approved jobs for a platform
+  - invokes the publisher CLI (e.g., `publish_youtube`)
+- The runner MUST:
+  - respect approval artifacts
+  - be idempotent (safe to re-run)
+  - never modify job.json or worker outputs
+- The runner MUST NOT require Telegram; it operates purely on artifacts
+
+Outcome:
+- End-to-end automation from “approved” → “published”
+- Still file-bus driven; no always-on service required
+
+---
+
+### PR-11 — Expand publishing adapters (IG / TikTok / X)
 Scope:
 - Add adapters incrementally per platform
 - Maintain idempotency + derived dist artifacts
@@ -315,6 +356,7 @@ Scope:
 
 Outcome:
 - Multi-platform distribution layer with clean semantics
+
 
 ------------------------------------------------------------
 
