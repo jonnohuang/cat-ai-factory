@@ -1,0 +1,17 @@
+{
+  "job_id": "demo-dance-loop-v1",
+  "platform": "youtube",
+  "assets": {
+    "video_path": "/Users/jonathanhuang/Developer/cat-ai-factory/sandbox/output/demo-dance-loop-v1/final.mp4",
+    "caption_path": "/Users/jonathanhuang/Developer/cat-ai-factory/sandbox/output/demo-dance-loop-v1/final.srt"
+  },
+  "metadata": {
+    "title": "Video for Job demo-dance-loop-v1",
+    "description": "Content generated for job_id: demo-dance-loop-v1",
+    "tags": [
+      "cat-ai-factory",
+      "ai-generated"
+    ]
+  },
+  "created_at": "2026-02-08T05:00:46.997411Z"
+}
