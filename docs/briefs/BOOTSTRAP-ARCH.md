@@ -43,54 +43,69 @@ Non-authoritative:
 ## CAF Global Decisions to Preserve (binding unless superseded by ADR)
 
 1) 3-plane architecture is strict:
-   - Planner writes contracts/artifacts only
-   - Control Plane (Ralph) reconciles deterministically
-   - Worker renders deterministically (FFmpeg, no LLM)
+   - Planner is non-deterministic and writes **job contracts only**:
+     `/sandbox/jobs/*.job.json`
+   - Control Plane (Ralph) reconciles deterministically and writes logs/state only:
+     `/sandbox/logs/<job_id>/**`
+   - Worker renders deterministically (FFmpeg, no LLM) and writes outputs only:
+     `/sandbox/output/<job_id>/**`
 
-2) 3-lane output model is the production strategy:
+2) Files-as-bus is strict:
+   - no agent-to-agent RPC
+   - no shared memory
+   - all coordination happens through explicit artifacts on disk
+
+3) 3-lane daily output model is the production strategy:
    - Lane A: ai_video (Veo; Sora manual only)
    - Lane B: image_motion (Imagen → FFmpeg motion)
    - Lane C: template_remix (FFmpeg templates)
 
-3) Telegram remains:
+4) Telegram remains:
    - inbox write + status read only
    - Daily Plan Brief is the canonical human interface
 
-4) Promotion automation is artifact-only:
+5) Ops/Distribution remains outside the factory:
+   - must not mutate job.json or worker outputs
+   - must write derived artifacts only under:
+     `sandbox/dist_artifacts/<job_id>/...`
+
+6) Publish idempotency authority (local):
+   - `sandbox/dist_artifacts/<job_id>/<platform>.state.json`
+   - canonical idempotency key = `{job_id, platform}`
+
+7) Publisher adapters are required pre-cloud:
+   - bundle-first adapters for YouTube / IG / TikTok / X
+   - upload automation is OPTIONAL per platform:
+     - YouTube may be added later (official API only, opt-in)
+     - IG/TikTok upload automation is NOT required and may remain manual
+
+8) Promotion automation is artifact-only:
    - publish_plan.json + export bundles + caption/hashtag variants
-   - NO social platform posting automation in v1
-   - NO platform credentials in repo
+   - NO credentials in repo
+   - NO engagement automation
+   - NO scraping analytics in v1
 
-5) “Distribution” means:
-   - packaging + bundle export + routing to pending/final storage
-   - optional upload of bundles to GCS
-   - NOT posting to platforms
-
-6) Publisher adapters are required pre-cloud:
-   - bundle-first adapters for YouTube/IG/TikTok/X
-   - upload automation optional later (YouTube first)
-
-7) Audio must be included in export bundles:
+9) Audio must be included in export bundles:
    - audio_plan + audio_notes always
    - optional SFX assets (deterministic library)
    - NO music generation or trending-audio scraping in v1
 
-8) Multilingual:
+10) Multilingual:
    - schema supports N languages via language-map fields
    - enable only: "en" and "zh-Hans" initially
    - Spanish deferred
 
-9) Hero cats:
+11) Hero cats:
    - character registry is metadata, not agents
    - characters primarily act; captions carry humor
    - optional voice later (not required)
 
-10) LangGraph:
+12) LangGraph:
    - required for Google demo
    - planner-plane workflow adapter only
    - must NOT replace Ralph or Worker
 
-11) Seedance:
+13) Seedance:
    - optional provider adapter only
    - must not be a core dependency of the roadmap
 

@@ -30,14 +30,19 @@ Cat AI Factory’s core invariant is the three-plane factory:
 
 Planner (Clawdbot) → Control Plane (Ralph Loop) → Worker (FFmpeg)
 
-Ops/Distribution (e.g., n8n workflows, approval gates, publishing integrations)
+Ops/Distribution (e.g., Telegram, approval gates, publisher adapters, bundle generation)
 is an **external automation layer**. It may consume events and artifacts, but it must:
 
 - NOT replace Clawdbot or Ralph Loop
 - NOT mutate `job.json`
 - NOT modify worker outputs under `/sandbox/output/<job_id>/...`
-- Emit derived dist artifacts instead (e.g., `sandbox/dist_artifacts/<job_id>/<platform>.json`)
+- Emit derived artifacts instead (e.g., `sandbox/dist_artifacts/<job_id>/...`)
 - Enforce idempotency for publishing keyed by `{job_id, platform}`
+
+Important:
+- Ops/Distribution remains outside the factory invariant.
+- However, Ops/Distribution is REQUIRED before Cloud migration, because it defines
+  the “posting modules” and daily operational workflow.
 
 ------------------------------------------------------------
 
@@ -65,6 +70,8 @@ Outcome:
 Purpose: prove reproducibility, idempotency, and artifact lineage locally.
 
 ### PR-1 — Job contract v1
+Status: Completed
+
 Scope:
 - job.schema.json v1
 - Deterministic validator
@@ -78,6 +85,8 @@ Outcome:
 ---
 
 ### PR-2 — Worker idempotency + stable outputs
+Status: Completed
+
 Scope:
 - Per-job output directories
 - Atomic overwrite / safe reruns
@@ -92,6 +101,8 @@ Outcome:
 ---
 
 ### PR-3 — Artifact lineage + determinism harness
+Status: Completed
+
 Scope:
 - Lineage verifier (job → outputs → logs)
 - Unified local harness command
@@ -105,14 +116,14 @@ Outcome:
 ---
 
 ### PR-3.5 — Demo Sample Pack (cat activities + assets)
-Status: Optional but recommended (portfolio demo)
+Status: Completed (recommended demo pack)
 
 Scope:
 - Add a small demo pack under:
   - assets: `sandbox/assets/demo/`
   - jobs: `sandbox/jobs/demo-*.job.json`
   - docs: minimal “how to run demo” notes
-- Include 2–4 canonical “cat activity” examples aligned with Shorts/Reels style.
+- Include canonical “cat activity” examples aligned with Shorts/Reels style.
 - No schema changes.
 - No pipeline logic changes.
 - Demo pack must not be required for LOCAL v0.1 correctness.
@@ -128,11 +139,13 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 2 — AGENTS v0.2 Control Plane + Planner Autonomy (Portfolio-Strong)
+## Phase 2 — AGENTS v0.2 Control Plane + Planner Autonomy (Completed)
 
 Purpose: demonstrate real agent orchestration + autonomous planning without sacrificing safety.
 
 ### PR-4 — Ralph Loop state machine (single-job orchestrator)
+Status: Completed
+
 Scope:
 - Explicit job lifecycle states
 - Deterministic reconciliation loop
@@ -147,6 +160,8 @@ Outcome:
 ---
 
 ### PR-4.1 — Requirements + roadmap tightening (docs-only)
+Status: Completed
+
 Scope:
 - Add `docs/system-requirements.md` as a reviewer-readable requirements contract
 - Capture phased provider strategy (AI Studio now, Vertex later)
@@ -160,11 +175,12 @@ Outcome:
 ---
 
 ### PR-5 — Planner Adapter Layer + Gemini AI Studio (LOCAL autonomy)
+Status: Completed
+
 Scope:
 - Introduce a planner adapter interface (frameworks are adapters, not foundations)
 - Add a Gemini adapter using Google AI Studio API key (LOCAL, no OAuth)
-- Planner target is autonomous planning (no long-term human-in-loop)
-- (Optional seam) planner-only RAG provider abstraction (pluggable; does not affect orchestrator/worker)
+- Planner target is autonomous planning (no long-term human-in-loop planner)
 - Adapters must produce the same `job.json` schema (contract remains stable)
 
 Hard constraints:
@@ -186,6 +202,8 @@ Outcome:
 ---
 
 ### PR-5.1 — Planner prompt-injection hardening + debug redaction
+Status: Completed
+
 Scope:
 - Add planner prompt guardrails (PRD/inbox treated as untrusted; JSON-only)
 - Ensure debug surfaces never print model raw text (len-only) and never print secrets
@@ -196,24 +214,8 @@ Outcome:
 
 ---
 
-### PR-5.5 — Seed images + asset selection interface (optional seam PR)
-Scope:
-- Add a planner-side interface for seed image generation OR selection
-- Default implementation may be:
-  - placeholder / stub, or
-  - AI Studio image generation (if supported), or
-  - selection from a local asset library
-- Seed image generation must NOT move into the worker
-- No changes to worker determinism rules
-
-Outcome:
-- Clean future path for richer meme formats
-- Keeps worker deterministic while enabling better content
-
----
-
 ### PR-6 — Verification / QC agent
-Status: DONE
+Status: Completed
 
 Scope:
 - Deterministic, read-only evaluator
@@ -226,26 +228,25 @@ Outcome:
 ---
 
 ### PR-6.1 — Harness-only QC integration (reporting-only)
-Status: DONE
+Status: Completed
 
 Scope:
-- Integrate `qc_verify.py` into `local_v0_1_harness.py`.
+- Integrate QC into the local harness.
 - QC is additive reporting only; does not change harness PASS/FAIL gating.
-- QC results (exit code, artifact paths) are recorded in `harness_summary.json`.
-- Update docs to reflect QC artifact paths and correct tool name (`qc_verify`).
+- QC results are recorded in harness summary artifacts.
 
 Outcome:
 - QC is a first-class reporting surface in the local development harness.
-- Clear separation of concerns: harness gating vs. QC checks.
+- Clear separation: harness gating vs QC reporting.
 
 ------------------------------------------------------------
 
-## Phase 3 — Ops/Distribution v0.2+ (Optional but Recruiter-Friendly)
+## Phase 3 — Ops/Distribution v0.2 (Completed)
 
-Purpose: demonstrate real-world “agent → human approval → publishing” workflows without contaminating core determinism.
+Purpose: demonstrate real-world “agent → human approval → publish artifacts” workflows without contaminating core determinism.
 
 ### PR-7 — Telegram/mobile control adapter (inbox/status bridge)
-Status: DONE
+Status: Completed
 
 Scope:
 - Telegram writes requests into `/sandbox/inbox/*.json`
@@ -254,170 +255,204 @@ Scope:
   - `/sandbox/dist_artifacts/<job_id>/<platform>.state.json` (publish status)
 - Commands are implemented as inbox artifacts (file-bus), e.g.:
   - `/plan <prompt>` → `plan-<nonce>.json`
-  - `/approve <job_id>` → `approve-<job_id>-youtube-<nonce>.json`
-  - `/reject <job_id> [reason]` → `reject-<job_id>-youtube-<nonce>.json`
+  - `/approve <job_id>` → `approve-<job_id>-<platform>-<nonce>.json`
+  - `/reject <job_id> [reason]` → `reject-<job_id>-<platform>-<nonce>.json`
 - Authorization enforced via `TELEGRAM_ALLOWED_USER_ID`
 - No bypass of file-bus semantics
 - No mutation of job.json or worker outputs
 
 Outcome:
-- Mobile-friendly control surface
+- Mobile-friendly supervisor surface
 - Clean adapter boundary (no orchestration contamination)
 
 ---
 
-### PR-7.2 — Telegram supervisor UX (help + status query)
+### PR-8 — Publish contracts + idempotency model (docs-only)
+Status: Completed
+
 Scope:
-- Add a `/help` command that lists available Telegram commands
-- Add `/status <job_id>`:
-  - Reads `/sandbox/logs/<job_id>/state.json`
-  - Reads `/sandbox/dist_artifacts/<job_id>/<platform>.state.json` if present
-  - Returns a human-readable summary to the authorized user
-- No artifact mutation beyond inbox writes
-- No orchestration triggers; status is purely informational
+- Define publish contracts, approval artifacts, and idempotency conventions.
+- Lock derived artifact conventions under `sandbox/dist_artifacts/`.
+- No changes to worker outputs or job.json schema.
 
 Outcome:
-- A usable mobile supervisor surface for the factory
-- Status visibility without breaking determinism or introducing RPC coupling
+- Stable publish/idempotency conventions
+- Prevents drift in Ops/Distribution artifact semantics
 
 ---
 
-### PR-8 — Publish contracts + idempotency model (docs-only; Proposed)
-Scope:
-- Define proposed (non-binding) schemas for publish contracts, approval artifacts, and idempotency.
-- See `docs/publish-contracts.md` for local file-bus artifacts.
-- See `docs/cloud-mapping-firestore.md` for cloud/Firestore mapping.
-- No changes to code or `job.json` schema.
-
-Outcome:
-- Explicit publish semantics
-- Retry-safe publishing model
-- Clean boundary: factory outputs vs dist artifacts
-
----
-
-### PR-8.1 — Bind publish/dist conventions via ADRs (dist_artifacts/)
-Status: DONE
+### PR-9 — Publish pipeline MVP (YouTube first) + approval gate
+Status: Completed
 
 Scope:
-- Append ADRs to lock the Ops/Distribution derived artifact conventions:
-  - Local derived root: sandbox/dist_artifacts/<job_id>/
-  - Publish payload: sandbox/dist_artifacts/<job_id>/<platform>.json
-  - Idempotency authority: sandbox/dist_artifacts/<job_id>/<platform>.state.json
-  - Approval artifacts: sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json
-  - Canonical idempotency key: {job_id, platform}
-  - Firestore shape: jobs/{job_id}/publishes/{platform}
-- No code changes.
-- No job.json schema changes.
+- YouTube publish adapter
+- Approval gate via inbox artifacts
+- Idempotency via dist_artifacts state file
+- Must not modify worker outputs
 
 Outcome:
-- Publish/idempotency conventions are binding and stable for PR9+.
-- Prevents drift in Ops/Distribution pathing and state authority.
-
----
-
-### PR-9 — Publish pipeline MVP (YouTube first) + approval gate (n8n-friendly)
-Scope:
-- Human approval gate (Slack/Discord/email)
-- Publish adapter writes derived dist artifacts only:
-  - sandbox/dist_artifacts/<job_id>/youtube.json
-- Stores platform_post_id + post_url keyed by {job_id, platform}
-- Must not modify worker outputs.
-
-Outcome:
-- End-to-end “COMPLETED → approved → published” workflow
-- Strong portfolio signal without breaking determinism
-
----
-
-### PR-10 — Local Distribution Runner (approval-gated automation)
-Scope:
-- Add a deterministic local runner that:
-  - polls the file-bus (inbox + logs + dist_artifacts)
-  - detects approved jobs for a platform
-  - invokes the publisher CLI (e.g., `publish_youtube`)
-- The runner MUST:
-  - respect approval artifacts
-  - be idempotent (safe to re-run)
-  - never modify job.json or worker outputs
-- The runner MUST NOT require Telegram; it operates purely on artifacts
-
-Outcome:
-- End-to-end automation from “approved” → “published”
-- Still file-bus driven; no always-on service required
-
----
-
-### PR-11 — Expand publishing adapters (IG / TikTok / X)
-Scope:
-- Add adapters incrementally per platform
-- Maintain idempotency + derived dist artifacts
-- Keep human approval default (configurable)
-
-Outcome:
-- Multi-platform distribution layer with clean semantics
-
+- End-to-end “COMPLETED → approved → published” workflow for YouTube
 
 ------------------------------------------------------------
 
-## Phase 4 — CLOUD v0.3 Migration (Optional / Stretch)
+## Phase 4 — Daily Output System v0.3 (Required before Cloud)
 
-Purpose: show cloud literacy and clean mapping; do not compromise LOCAL guarantees.
+Purpose: achieve 3 clips/day under strict budget constraints without violating determinism.
 
-### PR-11 — Cloud artifact layout (GCS + Firestore mapping)
+Key idea:
+- CAF is a deterministic renderer with multiple production lanes.
+- Telegram daily plan brief is the canonical human input.
+- Promotion outputs are artifacts and bundles (bundle-first).
+
+### PR-10 — Roadmap + ADR locks (docs-only)
+Status: ACTIVE (this PR)
+
+Scope:
+- Rewrite PR plan sequencing (daily lanes + promotion toolkit + publisher adapters before cloud)
+- Append ADRs locking the new roadmap decisions:
+  - lanes
+  - hero cats (metadata)
+  - multilingual support (en + zh-Hans)
+  - audio plan
+  - LangGraph planner-only
+  - Seedance optional
+- Align docs (system requirements + architecture notes) with required posture
+
+Outcome:
+- A stable “constitution” for the next implementation era
+
+---
+
+### PR-11 — Lane contracts + expected outputs (no cloud yet)
+Scope:
+- Define lane identifiers: ai_video | image_motion | template_remix (contract-level)
+- Define expected artifacts per lane (local paths)
+- No change to core 3-plane invariant
+
+Outcome:
+- Lane-aware planning and publish planning becomes explicit and reviewable
+
+---
+
+### PR-12 — Lane C: Template registry + deterministic template_remix recipes
+Scope:
+- Add a template registry (deterministic metadata)
+- Worker supports template_remix lane via FFmpeg-only recipes
+
+Outcome:
+- Near-free daily clips at scale (C lane)
+
+---
+
+### PR-13 — Lane B: image_motion (seed frames + deterministic motion presets)
+Scope:
+- Seed image request/selection interface (planner-side or pre-worker; not in worker)
+- Worker adds deterministic motion presets (Ken Burns/zoom/shake/cuts)
+
+Outcome:
+- Cheap “video-like” clips (B lane)
+
+---
+
+### PR-14 — Hero cats registry (metadata only) + planner bindings
+Scope:
+- Add character registry + schema + validator
+- Planner uses hero-cat metadata for series consistency (no agent behavior)
+
+Outcome:
+- Series continuity and retention improvement
+
+------------------------------------------------------------
+
+## Phase 5 — Promotion Toolkit + Publisher Modules v0.3 (Required before Cloud)
+
+Purpose: make posting fast, safe, and repeatable without requiring platform automation.
+
+### PR-15 — Publish plan v1 (multilingual + audio plan included)
+Scope:
+- publish_plan.json v1 + schema + validator
+- language-map structures (en + zh-Hans enabled)
+- audio plan per clip (strategy + notes + optional assets list)
+- Generates platform copy artifacts and posting metadata
+
+Outcome:
+- Deterministic “algorithm farming” toolkit via artifacts (no posting required)
+
+---
+
+### PR-16 — Publisher Adapter Interface + Platform Modules (bundle-first)
+Scope:
+- Define Publisher Adapter interface (platform-agnostic)
+- Implement v1 adapters that generate export bundles + checklists:
+  - YouTube / Instagram / TikTok / X
+- Bundles contain:
+  - final.mp4 (+ captions/srt if present)
+  - per-language copy files
+  - audio_notes.txt + audio_plan.json (+ optional audio assets)
+  - posting_checklist_{platform}.txt
+- Upload automation:
+  - optional per platform
+  - opt-in
+  - official APIs only
+  - credentials out-of-repo only
+
+Outcome:
+- Required “posting modules” exist before cloud; manual posting <2 minutes/clip
+
+------------------------------------------------------------
+
+## Phase 6 — Cloud v0.4 Migration (After local daily workflow is proven)
+
+Purpose: demonstrate cloud literacy while preserving LOCAL guarantees.
+
+### PR-17 — Cloud artifact layout (GCS + Firestore mapping)
 Scope:
 - GCS path conventions (immutable artifacts)
-- Firestore job state schema
-- Mapping remains consistent with local lineage
+- Firestore job + publish state mapping consistent with local lineage
 
 Outcome:
-- Cloud storage + state is explicitly modeled and reviewable
+- Cloud storage/state explicitly modeled
 
 ---
 
-### PR-12 — Cloud Run execution stubs (orchestrator + worker)
+### PR-18 — Cloud Run execution stubs (orchestrator + worker)
 Scope:
-- Minimal Cloud Run deployment for orchestrator
-- Worker remains deterministic and isolated
-- No new semantics; same contracts and states
+- Minimal Cloud Run deployment
+- Preserve contracts and states; no redesign
 
 Outcome:
-- Clean cloud execution path without redesign
+- Clean cloud execution path without semantics drift
 
 ---
 
-### PR-13 — Vertex AI integration (mandatory portfolio requirement)
+### PR-19 — Vertex AI providers (mandatory portfolio requirement)
 Scope:
-- Add Vertex AI as a first-class planner provider option
-- Migrate planner calls from AI Studio → Vertex AI (toggle/config)
-- Keep adapters stable; preserve job contract
+- Vertex AI provider adapters (planner-side)
+- Lane A: Veo (ai_video), Lane B: Imagen (seed frames) as applicable
+- Maintain adapter boundaries and deterministic worker behavior
 
 Outcome:
 - Enterprise/production path demonstrated
-- Mandatory Vertex AI presence in portfolio
 
 ---
 
-### PR-14 — Budget guardrails + enforcement (local + cloud)
+### PR-20 — Budget guardrails + enforcement (local + cloud)
 Scope:
-- Per-job cost estimate surfaced in planner outputs
-- Per-day/per-month caps enforced (hard stop)
-- Cloud Billing budget integration (optional)
-- No secrets in logs; safe error reporting
+- Cost estimation and caps (hard stop) before spending
+- Idempotent accounting keys; retry-safe enforcement
 
 Outcome:
-- Real production safety guardrail (cost control)
+- Safe autonomy and cost control
 
 ---
 
-### PR-15 — CI/CD skeleton
+### PR-21 — CI/CD skeleton
 Scope:
 - Lint + harness execution
 - No auto-deploy required
-- Preserve determinism checks
 
 Outcome:
-- Reproducible builds and portfolio-grade hygiene
+- Portfolio-grade hygiene
 
 ------------------------------------------------------------
 
@@ -426,8 +461,8 @@ Outcome:
 The project is considered **portfolio-complete** when:
 - Phase 1 is complete (PR-3 merged)
 - PR-5 is complete (Gemini autonomy via AI Studio)
-- PR-13 is complete (Vertex AI presence demonstrated)
+- PR-19 is complete (Vertex AI presence demonstrated)
 - All invariants remain intact
 - LOCAL v0.1 can be verified with a single command
 
-Phases 3+ are optional enhancements and should not compromise Phase 1 guarantees.
+Phases 4+ must not compromise Phase 1 guarantees.

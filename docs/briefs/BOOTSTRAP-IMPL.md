@@ -31,13 +31,13 @@ Non-authoritative:
 
 ## CAF Invariants (must preserve)
 - Strict 3-plane separation:
-  - Planner writes contracts/artifacts only
-  - Control Plane (Ralph) is deterministic reconciler
-  - Worker is deterministic renderer (FFmpeg; no LLM)
-- Files-as-bus semantics remain authoritative.
-- Telegram is inbox write + status read only.
-- Promotion tooling is artifact-only (no auto-posting; no platform creds).
-- Distribution = packaging + storage routing, NOT posting.
+  - Planner (Clawdbot) is non-deterministic and writes **job contracts only**: `/sandbox/jobs/*.job.json`
+  - Control Plane (Ralph Loop) is deterministic reconciler; writes logs/state only under `/sandbox/logs/<job_id>/**`
+  - Worker is deterministic renderer (FFmpeg; no LLM); writes outputs only under `/sandbox/output/<job_id>/**`
+- Files-as-bus semantics remain authoritative (no agent-to-agent RPC, no shared hidden state).
+- Telegram is inbox write + status read only (adapter; no authority bypass).
+- Ops/Distribution is outside the factory and must never mutate job.json or worker outputs.
+- Publishing is **bundle-first by default**; upload automation (if ever added) must be opt-in, platform-specific, and credentials handled out-of-repo.
 
 ------------------------------------------------------------
 
@@ -45,8 +45,9 @@ Non-authoritative:
 - Do NOT change schemas/contracts unless ARCH explicitly approves via ADR.
 - Do NOT broaden PR scope.
 - Do NOT introduce LLM calls into worker or control plane.
-- Do NOT add platform credentials or auto-posting logic.
-- Do NOT overwrite any existing manifest or contract examples.
+- Do NOT add platform credentials or auto-posting logic as a default path.
+- Do NOT overwrite or modify any existing manifest or contract examples:
+  - `sandbox/assets/manifest.json` must NOT be modified.
 - Do NOT write outside the repo (especially no writes to `sandbox/**`).
 - Always keep fixes minimal, reviewable, and deterministic.
 
@@ -59,7 +60,7 @@ When suggesting any change, always classify it as exactly one:
 - behavior change (semantic change, still within contract)
 - contract change (requires ADR approval)
 
-If the fix is not clearly “bugfix” or “refactor”, assume ADR is required.
+If the change is not clearly “bugfix” or “refactor”, assume ADR is required and STOP to escalate.
 
 ------------------------------------------------------------
 
@@ -72,7 +73,7 @@ If the fix is not clearly “bugfix” or “refactor”, assume ADR is required
   - expected outputs / pass criteria
 - If handing off to CODEX:
   - produce a PR-scoped implementation prompt
-  - list exact files to edit
+  - list exact files to edit/add
   - include acceptance criteria and test commands
 
 ------------------------------------------------------------
