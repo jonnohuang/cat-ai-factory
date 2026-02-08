@@ -36,7 +36,7 @@ is an **external automation layer**. It may consume events and artifacts, but it
 - NOT replace Clawdbot or Ralph Loop
 - NOT mutate `job.json`
 - NOT modify worker outputs under `/sandbox/output/<job_id>/...`
-- Emit derived dist artifacts instead (e.g., `/dist/<job_id>/<platform>.json`)
+- Emit derived dist artifacts instead (e.g., `sandbox/dist_artifacts/<job_id>/<platform>.json`)
 - Enforce idempotency for publishing keyed by `{job_id, platform}`
 
 ------------------------------------------------------------
@@ -259,19 +259,12 @@ Outcome:
 
 ---
 
-### PR-8 — Publish contracts + idempotency model (docs + minimal data shapes)
+### PR-8 — Publish contracts + idempotency model (docs-only; Proposed)
 Scope:
-- Define minimal publish event payload fields:
-  - job_id
-  - completion status
-  - artifact pointers (paths/URIs)
-  - lineage status
-- Define Firestore document shapes (cloud mapping) for:
-  - jobs/{job_id}
-  - publishes/{job_id} (or publishes/{job_id}_{platform})
-- Define idempotency keys:
-  - {job_id, platform}
-- No changes to job.json schema.
+- Define proposed (non-binding) schemas for publish contracts, approval artifacts, and idempotency.
+- See `docs/publish-contracts.md` for local file-bus artifacts.
+- See `docs/cloud-mapping-firestore.md` for cloud/Firestore mapping.
+- No changes to code or `job.json` schema.
 
 Outcome:
 - Explicit publish semantics
@@ -284,7 +277,7 @@ Outcome:
 Scope:
 - Human approval gate (Slack/Discord/email)
 - Publish adapter writes derived dist artifacts only:
-  - /dist/<job_id>/youtube.json
+  - sandbox/dist_artifacts/<job_id>/youtube.json
 - Stores platform_post_id + post_url keyed by {job_id, platform}
 - Must not modify worker outputs.
 

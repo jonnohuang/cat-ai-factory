@@ -56,6 +56,6 @@ Hard constraints:
 - Must not mutate `job.json`.
 - Must not modify worker outputs under `/sandbox/output/<job_id>/...`.
 - If platform-specific formatting is needed, emit derived dist artifacts:
-  - `/dist/<job_id>/<platform>.json`
+  - `sandbox/dist_artifacts/<job_id>/<platform>.json`
 - Publishing should be gated by human approval and must be idempotent via `{job_id, platform}` keys.
 

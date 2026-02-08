@@ -68,7 +68,7 @@ Hard constraints:
   - `/sandbox/output/<job_id>/final.srt`
   - `/sandbox/output/<job_id>/result.json`
 - Platform-specific formatting must emit derived dist artifacts:
-  - `/dist/<job_id>/<platform>.json`
+  - `sandbox/dist_artifacts/<job_id>/<platform>.json`
 - Publishing must be gated by human approval by default.
 - Publishing must be idempotent via `{job_id, platform}` keys (store platform_post_id/post_url).
 
