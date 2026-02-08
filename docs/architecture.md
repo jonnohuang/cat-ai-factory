@@ -144,8 +144,8 @@ Notes:
 
 ## Diagram 3 — Ops/Distribution (Outside the Factory)
 
-Ops/Distribution is **outside** the core factory (Planner / Control Plane / Worker).
-It consumes **events + immutable artifacts** and performs nondeterministic external work
+Ops/Distribution is outside the core factory (Planner / Control Plane / Worker).
+It consumes events + immutable artifacts and performs nondeterministic external work
 (approvals, notifications, publishing) without mutating worker outputs.
 
 flowchart TB
@@ -212,10 +212,9 @@ Notes:
 | Worker | Worker code | repo/worker/render_ffmpeg.py | /sandbox/output/<job_id>/** | Consumes job.json + /sandbox/assets/** | Deterministic, idempotent, CPU-bound; no LLM |
 | Worker | Input assets | (runtime) | /sandbox/assets/** | N/A | Worker reads assets from sandbox only |
 | Verification | Lineage verifier (QC) | repo/tools/lineage_verify.py | (writes logs only when invoked) | CLI tool | Deterministic read-only verification of required artifacts |
-| Verification | Job validator (QC) | repo/tools/validate_job.py | (writes logs only when invoked) | CLI tool | Deterministic validation of job.json against schema (or minimal checks) |
-| Verification | QC verifier (QC gate) | repo/tools/qc_verify.py | (writes logs only when invoked) | CLI tool | Deterministic, read-only QC gate: composes schema validation + lineage verification + output conformance; writes qc artifacts under /sandbox/logs/<job_id>/qc/ |
-
-| Ingress (optional) | Telegram bridge | repo/tools/telegram_bridge.py | /sandbox/inbox/ | Instruction artifacts | Ingress only; no execution authority |
+| Verification | Job validator (QC) | repo/tools/validate_job.py | (writes logs only when invoked) | CLI tool | Deterministic validation of job.json against schema |
+| Verification | QC verifier (QC tool) | repo/tools/qc_verify.py | /sandbox/logs/<job_id>/qc/ | CLI tool | Deterministic, read-only QC summary: composes schema validation + lineage + output conformance |
+| Ingress (optional) | Telegram bridge | repo/tools/telegram_bridge.py | /sandbox/inbox/ | Instruction artifacts | Ingress only; no execution authority. Reads /sandbox/logs/<job_id>/state.json for status checks. |
 | Contracts | Job schema | repo/shared/job.schema.json | N/A | JSON Schema | Central contract definition for job.json |
 
 ------------------------------------------------------------
