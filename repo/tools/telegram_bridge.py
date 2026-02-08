@@ -139,14 +139,65 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 Commands:
 /plan <prompt>
+/daily [--auto-style|--human-style] <brief text...>
 /approve <job_id>
 /reject <job_id> [reason]
 /style list
 /style set <key>
 /status <job_id> [platform]
 /help
+
+Daily plan:
+Defaults: auto_style=true
+A/B/C lanes: numbers are volume targets (how many videos/jobs), NOT time slots.
+Example:
+/daily --human-style A=1 B=0 C=2 theme: office cats, barista mishaps
+
+Note: commands write inbox artifacts only; this bridge does not run the factory.
     """.strip()
     await update.message.reply_text(help_text)
+
+
+async def daily_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles /daily [--auto-style|--human-style] <brief text...>."""
+    if not is_authorized(update.effective_user.id):
+        if update.message:
+            await update.message.reply_text("Not authorized.")
+        return
+
+    args = context.args or []
+    auto_style = True
+    brief_args = args[:]
+
+    if brief_args and brief_args[0] in ("--auto-style", "--human-style"):
+        auto_style = brief_args[0] == "--auto-style"
+        brief_args = brief_args[1:]
+
+    brief_text = " ".join(brief_args).strip()
+    if not brief_text:
+        await update.message.reply_text(
+            "Usage: /daily [--auto-style|--human-style] <brief text...>"
+        )
+        return
+
+    today = datetime.now().date().isoformat()
+    update_id = update.update_id
+    artifact = {
+        "source": "telegram",
+        "received_at": _utc_now_z(),
+        "command": "daily_plan",
+        "date": today,
+        "brief_text": brief_text,
+        "auto_style": auto_style,
+        "approved_by": f"telegram:{update.effective_user.id}",
+        "nonce": str(update_id),
+    }
+
+    filepath = INBOX_PATH / f"daily-plan-{today}-{update_id}.json"
+    await _write_artifact(filepath, artifact)
+    await update.message.reply_text(
+        f"✅ Daily plan captured for {today} (auto_style={str(auto_style).lower()})"
+    )
 
 
 async def style_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -371,6 +422,7 @@ def main() -> None:
     # Register handlers
     app.add_handler(CommandHandler("start", start_command), group=1)
     app.add_handler(CommandHandler("help", help_command), group=1)
+    app.add_handler(CommandHandler("daily", daily_command), group=1)
     app.add_handler(CommandHandler("status", status_command), group=1)
     app.add_handler(CommandHandler("style", style_command), group=1)
 
