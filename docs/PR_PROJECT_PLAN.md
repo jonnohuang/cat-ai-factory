@@ -245,6 +245,8 @@ Outcome:
 Purpose: demonstrate real-world “agent → human approval → publishing” workflows without contaminating core determinism.
 
 ### PR-7 — Telegram/mobile control adapter (inbox/status bridge)
+Status: DONE
+
 Scope:
 - Telegram writes requests into `/sandbox/inbox/*.json`
 - Telegram reads status from `/sandbox/logs/<job_id>/state.json`

@@ -1,20 +1,24 @@
-
-## Planner CLI (PR5)
+## Planner CLI (LOCAL)
 
 The planner CLI runs locally and does NOT require the Clawdbot gateway.
 
 Requirements:
-- `GEMINI_API_KEY` must be set at runtime
+- GEMINI_API_KEY must be set at runtime
 
 Run:
 
-```bash
-# set GEMINI_API_KEY in your shell environment first
+# set GEMINI_API_KEY in your shell environment first and then the following
 python3 -m repo.services.planner.planner_cli \
   --prd sandbox/PRD.json \
   --inbox sandbox/inbox \
   --out sandbox/jobs \
-  --provider gemini_ai_studio
-```
+  --provider ai_studio
 
-On success, a new `/sandbox/jobs/<job_id>.job.json` is created (or `-v2`, `-v3`, etc on collision).
+Optional (prompt-only):
+
+python3 -m repo.services.planner.planner_cli \
+  --prompt "Cat dancing" \
+  --out sandbox/jobs \
+  --provider ai_studio
+
+On success, a new /sandbox/jobs/<job_id>.job.json is created (or -v2, -v3, etc on collision).
