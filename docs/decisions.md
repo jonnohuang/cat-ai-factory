@@ -260,3 +260,83 @@ References:
 - docs/system-requirements.md
 - docs/architecture.md
 - repo/tools/telegram_bridge.py
+
+------------------------------------------------------------
+
+## ADR-0010 — Distribution Artifact Path
+Date: 2026-02-07
+Status: Accepted
+
+Context:
+The Ops/Distribution layer needs a standardized, isolated location for derived artifacts (e.g., platform-specific metadata) to avoid modifying the Worker's immutable outputs.
+
+Decision:
+- The canonical root for local derived distribution artifacts will be `sandbox/dist_artifacts/<job_id>/`.
+- The primary publish payload will be `sandbox/dist_artifacts/<job_id>/<platform>.json`.
+
+Consequences:
+This enforces a clean separation between the core factory's immutable outputs and the mutable, ephemeral artifacts used for external publishing. It reinforces the "files-as-bus" principle for external integrations.
+
+References:
+- docs/publish-contracts.md
+- docs/architecture.md (Diagram 3)
+
+------------------------------------------------------------
+
+## ADR-0011 — Approval Artifact Contract
+Date: 2026-02-07
+Status: Accepted
+
+Context:
+An explicit, deterministic contract is needed to signal approval for publishing a job to a specific platform, enabling automated-but-gated workflows.
+
+Decision:
+- Approval artifacts will be delivered via the existing file-bus ingress path: `sandbox/inbox/`.
+- The format will be `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`.
+- Minimal required fields are: `job_id`, `platform`, `approved` (boolean), `approved_at` (timestamp), `approved_by` (string), `source` (string), and `nonce` (string).
+
+Consequences:
+This reuses the existing `ADR-0009` ingress model, avoiding a new file path. It provides a clear, auditable artifact that can be used by an external orchestrator (e.g., n8n) to trigger a publish action.
+
+References:
+- docs/publish-contracts.md
+- docs/decisions.md (ADR-0009)
+
+------------------------------------------------------------
+
+## ADR-0012 — Local Idempotency Contract for Publishing
+Date: 2026-02-07
+Status: Accepted
+
+Context:
+Publishing actions are not transactional and can fail, requiring a retry-safe mechanism to prevent duplicate posts from the local file system.
+
+Decision:
+- The authority for local publish state will be a state file: `sandbox/dist_artifacts/<job_id>/<platform>.state.json`.
+- The presence and content of this file (recording `platform_post_id`, `post_url`, etc.) indicate a terminal state (e.g., PUBLISHED, FAILED).
+- The canonical idempotency key for any publish action is the tuple `{job_id, platform}`.
+
+Consequences:
+This provides a simple, robust, and file-based idempotency lock that external publishing tools can check before executing a post.
+
+References:
+- docs/publish-contracts.md
+
+------------------------------------------------------------
+
+## ADR-0013 — Cloud State Mapping for Publishing (Firestore)
+Date: 2026-02-07
+Status: Accepted
+
+Context:
+The local file-based idempotency model needs a scalable, cloud-native equivalent for Phase 3/4 cloud workflows.
+
+Decision:
+- The canonical Firestore shape for tracking publish state will be a subcollection: `jobs/{job_id}/publishes/{platform}`.
+- Each document within this subcollection, keyed by `{platform}`, will store the state (e.g., `status`, `platform_post_id`, `post_url`) for a given publish attempt.
+
+Consequences:
+This structure is idiomatic for Firestore, enabling transactional updates to a publish document that serve as a cloud-native idempotency lock. It allows for scalable, event-driven publisher functions.
+
+References:
+- docs/cloud-mapping-firestore.md

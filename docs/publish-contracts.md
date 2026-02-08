@@ -2,6 +2,8 @@
 
 **Status: Proposed (non-binding)**
 
+**Note:** The recommended defaults in this document have been accepted and are now binding. See `docs/decisions.md` (ADR-0010, ADR-0011, ADR-0012).
+
 This document outlines the proposed (non-binding) file contracts for the Ops/Distribution layer. This layer sits outside the core Planner/Control/Worker planes and is responsible for publishing content to external platforms.
 
 References:
