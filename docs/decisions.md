@@ -530,3 +530,52 @@ References:
 - docs/PR_PROJECT_PLAN.md
 - docs/system-requirements.md
 
+------------------------------------------------------------
+
+## ADR-0021 — Export Bundle Layout v1 (bundle-first normative spec)
+Date: 2026-02-08
+Status: Accepted
+
+Context:
+- The system already defines `publish_plan.v1` as the Ops/Distribution intent contract.
+- Without a normative export bundle layout, each platform module (YouTube/IG/TikTok/X) will drift in structure, naming, and required artifacts.
+- Audio + multilingual requirements must map to concrete, portable file placement rules.
+
+Decision:
+- We lock the following bundle layout under:
+  `sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/`
+
+Normative tree:
+```text
+sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/
+├── clips/<clip_id>/
+│   ├── video/final.mp4                 # required (physical copy)
+│   ├── captions/final.srt              # include if present
+│   ├── copy/copy.en.txt                # required
+│   ├── copy/copy.zh-Hans.txt           # required
+│   ├── audio/audio_plan.json           # required
+│   ├── audio/audio_notes.txt           # required
+│   └── audio/assets/                   # optional: referenced assets
+└── checklists/posting_checklist_<platform>.txt  # required
+```
+
+Normative rules:
+1. Bundles are **derived Ops/Distribution artifacts** and MUST NOT modify worker outputs.
+2. Bundle artifacts MUST NOT contain credentials, secrets, tokens, cookies, or OAuth material.
+3. Bundles are **bundle-first**; posting automation is optional and outside the scope of this spec.
+4. `video/final.mp4` MUST be a physical copy (no symlinks). If `captions/final.srt` is included, it MUST also be a physical copy.
+5. `clips/<clip_id>/` MUST use a filesystem-safe clip_id (recommendation: `clip-001`, `clip-002`, ...).
+6. v1 export bundle copy artifacts MUST include copy/copy.en.txt and copy/copy.zh-Hans.txt
+
+Consequences:
+- Publisher adapters can rely on a fixed, versioned bundle layout.
+- Manual + future automated workflows operate with consistent artifacts.
+- Prevents bundle format drift across platforms.
+- Bundles are portable and safe to share with human operators.
+
+References:
+- docs/publish-contracts.md
+- docs/system-requirements.md
+- docs/architecture.md
+- docs/decisions.md (ADR-0010..ADR-0013)
+
