@@ -154,6 +154,21 @@ This normative specification defines the layout for **export bundles**, which ar
 ### Bundle Location
 `sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/`
 
+### Output
+This will populate:
+`sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/`
+
+### Validation
+The tools enforce:
+- **Existence of required assets**: `final.mp4` must exist.
+- **Content presence**: The following are mandatory:
+    - `clips/<clip_id>/copy/copy.en.txt`
+    - `clips/<clip_id>/copy/copy.zh-Hans.txt`
+    - `clips/<clip_id>/audio/audio_plan.json`
+    - `clips/<clip_id>/audio/audio_notes.txt`
+- **Optional Captions**: `clips/<clip_id>/captions/final.srt` is included ONLY if `final.srt` exists next to `final.mp4`.
+- **No secrets**: The publish plan is scanned for secrets before processing.
+
 ### Normative Layout
 ```text
 sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/
