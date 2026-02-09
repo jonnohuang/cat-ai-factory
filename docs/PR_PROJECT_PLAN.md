@@ -1,4 +1,4 @@
-# Cat AI Factory — PR Project Plan
+# Cat AI Factory — PR Project Plan (Corrected to Current Canon)
 
 This document defines the expected Pull Request (PR) plan for the Cat AI Factory project.
 
@@ -21,6 +21,7 @@ Each PR is intentionally scoped and independently defensible.
 - LOCAL determinism must always be preserved
 - Earlier phases must not be invalidated by later ones
 - Demo assets must be license-safe (or excluded from Git)
+- **PR numbers must never be reused once shipped**
 
 ------------------------------------------------------------
 
@@ -41,7 +42,7 @@ is an **external automation layer**. It may consume events and artifacts, but it
 
 Important:
 - Ops/Distribution remains outside the factory invariant.
-- However, Ops/Distribution is REQUIRED before Cloud migration, because it defines
+- Ops/Distribution is REQUIRED before Cloud migration, because it defines
   the “posting modules” and daily operational workflow.
 
 ------------------------------------------------------------
@@ -293,23 +294,14 @@ Scope:
 Outcome:
 - End-to-end “COMPLETED → approved → published” workflow for YouTube
 
-------------------------------------------------------------
-
-## Phase 4 — Daily Output System v0.3 (Required before Cloud)
-
-Purpose: achieve 3 clips/day under strict budget constraints without violating determinism.
-
-Key idea:
-- CAF is a deterministic renderer with multiple production lanes.
-- Telegram daily plan brief is the canonical human input.
-- Promotion outputs are artifacts and bundles (bundle-first).
+---
 
 ### PR-10 — Roadmap + ADR locks (docs-only)
-Status: ACTIVE (this PR)
+Status: Completed
 
 Scope:
 - Rewrite PR plan sequencing (daily lanes + promotion toolkit + publisher adapters before cloud)
-- Append ADRs locking the new roadmap decisions:
+- Append ADRs locking roadmap decisions:
   - lanes
   - hero cats (metadata)
   - multilingual support (en + zh-Hans)
@@ -321,54 +313,19 @@ Scope:
 Outcome:
 - A stable “constitution” for the next implementation era
 
----
-
-### PR-11 — Lane contracts + expected outputs (no cloud yet)
-Scope:
-- Define lane identifiers: ai_video | image_motion | template_remix (contract-level)
-- Define expected artifacts per lane (local paths)
-- No change to core 3-plane invariant
-
-Outcome:
-- Lane-aware planning and publish planning becomes explicit and reviewable
-
----
-
-### PR-12 — Lane C: Template registry + deterministic template_remix recipes
-Scope:
-- Add a template registry (deterministic metadata)
-- Worker supports template_remix lane via FFmpeg-only recipes
-
-Outcome:
-- Near-free daily clips at scale (C lane)
-
----
-
-### PR-13 — Lane B: image_motion (seed frames + deterministic motion presets)
-Scope:
-- Seed image request/selection interface (planner-side or pre-worker; not in worker)
-- Worker adds deterministic motion presets (Ken Burns/zoom/shake/cuts)
-
-Outcome:
-- Cheap “video-like” clips (B lane)
-
----
-
-### PR-14 — Hero cats registry (metadata only) + planner bindings
-Scope:
-- Add character registry + schema + validator
-- Planner uses hero-cat metadata for series consistency (no agent behavior)
-
-Outcome:
-- Series continuity and retention improvement
-
 ------------------------------------------------------------
 
-## Phase 5 — Promotion Toolkit + Publisher Modules v0.3 (Required before Cloud)
+## Phase 4 — Promotion Toolkit + Publisher Modules v0.3 (Completed)
 
 Purpose: make posting fast, safe, and repeatable without requiring platform automation.
 
-### PR-15 — Publish plan v1 (multilingual + audio plan included)
+Note:
+PR11–PR14 were executed early to lock publish_plan + bundle layout + platform copy formatting
+before lane expansion work. This sequencing is intentional and does not violate invariants.
+
+### PR-11 — Publish plan v1 (multilingual + audio plan included)
+Status: Completed
+
 Scope:
 - publish_plan.json v1 + schema + validator
 - language-map structures (en + zh-Hans enabled)
@@ -376,36 +333,152 @@ Scope:
 - Generates platform copy artifacts and posting metadata
 
 Outcome:
-- Deterministic “algorithm farming” toolkit via artifacts (no posting required)
+- Deterministic promotion contract via artifacts (no posting required)
 
 ---
 
-### PR-16 — Publisher Adapter Interface + Platform Modules (bundle-first)
+### PR-12 — Export Bundle Layout v1 (ADR-0021; normative spec)
+Status: Completed
+
 Scope:
-- Define Publisher Adapter interface (platform-agnostic)
-- Implement v1 adapters that generate export bundles + checklists:
-  - YouTube / Instagram / TikTok / X
-- Bundles contain:
-  - final.mp4 (+ captions/srt if present)
-  - per-language copy files
-  - audio_notes.txt + audio_plan.json (+ optional audio assets)
-  - posting_checklist_{platform}.txt
-- Upload automation:
-  - optional per platform
-  - opt-in
-  - official APIs only
-  - credentials out-of-repo only
+- Lock bundle layout under:
+  `sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/`
+- Require audio + bilingual copy artifacts in bundle
+- No schema changes
 
 Outcome:
-- Required “posting modules” exist before cloud; manual posting <2 minutes/clip
+- Bundle layout drift prevented; platform modules can rely on fixed structure
+
+---
+
+### PR-13 — Publisher adapter interface + bundle builder (bundle-first)
+Status: Completed
+
+Scope:
+- Publisher adapter interface
+- Bundle builder generates ADR-0021-compliant bundles for:
+  - YouTube / Instagram / TikTok / X
+- Bundle-only behavior (no upload automation required)
+
+Outcome:
+- Platform modules exist pre-cloud; bundles are deterministic artifacts
+
+---
+
+### PR-14 — Per-platform copy formatting (derived from publish_plan.v1)
+Status: Completed
+
+Scope:
+- Deterministic, per-platform copy formatting:
+  - YouTube / Instagram / TikTok / X
+- Writes only:
+  `copy/copy.en.txt`, `copy/copy.zh-Hans.txt`
+- No schema changes; no new artifact paths
+
+Outcome:
+- Bundles become immediately usable for manual posting (<2 min/clip)
 
 ------------------------------------------------------------
 
-## Phase 6 — Cloud v0.4 Migration (After local daily workflow is proven)
+## Phase 5 — Repo Posture + Branding (ACTIVE)
+
+Purpose: lock public-repo guardrails and improve brand survival against repost theft.
+
+### PR-15 — Public repo posture + roadmap alignment (docs-only)
+Status: ACTIVE
+
+Scope:
+- Update canon docs to reflect:
+  - CAF core repo is PUBLIC (portfolio posture)
+  - No secrets in repo (non-negotiable)
+  - Credentialed publishing integrations must be external/private
+- Update PR plan sequencing to match shipped PR11–PR14
+- Add PR16 watermark PR entry to roadmap
+- Optional: add LICENSE + SECURITY.md
+
+Outcome:
+- Repo is safe to keep public; roadmap is coherent and non-contradictory
+
+---
+
+### PR-16 — Deterministic watermark overlay (Worker)
+Scope:
+- Worker applies deterministic FFmpeg watermark overlay:
+  - repo-owned watermark asset (versioned)
+  - fixed placement + opacity + scale
+  - output path unchanged:
+    `/sandbox/output/<job_id>/final.mp4`
+- No schema changes
+- No bundle layout changes (bundles inherit watermarked media automatically)
+
+Outcome:
+- Brand attribution survives reposts; reduces lazy theft without autonomy creep
+
+------------------------------------------------------------
+
+## Phase 6 — Daily Output System v0.4 (Required before Cloud)
+
+Purpose: achieve 3 clips/day under strict budget constraints using lane-based production.
+
+### PR-17 — Lane contracts + expected outputs (no cloud yet)
+Scope:
+- Define lane identifiers (contract-level):
+  - ai_video | image_motion | template_remix
+- Define expected artifacts per lane (local paths)
+- No change to core 3-plane invariant
+
+Outcome:
+- Lane-aware planning becomes explicit and reviewable
+
+---
+
+### PR-18 — Lane C: Template registry + deterministic template_remix recipes
+Scope:
+- Add template registry (deterministic metadata)
+- Worker supports template_remix lane via FFmpeg-only recipes
+
+Outcome:
+- Near-free daily clips at scale (Lane C)
+
+---
+
+### PR-19 — Lane B: image_motion (seed frames + deterministic motion presets)
+Scope:
+- Seed image request/selection interface (planner-side or pre-worker; not in worker)
+- Worker adds deterministic motion presets (Ken Burns/zoom/shake/cuts)
+
+Outcome:
+- Cheap “video-like” clips at scale (Lane B)
+
+---
+
+### PR-20 — Hero cats registry (metadata only) + planner bindings
+Scope:
+- Add character registry + schema + validator
+- Planner uses hero-cat metadata for series continuity
+- Characters are metadata, NOT agents
+
+Outcome:
+- Series continuity without story-memory/autonomy creep
+
+---
+
+### PR-21 — LangGraph demo workflow (planner-only)
+Scope:
+- LangGraph workflow adapter in Planner plane only
+- Must NOT replace Ralph or Worker
+- Demonstrate recruiter-facing workflow orchestration story
+
+Outcome:
+- Mandatory Google demo signal without architecture compromise
+
+------------------------------------------------------------
+
+## Phase 7 — Cloud v0.5 Migration (After local daily workflow is proven)
 
 Purpose: demonstrate cloud literacy while preserving LOCAL guarantees.
 
-### PR-17 — Cloud artifact layout (GCS + Firestore mapping)
+### PR-22 — Cloud artifact layout (GCS + Firestore mapping)
 Scope:
 - GCS path conventions (immutable artifacts)
 - Firestore job + publish state mapping consistent with local lineage
@@ -415,7 +488,7 @@ Outcome:
 
 ---
 
-### PR-18 — Cloud Run execution stubs (orchestrator + worker)
+### PR-23 — Cloud Run execution stubs (orchestrator + worker)
 Scope:
 - Minimal Cloud Run deployment
 - Preserve contracts and states; no redesign
@@ -425,7 +498,7 @@ Outcome:
 
 ---
 
-### PR-19 — Vertex AI providers (mandatory portfolio requirement)
+### PR-24 — Vertex AI providers (mandatory portfolio requirement)
 Scope:
 - Vertex AI provider adapters (planner-side)
 - Lane A: Veo (ai_video), Lane B: Imagen (seed frames) as applicable
@@ -436,7 +509,7 @@ Outcome:
 
 ---
 
-### PR-20 — Budget guardrails + enforcement (local + cloud)
+### PR-25 — Budget guardrails + enforcement (local + cloud)
 Scope:
 - Cost estimation and caps (hard stop) before spending
 - Idempotent accounting keys; retry-safe enforcement
@@ -446,7 +519,7 @@ Outcome:
 
 ---
 
-### PR-21 — CI/CD skeleton
+### PR-26 — CI/CD skeleton
 Scope:
 - Lint + harness execution
 - No auto-deploy required
@@ -461,7 +534,7 @@ Outcome:
 The project is considered **portfolio-complete** when:
 - Phase 1 is complete (PR-3 merged)
 - PR-5 is complete (Gemini autonomy via AI Studio)
-- PR-19 is complete (Vertex AI presence demonstrated)
+- PR-24 is complete (Vertex AI presence demonstrated)
 - All invariants remain intact
 - LOCAL v0.1 can be verified with a single command
 
