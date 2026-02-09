@@ -142,3 +142,43 @@ python3 -m repo.tools.publish_youtube --job-id demo-dance-loop-v1
 4. Print a dry-run message and exit `0`.
 
 Running the command a second time will result in a no-op due to the idempotency check against the `.state.json` file.
+
+---
+
+## 6. Export Bundle Spec v1
+
+**Status: Binding (ADR-0021)**
+
+This normative specification defines the layout for **export bundles**, which are portable, zipped-ready collections of artifacts used for publishing (manual or automated).
+
+### Bundle Location
+`sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/`
+
+### Normative Layout
+```text
+sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/
+├── clips/<clip_id>/
+│   ├── video/final.mp4                # Physical copy (no symlinks)
+│   ├── captions/final.srt             # Included if present
+│   ├── copy/copy.en.txt               # Required (English)
+│   ├── copy/copy.zh-Hans.txt          # Required (Simplified Chinese)
+│   ├── audio/audio_plan.json          # Required (Audio strategy metadata)
+│   ├── audio/audio_notes.txt          # Required (Human instructions)
+│   └── audio/assets/                  # Optional (SFX, VO, etc.)
+└── checklists/posting_checklist_<platform>.txt  # Required (Step-by-step guide)
+```
+
+### Requirements
+1. **Physical Copies:** `video/final.mp4` must be a physical copy (no symlinks). If `captions/final.srt` is included, it must also be a physical copy.
+2. **Languages:** `en` and `zh-Hans` are the only required languages at this stage. Naming is strict: `copy/copy.<lang>.txt`.
+3. **Audio:** Audio strategy must be explicitly included via `audio/audio_plan.json` and human-readable `audio/audio_notes.txt`.
+4. **No Secrets:** Bundles must strictly exclude any credentials or tokens.
+5. **Clip ID:** `clips/<clip_id>/` must use a filesystem-safe ID (e.g., `clip-001`).
+
+### Manual Posting Workflow (<2 min/clip)
+1. Operator opens `checklists/posting_checklist_<platform>.txt`.
+2. Operator uploads `clips/<clip_id>/video/final.mp4` to the platform.
+3. Operator pastes text from `clips/<clip_id>/copy/copy.en.txt` (or target language).
+4. Operator applies audio per instructions in `clips/<clip_id>/audio/audio_notes.txt`.
+5. Operator clicks "Post".
+

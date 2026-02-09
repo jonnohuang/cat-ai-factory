@@ -18,6 +18,28 @@ You are NOT responsible for:
 
 ------------------------------------------------------------
 
+## Terminal Environment (MANDATORY — every terminal session)
+
+You MUST run all terminal commands inside the project Conda environment.
+
+Miniconda base:
+- /opt/miniconda3
+
+Before running ANY python/pip/pytest commands, always execute this preamble
+in the same terminal session:
+
+1) source /opt/miniconda3/etc/profile.d/conda.sh
+2) conda activate cat-ai-factory
+3) python --version
+4) which python
+
+Rules:
+- Never assume the environment is already active.
+- If conda activation fails, STOP and report the error; do not proceed with system python.
+- Prefer "python -m ..." invocations where applicable after activation.
+
+------------------------------------------------------------
+
 ## Required Reading (bring yourself up to speed)
 
 Before implementing anything, you MUST read these files in this order:
