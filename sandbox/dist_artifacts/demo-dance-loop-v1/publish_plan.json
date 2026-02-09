@@ -1,0 +1,35 @@
+{
+  "version": "publish_plan.v1",
+  "job_id": "demo-dance-loop-v1",
+  "platform_plans": {
+    "youtube": {
+      "title": {
+        "en": "Cat Dance Loop - Fun!",
+        "zh-Hans": "猫咪跳舞循环 - 有趣！"
+      },
+      "description": {
+        "en": "Look at this cat go! #cat #dance #funny",
+        "zh-Hans": "看这只猫！ #猫 #跳舞 #搞笑"
+      },
+      "tags": ["cat", "dance", "funny", "shorts"],
+      "publish_time": "2026-02-10T10:00:00Z",
+      "clips": [
+        {
+          "id": "clip_001",
+          "video_path": "/sandbox/output/demo-dance-loop-v1/final.mp4",
+          "caption": {
+            "en": "Dancing the day away!",
+            "zh-Hans": "跳舞一整天！"
+          },
+          "audio_plan": {
+            "strategy": "Upbeat funk track, synchronized with dance moves."
+          },
+          "audio_notes": "Use a royalty-free funk track. Sync the beat drop with the spin.",
+          "audio_assets": [
+            "/sandbox/assets/audio/sfx_cheer.wav"
+          ]
+        }
+      ]
+    }
+  }
+}
