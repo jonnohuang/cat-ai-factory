@@ -1,0 +1,29 @@
+{
+    "version": "publish_plan.v1",
+    "job_id": "TEST-FINAL-JOB",
+    "platform_plans": {
+        "youtube": {
+            "clips": [
+                {
+                    "video_path": "sandbox/output/TEST-FINAL-JOB/final.mp4",
+                    "audio_plan": {
+                        "strategy": "manual"
+                    },
+                    "audio_notes": "Test notes",
+                    "caption": {
+                        "en": "Hi",
+                        "zh-Hans": "NiHao"
+                    },
+                    "title": {
+                        "en": "T",
+                        "zh-Hans": "TC"
+                    },
+                    "description": {
+                        "en": "D",
+                        "zh-Hans": "DC"
+                    }
+                }
+            ]
+        }
+    }
+}

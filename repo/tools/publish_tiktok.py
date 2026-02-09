@@ -1,22 +1,22 @@
 """
-YouTube Publisher CLI (Wrapper for ADR-0021 Adapter)
-Generates 'v1' export bundle for YouTube.
+TikTok Publisher CLI (Wrapper for ADR-0021 Adapter)
+Generates 'v1' export bundle for TikTok.
 """
 import argparse
 import sys
 from pathlib import Path
 
 def _get_repo_root() -> Path:
-    """Derive repo root from file location (repo/tools/publish_youtube.py)."""
+    """Derive repo root from file location (repo/tools/publish_tiktok.py)."""
     return Path(__file__).resolve().parent.parent.parent
 
 # Add repo root to sys.path so we can import 'repo' package
 sys.path.append(str(_get_repo_root()))
 
-from repo.tools.publisher_adapters.youtube import YouTubeAdapter
+from repo.tools.publisher_adapters.tiktok import TikTokAdapter
 
 def main():
-    parser = argparse.ArgumentParser(description="YouTube Publisher (ADR-0021 Bundle Generator)")
+    parser = argparse.ArgumentParser(description="TikTok Publisher (ADR-0021 Bundle Generator)")
     parser.add_argument("--job-id", required=True, help="Job ID")
     parser.add_argument("--publish-plan", required=True, help="Path to publish_plan.json")
     parser.add_argument("--dist-root", default="sandbox/dist_artifacts", help="Root for dist artifacts")
@@ -38,19 +38,19 @@ def main():
         sys.exit(1)
 
     try:
-        adapter = YouTubeAdapter()
+        adapter = TikTokAdapter()
         bundle_path = adapter.generate_bundle(
             job_id=args.job_id,
             publish_plan_path=args.publish_plan,
             dist_root=args.dist_root
         )
         if bundle_path:
-            print(f"SUCCESS: YouTube bundle generated at: {bundle_path}")
+            print(f"SUCCESS: TikTok bundle generated at: {bundle_path}")
             sys.exit(0)
         else:
-            print("No plan found for YouTube. Use --publish-plan with correct content.")
+            print("No plan found for TikTok. Use --publish-plan with correct content.")
             sys.exit(0)
-            
+
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
