@@ -92,6 +92,39 @@ No plane may “borrow” responsibilities from another plane.
 
 ------------------------------------------------------------
 
+## PUBLIC REPO: Secrets & Credentials Policy
+
+This repository is PUBLIC by design (portfolio posture).
+
+Non-negotiable:
+- NO secrets may ever be committed to this repo.
+- NO credential material may ever be stored in tracked files, including docs, examples, logs, or sandbox artifacts.
+
+Examples (non-exhaustive) of prohibited material:
+- API keys
+- OAuth client secrets
+- OAuth refresh tokens
+- Session cookies
+- Authorization headers / Bearer tokens
+- Webhook URLs with embedded secrets
+- Service account JSON files
+- Private keys (SSH keys, RSA keys, etc.)
+
+.env policy:
+- Never commit a real `.env`.
+- `.env.example` is allowed and must contain placeholders only.
+
+Logs policy:
+- Never log Authorization headers, tokens, cookies, or full request payloads containing secrets.
+- If debugging is needed, redact or omit sensitive fields entirely.
+
+Credentialed integrations boundary:
+- Any credentialed publishing integrations (OAuth/token flows, account bindings, automated posting requiring credentials)
+  MUST live outside this public repo (private ops repo / separate deployment artifact).
+- This repo may only implement credential-free, bundle-first publisher adapters by default.
+
+------------------------------------------------------------
+
 ## Ops/Distribution (Outside the Factory)
 
 Ops/Distribution is required pre-cloud, but it is still outside the factory.

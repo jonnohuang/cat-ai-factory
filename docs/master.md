@@ -71,6 +71,16 @@ that preserve this invariant. Decisions that alter plane responsibilities requir
 
 ------------------------------------------------------------
 
+## Repo visibility posture (PUBLIC by design)
+
+- The Cat AI Factory core repository is intended to be PUBLIC (portfolio posture).
+- Ops/Distribution remains bundle-first by default: export bundles + checklists are credential-free artifacts.
+- Any credentialed publishing integrations (OAuth/token flows, account bindings, automated posting) MUST be external to this repo (private ops repo / separate deployment artifact).
+- No secrets, credentials, or tokens may be committed (including in docs, examples, logs, or sandbox artifacts).
+- Avoid PII and identity-tied cloud resource names in repo text/configs (no real project IDs, buckets, emails, or personal identifiers).
+
+------------------------------------------------------------
+
 ## Control Plane vs Data Plane
 
 The system deliberately separates:
