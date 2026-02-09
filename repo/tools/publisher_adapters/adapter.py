@@ -20,6 +20,7 @@ import shutil
 import uuid
 from pathlib import Path
 from typing import Any, Dict, Optional
+from .copy_format import clip_id_dirname, format_copy
 
 # --- Secret Scanning (Reused from validate_publish_plan) ---
 SECRET_PATTERNS = [
@@ -173,8 +174,8 @@ class SharedBundleBuilder:
                  raise ValueError(f"Invalid plan: No clips defined for {platform}")
 
             for idx, clip_meta in enumerate(clips_meta):
-                clip_idx_str = f"clip-{str(idx + 1).zfill(3)}"
-                clip_dir = clips_dir / clip_idx_str
+                clip_dirname = clip_id_dirname(clip_meta, idx)
+                clip_dir = clips_dir / clip_dirname
                 clip_dir.mkdir()
                 
                 # Subdirs
@@ -216,21 +217,10 @@ class SharedBundleBuilder:
                     shutil.copy2(potential_srt, clip_dir / "captions" / "final.srt")
                 
                 # C. Copy
-                caption_map = clip_meta.get("caption", {})
-                title_map = platform_plan.get("title", {})  
-                desc_map = platform_plan.get("description", {})
-                
                 for lang in ["en", "zh-Hans"]:
-                    title_text = title_map.get(lang, "")
-                    desc_text = desc_map.get(lang, "")
-                    caption_text = caption_map.get(lang, "")
-                    
-                    full_copy = f"{title_text}\n\n{desc_text}\n\n{caption_text}".strip()
-                    if not full_copy:
-                         raise ValueError(f"Missing copy content for required language '{lang}' in clip {idx}")
-                         
+                    content = format_copy(platform, platform_plan, clip_meta, lang)
                     with open(clip_dir / "copy" / f"copy.{lang}.txt", "w", encoding="utf-8") as f:
-                        f.write(full_copy)
+                        f.write(content)
                         
                 # D. Audio
                 audio_plan = clip_meta.get("audio_plan")

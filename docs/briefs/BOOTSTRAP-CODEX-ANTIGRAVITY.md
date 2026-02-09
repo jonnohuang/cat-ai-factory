@@ -26,8 +26,7 @@ You MUST run all terminal commands inside the project Conda environment.
 Miniconda base:
 - /opt/miniconda3
 
-Before running ANY python/pip/pytest commands, always execute this preamble
-in the same terminal session:
+Before running ANY python/pip/pytest commands, always execute this preamble once at the start of a new terminal session:
 
 1) source /opt/miniconda3/etc/profile.d/conda.sh
 2) conda activate cat-ai-factory
