@@ -1,4 +1,4 @@
-# Cat AI Factory — PR Project Plan (Corrected to Current Canon)
+# Cat AI Factory — PR Project Plan (Current Canon + Status Labels)
 
 This document defines the expected Pull Request (PR) plan for the Cat AI Factory project.
 
@@ -47,12 +47,21 @@ Important:
 
 ------------------------------------------------------------
 
-## Phase 0 — Governance & Documentation (Completed)
+## PR Status Legend
+
+- **COMPLETED** — merged/shipped
+- **ACTIVE** — currently being implemented
+- **NEXT** — next up after ACTIVE
+- **PLANNED** — queued for later
+
+------------------------------------------------------------
+
+## Phase 0 — Governance & Documentation (COMPLETED)
 
 Purpose: establish authority, invariants, and navigability.
 
 ### PR-0 — Docs normalization + architecture
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Normalize master / decisions / chat bootstrap
@@ -66,12 +75,12 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 1 — LOCAL v0.1 Deterministic Pipeline (Completed)
+## Phase 1 — LOCAL v0.1 Deterministic Pipeline (COMPLETED)
 
 Purpose: prove reproducibility, idempotency, and artifact lineage locally.
 
 ### PR-1 — Job contract v1
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - job.schema.json v1
@@ -86,7 +95,7 @@ Outcome:
 ---
 
 ### PR-2 — Worker idempotency + stable outputs
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Per-job output directories
@@ -102,7 +111,7 @@ Outcome:
 ---
 
 ### PR-3 — Artifact lineage + determinism harness
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Lineage verifier (job → outputs → logs)
@@ -117,7 +126,7 @@ Outcome:
 ---
 
 ### PR-3.5 — Demo Sample Pack (cat activities + assets)
-Status: Completed (recommended demo pack)
+Status: **COMPLETED** (recommended demo pack)
 
 Scope:
 - Add a small demo pack under:
@@ -140,12 +149,12 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 2 — AGENTS v0.2 Control Plane + Planner Autonomy (Completed)
+## Phase 2 — AGENTS v0.2 Control Plane + Planner Autonomy (COMPLETED)
 
 Purpose: demonstrate real agent orchestration + autonomous planning without sacrificing safety.
 
 ### PR-4 — Ralph Loop state machine (single-job orchestrator)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Explicit job lifecycle states
@@ -161,7 +170,7 @@ Outcome:
 ---
 
 ### PR-4.1 — Requirements + roadmap tightening (docs-only)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Add `docs/system-requirements.md` as a reviewer-readable requirements contract
@@ -176,7 +185,7 @@ Outcome:
 ---
 
 ### PR-5 — Planner Adapter Layer + Gemini AI Studio (LOCAL autonomy)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Introduce a planner adapter interface (frameworks are adapters, not foundations)
@@ -203,7 +212,7 @@ Outcome:
 ---
 
 ### PR-5.1 — Planner prompt-injection hardening + debug redaction
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Add planner prompt guardrails (PRD/inbox treated as untrusted; JSON-only)
@@ -216,7 +225,7 @@ Outcome:
 ---
 
 ### PR-6 — Verification / QC agent
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Deterministic, read-only evaluator
@@ -229,7 +238,7 @@ Outcome:
 ---
 
 ### PR-6.1 — Harness-only QC integration (reporting-only)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Integrate QC into the local harness.
@@ -242,12 +251,12 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 3 — Ops/Distribution v0.2 (Completed)
+## Phase 3 — Ops/Distribution v0.2 (COMPLETED)
 
 Purpose: demonstrate real-world “agent → human approval → publish artifacts” workflows without contaminating core determinism.
 
 ### PR-7 — Telegram/mobile control adapter (inbox/status bridge)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Telegram writes requests into `/sandbox/inbox/*.json`
@@ -269,7 +278,7 @@ Outcome:
 ---
 
 ### PR-8 — Publish contracts + idempotency model (docs-only)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Define publish contracts, approval artifacts, and idempotency conventions.
@@ -283,7 +292,7 @@ Outcome:
 ---
 
 ### PR-9 — Publish pipeline MVP (YouTube first) + approval gate
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - YouTube publish adapter
@@ -297,7 +306,7 @@ Outcome:
 ---
 
 ### PR-10 — Roadmap + ADR locks (docs-only)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Rewrite PR plan sequencing (daily lanes + promotion toolkit + publisher adapters before cloud)
@@ -315,7 +324,7 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 4 — Promotion Toolkit + Publisher Modules v0.3 (Completed)
+## Phase 4 — Promotion Toolkit + Publisher Modules v0.3 (COMPLETED)
 
 Purpose: make posting fast, safe, and repeatable without requiring platform automation.
 
@@ -324,7 +333,7 @@ PR11–PR14 were executed early to lock publish_plan + bundle layout + platform 
 before lane expansion work. This sequencing is intentional and does not violate invariants.
 
 ### PR-11 — Publish plan v1 (multilingual + audio plan included)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - publish_plan.json v1 + schema + validator
@@ -338,7 +347,7 @@ Outcome:
 ---
 
 ### PR-12 — Export Bundle Layout v1 (ADR-0021; normative spec)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Lock bundle layout under:
@@ -352,7 +361,7 @@ Outcome:
 ---
 
 ### PR-13 — Publisher adapter interface + bundle builder (bundle-first)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Publisher adapter interface
@@ -366,7 +375,7 @@ Outcome:
 ---
 
 ### PR-14 — Per-platform copy formatting (derived from publish_plan.v1)
-Status: Completed
+Status: **COMPLETED**
 
 Scope:
 - Deterministic, per-platform copy formatting:
@@ -385,7 +394,7 @@ Outcome:
 Purpose: lock public-repo guardrails and improve brand survival against repost theft.
 
 ### PR-15 — Public repo posture + roadmap alignment (docs-only)
-Status: ACTIVE
+Status: **COMPLETED**
 
 Scope:
 - Update canon docs to reflect:
@@ -402,6 +411,8 @@ Outcome:
 ---
 
 ### PR-16 — Deterministic watermark overlay (Worker)
+Status: **COMPLETED**
+
 Scope:
 - Worker applies deterministic FFmpeg watermark overlay:
   - repo-owned watermark asset (versioned)
@@ -414,13 +425,47 @@ Scope:
 Outcome:
 - Brand attribution survives reposts; reduces lazy theft without autonomy creep
 
+---
+
+### PR-16.1 — Brand Asset Pack v1 (static repo-owned assets + channel setup)
+Status: **COMPLETED**
+
+Scope:
+- Add repo-owned, static brand assets for deterministic reuse:
+  - `repo/assets/watermarks/caf-watermark.png` (already exists; ensure it remains canonical)
+  - `repo/assets/brand/profile_1x1.png`
+  - optional banners (non-runtime):
+    - `repo/assets/brand/banner_youtube.png`
+    - `repo/assets/brand/banner_facebook.png`
+    - `repo/assets/brand/banner_x.png`
+- Add `docs/brand.md` containing:
+  - canonical brand name: Cat AI Factory
+  - canonical handle: @cataifactory
+  - links to platform accounts:
+    - YouTube / Instagram / TikTok / X / Facebook / Snapchat / Threads
+  - asset usage rules (watermark sizing guidance; profile/banner usage)
+- No schema changes.
+- No Worker logic changes.
+- No “branding layer” in Worker; assets are static inputs only.
+
+Notes:
+- For Facebook/Snapchat/Threads: CAF outputs one universal `final.mp4`.
+- No platform-specific video adapters are required until a future “auto-publish” phase.
+
+Outcome:
+- Deterministic brand identity pack lives in-repo
+- Channel setup becomes documented and reproducible
+- Watermark asset remains stable and versioned
+
 ------------------------------------------------------------
 
-## Phase 6 — Daily Output System v0.4 (Required before Cloud)
+## Phase 6 — Daily Output System v0.4 (PLANNED)
 
 Purpose: achieve 3 clips/day under strict budget constraints using lane-based production.
 
 ### PR-17 — Lane contracts + expected outputs (no cloud yet)
+Status: **PLANNED**
+
 Scope:
 - Define lane identifiers (contract-level):
   - ai_video | image_motion | template_remix
@@ -433,6 +478,8 @@ Outcome:
 ---
 
 ### PR-18 — Lane C: Template registry + deterministic template_remix recipes
+Status: **PLANNED**
+
 Scope:
 - Add template registry (deterministic metadata)
 - Worker supports template_remix lane via FFmpeg-only recipes
@@ -443,6 +490,8 @@ Outcome:
 ---
 
 ### PR-19 — Lane B: image_motion (seed frames + deterministic motion presets)
+Status: **PLANNED**
+
 Scope:
 - Seed image request/selection interface (planner-side or pre-worker; not in worker)
 - Worker adds deterministic motion presets (Ken Burns/zoom/shake/cuts)
@@ -453,6 +502,8 @@ Outcome:
 ---
 
 ### PR-20 — Hero cats registry (metadata only) + planner bindings
+Status: **PLANNED**
+
 Scope:
 - Add character registry + schema + validator
 - Planner uses hero-cat metadata for series continuity
@@ -464,6 +515,8 @@ Outcome:
 ---
 
 ### PR-21 — LangGraph demo workflow (planner-only)
+Status: **PLANNED**
+
 Scope:
 - LangGraph workflow adapter in Planner plane only
 - Must NOT replace Ralph or Worker
@@ -474,11 +527,13 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 7 — Cloud v0.5 Migration (After local daily workflow is proven)
+## Phase 7 — Cloud v0.5 Migration (PLANNED)
 
 Purpose: demonstrate cloud literacy while preserving LOCAL guarantees.
 
 ### PR-22 — Cloud artifact layout (GCS + Firestore mapping)
+Status: **PLANNED**
+
 Scope:
 - GCS path conventions (immutable artifacts)
 - Firestore job + publish state mapping consistent with local lineage
@@ -489,6 +544,8 @@ Outcome:
 ---
 
 ### PR-23 — Cloud Run execution stubs (orchestrator + worker)
+Status: **PLANNED**
+
 Scope:
 - Minimal Cloud Run deployment
 - Preserve contracts and states; no redesign
@@ -499,6 +556,8 @@ Outcome:
 ---
 
 ### PR-24 — Vertex AI providers (mandatory portfolio requirement)
+Status: **PLANNED**
+
 Scope:
 - Vertex AI provider adapters (planner-side)
 - Lane A: Veo (ai_video), Lane B: Imagen (seed frames) as applicable
@@ -510,6 +569,8 @@ Outcome:
 ---
 
 ### PR-25 — Budget guardrails + enforcement (local + cloud)
+Status: **PLANNED**
+
 Scope:
 - Cost estimation and caps (hard stop) before spending
 - Idempotent accounting keys; retry-safe enforcement
@@ -520,6 +581,8 @@ Outcome:
 ---
 
 ### PR-26 — CI/CD skeleton
+Status: **PLANNED**
+
 Scope:
 - Lint + harness execution
 - No auto-deploy required
