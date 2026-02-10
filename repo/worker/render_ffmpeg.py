@@ -1,8 +1,16 @@
 import argparse
 import hashlib
 import json
+import math
 import pathlib
 import subprocess
+
+
+PADDING_PX = 24
+OPACITY = 0.35
+SCALE_FACTOR = 0.12
+MIN_WM_WIDTH = 64
+MAX_WM_WIDTH = 256
 
 
 def repo_root_from_here() -> pathlib.Path:
@@ -56,15 +64,47 @@ def load_job(jobs_dir: pathlib.Path, job_path: str | None = None):
     return job_file, json.loads(job_file.read_text(encoding="utf-8"))
 
 
-def run_ffmpeg(cmd, out_path: pathlib.Path) -> None:
+def run_ffmpeg(cmd, out_path: pathlib.Path) -> list[str]:
     # Write to a temp file then atomically replace.
     tmp_out = out_path.with_name(out_path.name + ".tmp" + out_path.suffix)
     if tmp_out.exists():
         tmp_out.unlink()
-    cmd = cmd[:-1] + [str(tmp_out)]
-    print("Running:", " ".join(cmd))
-    subprocess.check_call(cmd)
+    # Find the output path argument and replace with tmp_out
+    # The last argument in our constructed commands is typically the output path
+    cmd_with_tmp = list(cmd)
+    cmd_with_tmp[-1] = str(tmp_out)
+    
+    print("Running:", " ".join(cmd_with_tmp))
+    subprocess.check_call(cmd_with_tmp)
     tmp_out.replace(out_path)
+    return cmd_with_tmp
+
+
+def get_video_dims(path: pathlib.Path) -> tuple[int, int]:
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height",
+        "-of",
+        "csv=p=0",
+        str(path),
+    ]
+    out = subprocess.check_output(cmd, text=True).strip()
+    w, h = map(int, out.split(","))
+    return w, h
+
+
+def validate_safe_path(path: pathlib.Path, root: pathlib.Path) -> None:
+    # Ensure path is within root
+    # Py3.9+ has is_relative_to, but we can fallback for safety
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        raise ValueError(f"Path is strictly forbidden outside sandbox root: {path}")
 
 
 def main():
@@ -81,7 +121,6 @@ def main():
     sandbox_root = pathlib.Path(args.sandbox_root) if args.sandbox_root else (root / "sandbox")
 
     jobs_dir = sandbox_root / "jobs"
-    assets_dir = sandbox_root / "assets"
     output_root = sandbox_root / "output"
 
     job_path, job = load_job(jobs_dir, args.job_path)
@@ -92,9 +131,24 @@ def main():
 
     # background_asset is stored as a sandbox-relative path in the contract
     bg_rel = job["render"]["background_asset"]
+    if pathlib.Path(bg_rel).is_absolute():
+        raise SystemExit(f"Background asset path matches host absolute path (disallowed): {bg_rel}")
+        
     bg = sandbox_root / bg_rel
+    # Double check it didn't resolve outside sandbox
+    try:
+        validate_safe_path(bg, sandbox_root)
+    except ValueError as e:
+        raise SystemExit(str(e))
+    
     if not bg.exists():
         raise SystemExit(f"Missing background asset: {bg}")
+
+    # Validate watermark asset
+    # Standardized path: repo/assets/watermarks/caf-watermark.png
+    wm_path = root / "repo/assets/watermarks/caf-watermark.png"
+    if not wm_path.exists():
+        raise SystemExit(f"Missing watermark asset: {wm_path}")
 
     out_dir = output_root / job_id
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -104,37 +158,102 @@ def main():
     result_path = out_dir / "result.json"
 
     make_srt(job["captions"], srt_path)
+    
+    # Get video dimensions (height unused but returned for completeness/logging if needed)
+    video_w, _ = get_video_dims(bg)
+    
+    # Calculate watermark dimensions
+    raw_wm_width = math.floor(video_w * SCALE_FACTOR)
+    wm_width = max(MIN_WM_WIDTH, min(raw_wm_width, MAX_WM_WIDTH))
 
-    base_cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(bg),
-        "-vf",
-        "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920",
-        "-t",
-        str(job["video"]["length_seconds"]),
-        "-r",
-        str(job["video"]["fps"]),
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        str(out_mp4),
-    ]
+    # Helper to build filter string
+    def build_filter(include_subtitles: bool):
+        f = []
+        # 1. Prepare watermark: scale and opacity
+        f.append(f"[1:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]")
+        
+        current_bg_ref = "[0:v]"
+        
+        # 2. Apply subtitles (Optional)
+        if include_subtitles and srt_path.exists():
+            # Strict validation
+            validate_safe_path(srt_path, sandbox_root)
+            
+            # Escape srt path for FFmpeg filter
+            # 1. : is separator -> \:
+            # 2. \ is escape -> \\
+            # 3. ' is quote -> \'
+            safe_srt_path = str(srt_path).replace("\\", "/").replace(":", "\\:")
+            # We don't expect commas in safe paths, but good practice
+            safe_srt_path = safe_srt_path.replace(",", "\\,")
+            
+            f.append(f"{current_bg_ref}subtitles=filename='{safe_srt_path}'[v_sub]")
+            current_bg_ref = "[v_sub]"
 
-    subtitles_cmd = base_cmd.copy()
-    # Replace the -vf argument with "...,subtitles=<srt_path>"
-    subtitles_cmd[5] = f"{subtitles_cmd[5]},subtitles={srt_path}"
+        # 3. Apply watermark overlay
+        f.append(f"{current_bg_ref}[wm]overlay=W-w-{PADDING_PX}:H-h-{PADDING_PX}[out]")
+        return ";".join(f)
 
-    subtitles_burned = True
-    try:
-        run_ffmpeg(subtitles_cmd, out_mp4)
-    except subprocess.CalledProcessError:
-        subtitles_burned = False
-        if out_mp4.exists():
-            out_mp4.unlink()
-        run_ffmpeg(base_cmd, out_mp4)
+    # Strategy: Try with subtitles first (if they exist). If that fails (e.g. no libass), 
+    # fallback to just watermark.
+    
+    subtitles_status = "skipped_no_file"
+    final_cmd_logical = []
+    final_cmd_executed = []
+    failed_cmd = None
+    
+    # Attempt 1: With Subtitles (if available)
+    if srt_path.exists():
+        try:
+            full_filter = build_filter(include_subtitles=True)
+            cmd = [
+                "ffmpeg", "-y",
+                "-i", str(bg),
+                "-i", str(wm_path),
+                "-filter_complex", full_filter,
+                "-map", "[out]",
+                "-t", str(job["video"]["length_seconds"]),
+                "-r", str(job["video"]["fps"]),
+                "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
+                str(out_mp4),
+            ]
+            print("Attempting render with subtitles and watermark...")
+            executed = run_ffmpeg(cmd, out_mp4)
+            subtitles_status = "burned"
+            final_cmd_logical = cmd
+            final_cmd_executed = executed
+        except (subprocess.CalledProcessError, ValueError) as e:
+            print(f"Render with subtitles failed: {e}")
+            if isinstance(e, ValueError):
+                subtitles_status = "skipped_unsafe_path"
+            else:
+                subtitles_status = "failed_ffmpeg_subtitles"
+                failed_cmd = cmd
+            
+            # Clean up potential partial output
+            if out_mp4.exists():
+                out_mp4.unlink()
+    
+    # Attempt 2: Watermark Only (if Attempt 1 failed or no subtitles)
+    if not out_mp4.exists():
+        full_filter = build_filter(include_subtitles=False)
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(bg),
+            "-i", str(wm_path),
+            "-filter_complex", full_filter,
+            "-map", "[out]",
+            "-t", str(job["video"]["length_seconds"]),
+            "-r", str(job["video"]["fps"]),
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            str(out_mp4),
+        ]
+        print("Rendering with watermark only...")
+        executed = run_ffmpeg(cmd, out_mp4)
+        final_cmd_logical = cmd
+        final_cmd_executed = executed
 
     result = {
         "job_id": job_id,
@@ -150,9 +269,22 @@ def main():
             "final_mp4_sha256": sha256_file(out_mp4),
             "final_srt_sha256": sha256_file(srt_path),
         },
-        "subtitles_burned": subtitles_burned,
-        "ffmpeg_cmd": subtitles_cmd if subtitles_burned else base_cmd,
+        "watermark": {
+            "bg_path": str(bg),
+            "wm_path": str(wm_path),
+            "video_width": video_w,
+            "wm_width": wm_width,
+            "padding": PADDING_PX,
+            "opacity": OPACITY,
+        },
+        "subtitles_status": subtitles_status,
+        "ffmpeg_cmd": final_cmd_logical,
+        "ffmpeg_cmd_executed": final_cmd_executed,
     }
+    
+    if failed_cmd:
+        result["failed_ffmpeg_cmd"] = failed_cmd
+
     atomic_write_text(result_path, json.dumps(result, indent=2, sort_keys=True))
 
     print("Wrote", out_mp4)

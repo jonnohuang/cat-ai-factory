@@ -579,3 +579,37 @@ References:
 - docs/architecture.md
 - docs/decisions.md (ADR-0010..ADR-0013)
 
+
+------------------------------------------------------------
+
+## ADR-0022 — Deterministic watermark overlay (Worker; repo-owned asset; no schema changes)
+Date: 2026-02-09
+Status: Accepted
+
+Context:
+- CAF is a public, bundle-first content factory; attribution should survive reposts.
+- Visual watermarking is a deterministic media transform and therefore belongs in the Worker plane.
+- We must reduce repost theft without introducing nondeterminism, schema churn, or autonomy creep.
+
+Decision:
+- The Worker applies a deterministic watermark overlay to the rendered video output (`final.mp4`).
+- No schema changes are introduced (job schema and publish_plan schema unchanged).
+- The watermark asset is a repo-owned static file (e.g., `repo/assets/watermarks/caf_watermark.png`), not generated per job.
+- Output paths remain unchanged; only media content changes:
+  - `/sandbox/output/<job_id>/final.mp4` remains the canonical output path.
+- Watermark placement/appearance is deterministic (fixed padding, opacity, and scaling rule).
+- Per-platform placement rules are deferred; v1 uses a single default placement.
+
+Consequences:
+- Attribution persists in the pixels, improving survivability across reposts.
+- Bundles (ADR-0021) automatically include watermarked media because they copy `final.mp4`.
+- Determinism is preserved; no LLM usage is added to Worker; no external APIs involved.
+- Future enhancements (e.g., slight periodic drift) require a new ADR if they change determinism semantics.
+
+References:
+- docs/master.md
+- docs/system-requirements.md
+- docs/architecture.md
+- docs/publish-contracts.md
+- docs/decisions.md (ADR-0001, ADR-0002, ADR-0021)
+
