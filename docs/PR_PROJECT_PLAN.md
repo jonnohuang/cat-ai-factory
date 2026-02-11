@@ -464,7 +464,7 @@ Outcome:
 Purpose: achieve 3 clips/day under strict budget constraints using lane-based production.
 
 ### PR-17 — Lane contracts + expected outputs (no cloud yet)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Define lane identifiers (contract-level):
@@ -478,7 +478,7 @@ Outcome:
 ---
 
 ### PR-18 — Lane C: Template registry + deterministic template_remix recipes
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add template registry (deterministic metadata)
