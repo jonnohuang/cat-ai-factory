@@ -613,3 +613,36 @@ References:
 - docs/publish-contracts.md
 - docs/decisions.md (ADR-0001, ADR-0002, ADR-0021)
 
+
+------------------------------------------------------------
+
+## ADR-0023 — Deterministic audio stream in Worker outputs (no silent MP4)
+Date: 2026-02-10
+Status: Proposed
+
+Context:
+- Worker outputs currently produce `final.mp4` with no audio stream (silent MP4).
+- This is a production blocker for Shorts/Reels/TikTok workflows and affects Lane B (image_motion) and Lane C (template_remix), and likely all lanes.
+- The Worker must remain deterministic and must not use LLMs or network calls.
+
+Decision:
+- The Worker MUST ensure `sandbox/output/<job_id>/final.mp4` always contains an audio stream, deterministically.
+- Priority order:
+  1) If the job contract provides `audio.audio_asset` (sandbox-relative), use it as the audio source.
+  2) Else, if the background video input contains an audio stream, preserve/passthrough it.
+  3) Else, inject deterministic silence (e.g., FFmpeg `anullsrc`) so the output always has audio.
+- Audio mux/encode settings must be deterministic (fixed codec/sample rate/channel layout/bitrate).
+- Any referenced audio assets must be sandbox-relative and validated to be within the sandbox root.
+
+Consequences:
+- Eliminates “silent MP4” outputs and produces publish-ready media across all lanes.
+- Preserves the Worker invariant: deterministic, retry-safe, no LLM/network.
+- Introduces an optional job contract field (`audio.audio_asset`) and associated validation; any schema/contract evolution must remain minimal and reviewable.
+
+References:
+- docs/master.md
+- docs/system-requirements.md
+- docs/PR_PROJECT_PLAN.md
+- docs/architecture.md
+- AGENTS.md
+

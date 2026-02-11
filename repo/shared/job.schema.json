@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "CatShortJob",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "job_id",
     "date",
@@ -13,41 +14,47 @@
     "hashtags",
     "render"
   ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "lane": {
+            "const": "image_motion"
+          }
+        },
+        "required": [
+          "lane"
+        ]
+      },
+      "then": {
+        "required": [
+          "image_motion"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lane": {
+            "const": "template_remix"
+          }
+        },
+        "required": [
+          "lane"
+        ]
+      },
+      "then": {
+        "required": [
+          "template"
+        ]
+      }
+    }
+  ],
   "properties": {
     "job_id": {
       "type": "string",
-      "minLength": 6
-    },
-    "template": {
-      "type": "object",
-      "required": [
-        "template_id"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "template_id": {
-          "type": "string"
-        },
-        "params": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "duration_seconds": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 60
-            },
-            "clip_start_seconds": {
-              "type": "number",
-              "minimum": 0
-            },
-            "clip_end_seconds": {
-              "type": "number",
-              "minimum": 0
-            }
-          }
-        }
-      }
+      "minLength": 6,
+      "pattern": "^[a-z0-9-]+$"
     },
     "date": {
       "type": "string",
@@ -61,52 +68,12 @@
         "template_remix"
       ]
     },
-    "image_motion": {
-      "type": "object",
-      "required": [
-        "seed_frames",
-        "motion_preset"
-      ],
-      "properties": {
-        "seed_frames": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 3,
-          "items": {
-            "type": "string"
-          }
-        },
-        "motion_preset": {
-          "type": "string",
-          "enum": [
-            "kb_zoom_in",
-            "kb_zoom_out",
-            "pan_lr",
-            "pan_ud",
-            "shake_soft",
-            "cut_3frame"
-          ]
-        },
-        "duration_s": {
-          "type": "number",
-          "minimum": 3,
-          "maximum": 20
-        },
-        "fps": {
-          "type": "integer",
-          "enum": [
-            24,
-            30,
-            60
-          ]
-        }
-      }
-    },
     "niche": {
       "type": "string"
     },
     "video": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "length_seconds",
         "aspect_ratio",
@@ -140,6 +107,7 @@
     },
     "script": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "hook",
         "voiceover",
@@ -169,6 +137,7 @@
       "maxItems": 14,
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "t",
           "visual",
@@ -214,6 +183,7 @@
     },
     "render": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "background_asset",
         "subtitle_style",
@@ -221,7 +191,8 @@
       ],
       "properties": {
         "background_asset": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^(assets|sandbox/assets)/.+"
         },
         "subtitle_style": {
           "type": "string",
@@ -232,6 +203,78 @@
         },
         "output_basename": {
           "type": "string"
+        }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "audio_asset"
+      ],
+      "properties": {
+        "audio_asset": {
+          "type": "string"
+        }
+      }
+    },
+    "template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_id"
+      ],
+      "properties": {
+        "template_id": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "duration_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60
+            },
+            "clip_start_seconds": {
+              "type": "number",
+              "minimum": 0
+            },
+            "clip_end_seconds": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "image_motion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seed_frames",
+        "motion_preset"
+      ],
+      "properties": {
+        "seed_frames": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "string"
+          }
+        },
+        "motion_preset": {
+          "type": "string",
+          "enum": [
+            "kb_zoom_in",
+            "kb_zoom_out",
+            "pan_lr",
+            "pan_ud",
+            "shake_soft",
+            "cut_3frame"
+          ]
         }
       }
     }
