@@ -389,7 +389,7 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 5 — Repo Posture + Branding (ACTIVE)
+## Phase 5 — Repo Posture + Branding (COMPLETED)
 
 Purpose: lock public-repo guardrails and improve brand survival against repost theft.
 
@@ -490,7 +490,7 @@ Outcome:
 ---
 
 ### PR-19 — Lane B: image_motion (seed frames + deterministic motion presets)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Seed image request/selection interface (planner-side or pre-worker; not in worker)
@@ -501,7 +501,25 @@ Outcome:
 
 ---
 
-### PR-20 — Hero cats registry (metadata only) + planner bindings
+### PR-20 — Deterministic audio support (Worker; blocker fix)
+Status: **NEXT**
+
+Scope:
+- Ensure Worker always emits `final.mp4` with an audio stream (Shorts/Reels/TikTok requirement).
+- Deterministic priority order:
+  1) If job provides `audio.audio_asset` (sandbox-relative), use it.
+  2) Else if background video has audio, preserve/passthrough it.
+  3) Else inject deterministic silence so output ALWAYS contains audio.
+- Deterministic encoding settings (e.g., AAC, 48kHz, stereo, fixed bitrate).
+- Safe path validation for audio assets (sandbox-only).
+- Must NOT call network/LLM APIs; pure deterministic FFmpeg mux/encode only.
+
+Outcome:
+- No silent/broken MP4s; publish-ready media across all lanes.
+
+---
+
+### PR-21 — Hero cats registry (metadata only) + planner bindings
 Status: **PLANNED**
 
 Scope:
@@ -514,7 +532,7 @@ Outcome:
 
 ---
 
-### PR-21 — LangGraph demo workflow (planner-only)
+### PR-22 — LangGraph demo workflow (planner-only)
 Status: **PLANNED**
 
 Scope:
@@ -531,7 +549,7 @@ Outcome:
 
 Purpose: demonstrate cloud literacy while preserving LOCAL guarantees.
 
-### PR-22 — Cloud artifact layout (GCS + Firestore mapping)
+### PR-23 — Cloud artifact layout (GCS + Firestore mapping)
 Status: **PLANNED**
 
 Scope:
@@ -543,7 +561,7 @@ Outcome:
 
 ---
 
-### PR-23 — Cloud Run execution stubs (orchestrator + worker)
+### PR-24 — Cloud Run execution stubs (orchestrator + worker)
 Status: **PLANNED**
 
 Scope:
@@ -555,7 +573,7 @@ Outcome:
 
 ---
 
-### PR-24 — Vertex AI providers (mandatory portfolio requirement)
+### PR-25 — Vertex AI providers (mandatory portfolio requirement)
 Status: **PLANNED**
 
 Scope:
@@ -568,7 +586,7 @@ Outcome:
 
 ---
 
-### PR-25 — Budget guardrails + enforcement (local + cloud)
+### PR-26 — Budget guardrails + enforcement (local + cloud)
 Status: **PLANNED**
 
 Scope:
@@ -580,7 +598,7 @@ Outcome:
 
 ---
 
-### PR-26 — CI/CD skeleton
+### PR-27 — CI/CD skeleton
 Status: **PLANNED**
 
 Scope:
@@ -597,7 +615,7 @@ Outcome:
 The project is considered **portfolio-complete** when:
 - Phase 1 is complete (PR-3 merged)
 - PR-5 is complete (Gemini autonomy via AI Studio)
-- PR-24 is complete (Vertex AI presence demonstrated)
+- PR-25 is complete (Vertex AI presence demonstrated)
 - All invariants remain intact
 - LOCAL v0.1 can be verified with a single command
 

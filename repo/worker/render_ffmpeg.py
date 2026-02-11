@@ -143,6 +143,57 @@ def validate_safe_path(path: pathlib.Path, root: pathlib.Path) -> None:
 
 
 
+
+def has_audio_stream(path: pathlib.Path) -> bool:
+    try:
+        cmd = [
+            "ffprobe",
+            "-v", "error",
+            "-select_streams", "a:0",
+            "-show_entries", "stream=codec_type",
+            "-of", "csv=p=0",
+            str(path)
+        ]
+        out = subprocess.check_output(cmd, text=True).strip()
+        return bool(out)
+    except subprocess.CalledProcessError:
+        # Fallback for corrupt files or other probe errors
+        return False
+
+
+def resolve_audio_asset(job: dict, sandbox_root: pathlib.Path) -> pathlib.Path | None:
+    if "audio" not in job or "audio_asset" not in job["audio"]:
+        return None
+    
+    clean_path = job["audio"]["audio_asset"]
+    if not clean_path:
+        return None
+        
+    try:
+        p = normalize_sandbox_path(clean_path, sandbox_root)
+        
+        # Security check: fail loud if unsafe path
+        validate_safe_path(p, sandbox_root)
+        
+        # Existence check: fail soft (warn and fallback)
+        if not p.exists():
+            print(f"WARNING: Audio asset missing, falling back to silence/bg: {p}")
+            return None
+            
+        # Extension check: fail soft
+        # PR20: Allow video containers (mp4, mov, etc) to be used as audio sources
+        valid_exts = [".mp3", ".wav", ".m4a", ".aac", ".mp4", ".mov", ".mkv", ".webm"]
+        if p.suffix.lower() not in valid_exts:
+             print(f"WARNING: Unsupported audio format, falling back: {p.suffix}")
+             return None
+            
+        print(f"Found audio asset: {p}")
+        return p
+    except ValueError as e:
+        # Malformed/unsafe path: fail loud
+        raise SystemExit(f"Invalid audio asset path: {e}")
+
+
 def escape_ffmpeg_path(path: pathlib.Path) -> str:
     # Escape path for FFmpeg filter argument
     # 1. : is separator -> \:
@@ -199,6 +250,8 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     inputs: list[str] = []
     filter_chain: list[str] = []
     
+    next_input_idx = 0  # Unified input counter
+    
     # Constants
     VIDEO_W = 1080
     VIDEO_H = 1920
@@ -207,55 +260,48 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     scale_crop = f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,crop={VIDEO_W}:{VIDEO_H}"
     
     # Preset Expressions
-    # All expressions must be deterministic, bounded, and safe
     PRESETS = {
         "kb_zoom_in": f"zoompan=z='min(zoom+0.0015,1.5)':d={{d}}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_W}x{VIDEO_H}",
         "kb_zoom_out": f"zoompan=z='if(eq(on,1),1.5,max(1.0,zoom-0.0015))':d={{d}}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_W}x{VIDEO_H}",
         "pan_lr": f"zoompan=z=1.2:d={{d}}:x='on*(iw-iw/zoom)/{{d}}':y='ih/2-(ih/zoom/2)':s={VIDEO_W}x{VIDEO_H}",
         "pan_ud": f"zoompan=z=1.2:d={{d}}:x='iw/2-(iw/zoom/2)':y='on*(ih-ih/zoom)/{{d}}':s={VIDEO_W}x{VIDEO_H}",
         "shake_soft": f"zoompan=z=1.1:d={{d}}:x='iw/2-(iw/zoom/2)+20*sin(on/20)':y='ih/2-(ih/zoom/2)+20*cos(on/20)':s={VIDEO_W}x{VIDEO_H}",
-        # Static/Fallback
         "static": f"zoompan=z=1.0:d={{d}}:x=0:y=0:s={VIDEO_W}x{VIDEO_H}" 
     }
 
-    # Count actual video inputs added to ffmpeg command
-    video_inputs_count = 0
-
+    # -- Video Inputs (Images) First --
+    # Add image inputs before audio to ensure stable video indexing
+    
     if preset == "cut_3frame" and len(safe_seeds) > 1:
         # Multi-frame (2 or 3)
         count = len(safe_seeds)
-        # Calculate frames per segment with remainder distribution
         seg_frames_base = total_frames // count
         remainder = total_frames % count
         
         concat_inputs = []
         
         for i, p in enumerate(safe_seeds):
-            # Distribute remainder frames to first 'remainder' segments
             current_seg_frames = seg_frames_base + (1 if i < remainder else 0)
             current_seg_duration = current_seg_frames / fps
             
-            # Input i: Loop 1 image for current_seg_duration
+            # Use next_input_idx for image input
+            input_idx = next_input_idx
             inputs.extend(["-loop", "1", "-t", f"{current_seg_duration:.3f}", "-i", str(p)])
-            video_inputs_count += 1
+            next_input_idx += 1
             
-            # Apply Zoom In (standard for cuts)
             zp_expr = PRESETS["kb_zoom_in"].format(d=current_seg_frames)
             
-            filter_chain.append(f"[{i}:v]{scale_crop},setsar=1[v{i}_base]")
+            filter_chain.append(f"[{input_idx}:v]{scale_crop},setsar=1[v{i}_base]")
             filter_chain.append(f"[v{i}_base]{zp_expr}[v{i}_zoom]")
             concat_inputs.append(f"[v{i}_zoom]")
             
-        # Concat
         concat_str = "".join(concat_inputs)
         filter_chain.append(f"{concat_str}concat=n={count}:v=1:a=0[bg]")
         
     else:
         # Single frame or fallback
         if preset == "cut_3frame":
-             # Fallback
              preset = "kb_zoom_in"
-             # Optional: Log fallback (n/a simple structure)
              
         if preset not in PRESETS:
             raise SystemExit(f"Unknown or unsupported preset: {preset}")
@@ -264,45 +310,64 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
              raise SystemExit("No seed frames available")
              
         p_path = safe_seeds[0]
-        # Loop single image for full duration
+        input_idx = next_input_idx
         inputs.extend(["-loop", "1", "-i", str(p_path)])
-        video_inputs_count += 1
+        next_input_idx += 1
         
-        # Filter
         zp_expr = PRESETS[preset].format(d=total_frames)
-        filter_chain.append(f"[0:v]{scale_crop},setsar=1[base]")
+        filter_chain.append(f"[{input_idx}:v]{scale_crop},setsar=1[base]")
         filter_chain.append(f"[base]{zp_expr}[bg]")
 
+    # -- Audio Inputs --
+    # Prio: Job Asset > Silence (Images have no BG audio)
+    audio_asset = resolve_audio_asset(job, sandbox_root)
+    has_bg_audio = False # Images don't have audio stream
+    audio_source = "silence"
+    audio_input_idx = -1
+    
+    if audio_asset:
+        audio_source = "job_asset"
+        # -stream_loop -1 allows audio to loop if shorter than video duration
+        inputs.extend(["-stream_loop", "-1", "-i", str(audio_asset)])
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+    else:
+        audio_source = "silence"
+        # Inject deterministic silence
+        inputs.extend([
+            "-f", "lavfi", 
+            "-t", str(duration), 
+            "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"
+        ])
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+
+    # -- Watermark Input --
+    wm_width = max(MIN_WM_WIDTH, min(math.floor(VIDEO_W * SCALE_FACTOR), MAX_WM_WIDTH))
+
+    wm_input_idx = next_input_idx
+    inputs.extend(["-i", str(wm_path)])
+    next_input_idx += 1
+    
+    filter_chain.append(f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]")
+    
     # Now we have [bg] at 1080x1920
     out_mp4 = out_dir / "final.mp4"
     srt_path = out_dir / "final.srt"
     
-    # Subtitles logic (reuse)
     if "captions" in job and job["captions"]:
         make_srt(job["captions"], srt_path)
     else:
         atomic_write_text(srt_path, "")
-
-    # Watermark logic
-    wm_width = max(MIN_WM_WIDTH, min(math.floor(VIDEO_W * SCALE_FACTOR), MAX_WM_WIDTH))
-
-    # Add WM input to inputs list
-    wm_input_idx = video_inputs_count
-    inputs.extend(["-i", str(wm_path)])
-    
-    # Watermark Filter
-    filter_chain.append(f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]")
     
     current_bg_ref = "[bg]"
     
-    # Subtitles Status
     subtitles_status = "ready_to_burn"
     if "captions" not in job or not job["captions"]:
         subtitles_status = "skipped_no_captions"
     elif srt_path.exists() and srt_path.stat().st_size == 0:
         subtitles_status = "skipped_empty"
     
-    # Validate SRT path safety for FFmpeg
     if subtitles_status == "ready_to_burn":
         try:
             validate_safe_path(srt_path, sandbox_root)
@@ -322,26 +387,35 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
         c.append(f"{ref}[wm]overlay=W-w-{PADDING_PX}:H-h-{PADDING_PX}[out]")
         return ";".join(c)
 
-    # Execution
     executed_cmd = []
     failed_cmd = None
     
-    # Clean output args without placeholders
+    # Audio filters to guarantee duration (pad if short, trim if long)
+    # This fixes the logical race where looped audio might end prematurely or extend beyond video
+    audio_filter = f"apad=pad_dur={duration},atrim=0:{duration}"
+
     output_args = [
         "-map", "[out]",
+        "-map", f"{audio_input_idx}:a:0",
         "-t", str(duration),
         "-r", str(fps),
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        "-b:a", "192k",
+        "-ar", "48000",
+        "-ac", "2",
+        "-af", audio_filter,
+        "-movflags", "+faststart",
+        "-map_metadata", "-1",
+        "-map_chapters", "-1",
         str(out_mp4)
     ]
     
     if attempt_burn:
         try:
             full_filter = build_final_chain(True)
-            # Explicit command construction
             cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", full_filter] + output_args
-            
             print(f"Rendering Image Motion ({preset}) with subtitles...")
             executed_cmd = run_ffmpeg(cmd, out_mp4)
             subtitles_status = "burned"
@@ -354,7 +428,6 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     if not attempt_burn:
         full_filter = build_final_chain(False)
         cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", full_filter] + output_args
-        
         print(f"Rendering Image Motion ({preset}) clean...")
         executed_cmd = run_ffmpeg(cmd, out_mp4)
         
@@ -376,6 +449,9 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
             "padding": PADDING_PX,
             "opacity": OPACITY,
         },
+        "audio_source": audio_source,
+        "audio_asset_path": str(audio_asset) if audio_asset else None,
+        "has_bg_audio": has_bg_audio,
         "motion_preset": preset,
         "seed_frames_count": len(safe_seeds),
         "subtitles_status": subtitles_status,
@@ -418,13 +494,57 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     raw_wm_width = math.floor(video_w * SCALE_FACTOR)
     wm_width = max(MIN_WM_WIDTH, min(raw_wm_width, MAX_WM_WIDTH))
 
+    # Duration and FPS
+    duration = str(job["video"]["length_seconds"])
+    fps = str(job["video"]["fps"])
+
+    # Inputs Construction
+    inputs = []
+    next_input_idx = 0
+    
+    # Input 0: Background
+    # Add input first, then increment counter and use it
+    current_bg_idx = next_input_idx
+    inputs.extend(["-i", str(bg)])
+    next_input_idx += 1
+    
+    # -- Audio Logic (Standard) --
+    # Prio: Job Asset > BG Audio > Silence
+    audio_asset = resolve_audio_asset(job, sandbox_root)
+    has_bg_audio = has_audio_stream(bg)
+    audio_source = "silence"
+    audio_input_idx = -1
+    
+    if audio_asset:
+        audio_source = "job_asset"
+        inputs.extend(["-stream_loop", "-1", "-i", str(audio_asset)])
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+    elif has_bg_audio:
+        audio_source = "bg_audio"
+        audio_input_idx = current_bg_idx # Use BG input
+    else:
+        audio_source = "silence"
+        inputs.extend([
+            "-f", "lavfi", 
+            "-t", duration, 
+            "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"
+        ])
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+
+    # Watermark Input
+    wm_input_idx = next_input_idx
+    inputs.extend(["-i", str(wm_path)])
+    next_input_idx += 1
+
     # Helper to build filter string
     def build_filter(include_subtitles: bool):
         f = []
         # 1. Prepare watermark: scale and opacity
-        f.append(f"[1:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]")
+        f.append(f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]")
         
-        current_bg_ref = "[0:v]"
+        current_bg_ref = f"[{current_bg_idx}:v]"
         
         # 2. Apply subtitles (Optional)
         # Only use subtitles if the file is non-empty/valid
@@ -459,26 +579,32 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     final_cmd_executed = []
     failed_cmd = None
     
-    # Duration and FPS
-    duration = str(job["video"]["length_seconds"])
-    fps = str(job["video"]["fps"])
+    # Audio filters to guarantee duration (pad if short, trim if long)
+    audio_filter = f"apad=pad_dur={duration},atrim=0:{duration}"
+    
+    output_args = [
+        "-map", "[out]",
+        "-map", f"{audio_input_idx}:a:0",
+        "-t", duration,
+        "-r", fps,
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        "-b:a", "192k",
+        "-ar", "48000",
+        "-ac", "2",
+        "-af", audio_filter,
+        "-movflags", "+faststart",
+        "-map_metadata", "-1",
+        "-map_chapters", "-1",
+        str(out_mp4),
+    ]
 
     # Attempt 1: With Subtitles (if available and non-empty)
     if srt_path.exists() and srt_path.stat().st_size > 0:
         try:
             full_filter = build_filter(include_subtitles=True)
-            cmd = [
-                "ffmpeg", "-y",
-                "-i", str(bg),
-                "-i", str(wm_path),
-                "-filter_complex", full_filter,
-                "-map", "[out]",
-                "-t", duration,
-                "-r", fps,
-                "-c:v", "libx264",
-                "-pix_fmt", "yuv420p",
-                str(out_mp4),
-            ]
+            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", full_filter] + output_args
             print("Attempting render with subtitles and watermark...")
             executed = run_ffmpeg(cmd, out_mp4)
             subtitles_status = "burned"
@@ -499,18 +625,7 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     # Attempt 2: Watermark Only (if Attempt 1 failed or no subtitles)
     if not out_mp4.exists():
         full_filter = build_filter(include_subtitles=False)
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", str(bg),
-            "-i", str(wm_path),
-            "-filter_complex", full_filter,
-            "-map", "[out]",
-            "-t", duration,
-            "-r", fps,
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-            str(out_mp4),
-        ]
+        cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", full_filter] + output_args
         print("Rendering with watermark only...")
         executed = run_ffmpeg(cmd, out_mp4)
         final_cmd_logical = cmd
@@ -534,6 +649,9 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
             "padding": PADDING_PX,
             "opacity": OPACITY,
         },
+        "audio_source": audio_source,
+        "audio_asset_path": str(audio_asset) if audio_asset else None,
+        "has_bg_audio": has_bg_audio,
         "subtitles_status": subtitles_status,
         "ffmpeg_cmd": final_cmd_logical,
         "ffmpeg_cmd_executed": final_cmd_executed,
@@ -646,6 +764,9 @@ def main():
         },
         "watermark": render_result["watermark"],
         "subtitles_status": render_result["subtitles_status"],
+        "audio_source": render_result.get("audio_source"),
+        "audio_asset_path": render_result.get("audio_asset_path"),
+        "has_bg_audio": render_result.get("has_bg_audio"),
         "ffmpeg_cmd": render_result["ffmpeg_cmd"],
         "ffmpeg_cmd_executed": render_result["ffmpeg_cmd_executed"],
     }
