@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "templates": {
+        "simple_remix": {
+            "recipe_id": "standard_render",
+            "description": "Standard render with captions and watermark",
+            "required_inputs": [
+                "render.background_asset"
+            ],
+            "default_params": {}
+        }
+    }
+}
