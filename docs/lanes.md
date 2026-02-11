@@ -20,7 +20,7 @@ If `lane` is omitted, the job is treated as a generic/legacy job (fully supporte
 
 ## Invariants
 
-- **Worker Determinism**: The Worker does not know or care about "lanes". It simply renders `job.json` + assets.
+- **Worker Determinism**: The Worker MAY route based on lane to select a deterministic recipe; routing must be deterministic and must not change output paths. The Worker remains fully deterministic: it renders only from `job.json` + sandbox assets and never calls LLMs or networks.
 - **Output Stability**: Regardless of lane, the canonical worker outputs are ALWAYS:
   - `/sandbox/output/<job_id>/final.mp4`
   - `/sandbox/output/<job_id>/final.srt` (if captions are present)
