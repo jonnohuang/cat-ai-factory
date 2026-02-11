@@ -61,6 +61,47 @@
         "template_remix"
       ]
     },
+    "image_motion": {
+      "type": "object",
+      "required": [
+        "seed_frames",
+        "motion_preset"
+      ],
+      "properties": {
+        "seed_frames": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "string"
+          }
+        },
+        "motion_preset": {
+          "type": "string",
+          "enum": [
+            "kb_zoom_in",
+            "kb_zoom_out",
+            "pan_lr",
+            "pan_ud",
+            "shake_soft",
+            "cut_3frame"
+          ]
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 3,
+          "maximum": 20
+        },
+        "fps": {
+          "type": "integer",
+          "enum": [
+            24,
+            30,
+            60
+          ]
+        }
+      }
+    },
     "niche": {
       "type": "string"
     },
