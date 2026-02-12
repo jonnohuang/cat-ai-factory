@@ -112,7 +112,15 @@ Before implementing anything, read these in order:
 ## Output Requirements
 
 1) Implementation Plan (Problem summary, 3–6 step plan, Files to change).
-2) Code Changes (Normal diffs; use `cat <<'EOF'` for NEW files).
+2) Code Changes (Normal diffs).
 3) Verification (Smoke test commands).
+
+# Agent Planning Protocol
+- **Mode:** Always default to "Planning Mode" for non-trivial changes.
+- **Pre-Action Requirement:** Before modifying any files, you MUST provide a "Change Proposal" artifact.
+- **Proposal Contents:** 1. **Target Files:** List of all paths to be modified/created.
+    2. **Logic Summary:** A 1-2 sentence overview of the change per file.
+    3. **Contract Summary:** List any changed function signatures or API schemas.
+- **Constraint:** Do not output implementation code until the user responds with "Approved," "Proceed," or similar confirmation.
 
 Confirm acknowledgement and wait.
