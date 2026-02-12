@@ -34,3 +34,4 @@ sandbox/assets/*
 !sandbox/assets/demo/**
 !sandbox/assets/audio/
 !sandbox/assets/audio/**
+.DS_Store
