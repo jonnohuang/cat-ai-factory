@@ -2,7 +2,7 @@
 
 This document lists the available commands for the CAF Telegram Bridge.
 
-**Note:** The bridge is an adapter only. It writes instruction artifacts to the `/sandbox/inbox/` directory but does not publish or orchestrate jobs. All commands require the user to be authorized via `TELEGRAM_ALLOWED_USER_ID`.
+**Note:** The bridge is an adapter only. The bridge MAY include optional creativity hints in planning artifacts; these are Planner-only and do not affect the Worker. It writes instruction artifacts to the `/sandbox/inbox/` directory but does not publish or orchestrate jobs. All commands require the user to be authorized via `TELEGRAM_ALLOWED_USER_ID`.
 
 ## Commands
 
@@ -17,6 +17,14 @@ This document lists the available commands for the CAF Telegram Bridge.
 ### `/plan <prompt>`
 - **Action:** Creates a new plan request.
 - **Artifact:** `sandbox/inbox/plan-<nonce>.json`
+
+Optional modifiers (Planner-only intent):
+- `creativity=canon|balanced|experimental`
+- `canon_fidelity=high|medium`
+
+Example:
+- `/plan A=0 B=1 C=2 theme: office cats | creativity=canon`
+- `/plan theme: cafe drama | creativity=experimental canon_fidelity=medium`
 
 ### `/approve <job_id>`
 - **Action:** Approves a job for publishing.

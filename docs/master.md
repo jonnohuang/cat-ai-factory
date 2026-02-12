@@ -190,6 +190,13 @@ Lane policy stance:
 - Schema must remain permissive.
 - Runtime recipes decide what inputs are required.
 
+Creativity controls:
+- `job.creativity` is an OPTIONAL planner-only input that influences tone/canon strictness.
+- It MUST NOT change Worker behavior and MUST NOT introduce schema gating.
+- Recommended values:
+  - `creativity.mode`: canon | balanced | experimental
+  - `creativity.canon_fidelity`: high | medium (optional)
+
 ------------------------------------------------------------
 
 ## Series Continuity (Planner-Only, Deterministic Canon)

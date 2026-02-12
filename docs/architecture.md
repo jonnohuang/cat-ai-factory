@@ -91,16 +91,21 @@ Notes:
 
 ### Planner reference inputs (optional; read-only)
 
-The Planner may also read additional **canon/continuity** and **audio selection** reference artifacts.
+The Planner may also read additional **canon/continuity**, **audio selection**, and **RAG** reference artifacts.
 
 These are inputs only. The Planner MUST NOT modify them.
 
 - Canon / continuity:
+  - `repo/shared/hero_registry.v1.json`
   - `repo/shared/series_bible.v1.json`
   - `repo/shared/episode_ledger.v1.json`
 
 - Audio selection (license-safe manifest):
   - `sandbox/assets/audio/audio_manifest.v1.json`
+
+- RAG (planner-only; deterministic, file-based):
+  - `repo/shared/rag_manifest.v1.json`
+  - `repo/shared/rag/**`
 
 ------------------------------------------------------------
 

@@ -910,3 +910,34 @@ References:
 - docs/system-requirements.md
 - docs/decisions.md (ADR-0010..ADR-0012, ADR-0015)
 
+------------------------------------------------------------
+
+## ADR-0031 — Cloud asset posture: GCS for runtime media, Artifact Registry for containers, Git for contracts
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- CAF is local-first with /sandbox/assets/** used by the deterministic Worker.
+- In Phase 7, Cloud Run needs access to runtime media assets without committing large or sensitive files to the public repo.
+- Artifact Registry is intended for container images, not content libraries.
+
+Decision:
+- Store runtime media assets (mp4/png/wav/templates/backgrounds/seed frames) in GCS under a stable prefix:
+  - gs://<bucket>/assets/** (inputs)
+  - gs://<bucket>/output/<job_id>/** (worker outputs)
+- Store container images in Artifact Registry only.
+- Store code, schemas/contracts, and small license-safe demo fixtures in GitHub.
+- Cloud Build is triggered by GitHub merges to build/push images and deploy Cloud Run services.
+
+Consequences:
+- Keeps the public repo lightweight and safe while enabling scalable runtime access.
+- Preserves the “files-as-bus” mental model via an explicit local→GCS mapping.
+- Requires IAM boundaries so Cloud Run services have least-privilege access to the relevant GCS prefixes.
+
+References:
+- docs/master.md
+- docs/architecture.md (Phase 7 mapping)
+- docs/system-requirements.md (SEC-01, SEC-03)
+- docs/decisions.md (ADR-0026..ADR-0030)
+
+
