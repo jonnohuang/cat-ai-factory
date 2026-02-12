@@ -277,6 +277,27 @@
           ]
         }
       }
+    },
+    "creativity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "canon",
+            "balanced",
+            "experimental"
+          ]
+        },
+        "canon_fidelity": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium"
+          ]
+        }
+      }
     }
   }
 }

@@ -44,9 +44,9 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
     """Dependency-free minimal checks for Contract v1."""
     errors: List[str] = []
 
-    # schema_version
+    # schema_version (optional, but if present must be 'v1')
     sv = job.get("schema_version")
-    if sv != "v1":
+    if sv is not None and sv != "v1":
         errors.append(f"schema_version must be 'v1' (got {sv!r})")
 
     # job_id
@@ -86,6 +86,30 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
         for i, c in enumerate(caps):
             if not isinstance(c, str):
                 errors.append(f"captions[{i}] must be a string")
+
+    # creativity (optional)
+    creativity = job.get("creativity")
+    if creativity is not None:
+        if not isinstance(creativity, dict):
+            errors.append("creativity must be an object")
+        else:
+            # Check for unknown keys
+            known_keys = {"mode", "canon_fidelity"}
+            unknown = set(creativity.keys()) - known_keys
+            if unknown:
+                errors.append(f"creativity has unknown keys: {sorted(list(unknown))}")
+
+            # mode
+            mode = creativity.get("mode")
+            if mode is not None:
+                if mode not in ("canon", "balanced", "experimental"):
+                    errors.append(f"creativity.mode must be one of ['canon', 'balanced', 'experimental'] (got {mode!r})")
+
+            # canon_fidelity
+            fidelity = creativity.get("canon_fidelity")
+            if fidelity is not None:
+                if fidelity not in ("high", "medium"):
+                    errors.append(f"creativity.canon_fidelity must be one of ['high', 'medium'] (got {fidelity!r})")
 
     return errors
 
