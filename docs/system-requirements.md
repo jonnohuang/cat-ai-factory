@@ -176,6 +176,20 @@ Non-goals (v1):
 - no automated trending-music selection
 - no scraping platform trends
 
+### FR-18 — Series continuity layer (contracts-only; required for “daily era” quality)
+To maintain higher-quality comedy and continuity without autonomy creep, CAF MUST support a minimal,
+deterministic “series layer” above job contracts.
+
+- The system MUST support a versioned “series bible” artifact that defines:
+  - tone rules, forbidden topics, running gags, canon setting rules
+  - references to hero cat registry ids (no new identities implied)
+- The system MUST support a versioned “episode ledger” artifact that records:
+  - what happened, new facts introduced, next hook
+- These artifacts MUST be file-based, reviewable, and reproducible.
+- The Worker MUST remain unchanged by this layer (planner/control-plane only).
+- The system MUST treat continuity as **explicit canon artifacts**:
+  - LLM may propose new facts, but only committed artifacts become canon.
+
 ------------------------------------------------------------
 
 ## 3) Non-Functional Requirements (NFR)

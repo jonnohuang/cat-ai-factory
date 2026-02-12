@@ -29,11 +29,16 @@ class GeminiAIStudioProvider(BaseProvider):
         self.model = os.environ.get("GEMINI_MODEL", model)
         self._last_raw_text: Optional[str] = None
 
-    def generate_job(self, prd: Dict[str, Any], inbox: Optional[List[Dict[str, Any]]]) -> Dict[str, Any]:
+    def generate_job(
+        self,
+        prd: Dict[str, Any],
+        inbox: Optional[List[Dict[str, Any]]] = None,
+        hero_registry: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         if not self.api_key:
             env_name = "GEMINI_" + "API" + "_" + "KEY"
             raise ValueError(f"{env_name} is required")
-        prompt = _build_prompt(prd, inbox or [])
+        prompt = _build_prompt(prd, inbox or [], hero_registry)
         raw = self._generate_content(prompt)
         if _looks_truncated(raw):
             repair_prompt = _build_repair_prompt(prompt, raw)
@@ -137,9 +142,22 @@ def _validate_job(job: Dict[str, Any]) -> Tuple[bool, str]:
             os.unlink(temp_path)
 
 
-def _build_prompt(prd: Dict[str, Any], inbox: List[Dict[str, Any]]) -> str:
-    prd_json = json.dumps(prd, indent=2, ensure_ascii=True)
-    inbox_json = json.dumps(inbox, indent=2, ensure_ascii=True)
+def _build_prompt(prd: Dict[str, Any], inbox: List[Dict[str, Any]], hero_registry: Optional[Dict[str, Any]] = None) -> str:
+    prd_json = json.dumps(prd, indent=None, separators=(",", ":"), ensure_ascii=True)
+    inbox_json = json.dumps(inbox, indent=None, separators=(",", ":"), ensure_ascii=True)
+    
+    registry_context = ""
+    if hero_registry:
+        # PR21: Compact JSON to save tokens
+        # TODO: If registry grows large, pass a reduced view (ids + names + tags) to save tokens.
+        registry_json = json.dumps(hero_registry, indent=None, separators=(",", ":"), ensure_ascii=True)
+        registry_context = (
+            f"Hero Registry (Reference Material):\n"
+            f"{registry_json}\n"
+            "Read-only reference; do not invent new hero characters; pick from the registry list.\n"
+            "Do not output the registry content. Do not paste registry JSON into captions.\n\n"
+        )
+
     template = (
         '{"job_id":"optional-id","date":"YYYY-MM-DD","niche":"...",'
         '"video":{"length_seconds":15,"aspect_ratio":"9:16","fps":30,"resolution":"1080x1920"},'
@@ -163,6 +181,7 @@ def _build_prompt(prd: Dict[str, Any], inbox: List[Dict[str, Any]]) -> str:
     return (
         "You are the Planner for Cat AI Factory.\n"
         f"{rules}\n"
+        f"{registry_context}"
         f"Template (structure only): {template}\n\n"
         f"PRD JSON:\n{prd_json}\n\n"
         f"Inbox JSON list:\n{inbox_json}\n"
@@ -179,7 +198,8 @@ def _build_repair_prompt(original_prompt: str, prior_response: str) -> str:
         "- No trailing commas\n"
         "- Use double quotes for all strings\n"
         "- Escape any embedded double quotes inside strings (\\\")\n"
-        "- Do NOT change the intended content; only fix JSON validity/escaping\n\n"
+        "- Do NOT change the intended content; only fix JSON validity/escaping\n"
+        "- If you mention a hero character in script/captions/shots, pick from the registry list and do not invent new names.\n\n"
         "Previous response to repair:\n"
         f"{prior_response}\n"
     )
@@ -195,7 +215,8 @@ def _build_schema_fix_prompt(original_prompt: str, prior_response: str, error_te
         "Your previous response did not pass schema validation.\n"
         "Return ONLY a single JSON object. No markdown, no code fences, no commentary.\n"
         "Fix only to satisfy the schema: types, required fields, min/max items, and patterns.\n"
-        "Keep top-level keys exactly as required: job_id, date, niche, video, script, shots, captions, hashtags, render.\n\n"
+        "Keep top-level keys exactly as required: job_id, date, niche, video, script, shots, captions, hashtags, render.\n"
+        "If you mention a hero character in script/captions/shots, pick from the registry list and do not invent new names.\n\n"
         "Validation error:\n"
         f"{error_text}\n\n"
         "Original prompt (for reference):\n"

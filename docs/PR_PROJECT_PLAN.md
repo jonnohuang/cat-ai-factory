@@ -502,7 +502,7 @@ Outcome:
 ---
 
 ### PR-20 — Deterministic audio support (Worker; blocker fix)
-Status: **NEXT**
+Status: **COMPLETED**
 
 Scope:
 - Ensure Worker always emits `final.mp4` with an audio stream (Shorts/Reels/TikTok requirement).
@@ -529,6 +529,68 @@ Scope:
 
 Outcome:
 - Series continuity without story-memory/autonomy creep
+
+---
+
+### PR-21.1 — Job creativity controls (contract-only; provider-agnostic)
+Status: **PLANNED**
+
+Scope:
+- Extend `repo/shared/job.schema.json` with an optional top-level `creativity` object:
+  - `mode`: canon | balanced | experimental
+  - (optional) `canon_fidelity`: high | medium
+- No provider-specific knobs (Gemini/Vertex remain adapters).
+- No Worker changes; Planner/control-plane only.
+- Backward compatible; schema remains permissive (no lane-based conditional enforcement).
+
+Outcome:
+- Stable “creative intent” surface for Planner without temperature hacks.
+
+---
+
+### PR-21.2 — Series Bible + Episode Ledger v1 (contracts + docs only)
+Status: **PLANNED**
+
+Scope:
+- Add minimal continuity artifacts as versioned contracts:
+  - `repo/shared/series_bible.v1.schema.json`
+  - `repo/shared/series_bible.v1.json` (example)
+  - `repo/shared/episode_ledger.v1.schema.json`
+  - `repo/shared/episode_ledger.v1.json` (example)
+- The series bible includes:
+  - tone rules
+  - forbidden topics
+  - running gags
+  - canon setting rules
+  - references to hero registry ids
+- The episode ledger records per-episode:
+  - what happened
+  - new facts introduced
+  - next hook / continuity seed
+- Docs update: define these as the canonical continuity layer above job contracts.
+- No Worker changes.
+
+Outcome:
+- Canon continuity becomes explicit, file-based, reviewable, and reproducible.
+
+---
+
+### PR-21.3 — Audio Strategy v1 (assets + manifest + usage rules; license-safe)
+Status: **PLANNED**
+
+Scope:
+- Add repo-owned, license-safe loopable audio beds:
+  - `sandbox/assets/audio/beds/*.wav`
+- Add an audio manifest contract:
+  - `sandbox/assets/audio/audio_manifest.v1.json`
+  - includes filename, mood tags, license/source notes, safe-to-commit flag
+- Add documentation:
+  - `sandbox/assets/audio/README.md`
+  - rules: Planner may only select from approved beds; no trending/copyright music
+- No Worker changes required (PR20 already supports deterministic audio selection order).
+
+Outcome:
+- Higher-quality shorts audio posture with reduced copyright / Content-ID risk.
 
 ---
 
