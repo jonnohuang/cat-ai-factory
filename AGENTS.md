@@ -1,269 +1,512 @@
-# Agent Operating Guide
+# Agent Operating Guide (AGENTS.md)
 
-This document defines the responsibilities, permissions, and operational boundaries
-of each agent and adapter in the Cat AI Factory system.
+This document defines the responsibilities, permissions, and operational boundaries of each **plane**, **component**, and **adapter** in Cat AI Factory (CAF).
 
-The design mirrors production ML/data platforms: planning, orchestration, and execution
-are strictly separated and enforced by infrastructure—not prompts.
+CAF is designed to mirror production ML/data platforms:
 
-This doc is explanatory. Binding architectural changes must be recorded in `docs/decisions.md`.
+* planning is nondeterministic (LLM)
+* orchestration is deterministic (control-plane)
+* execution is deterministic (data-plane)
 
-------------------------------------------------------------
+This doc is explanatory.
+Binding architectural changes must be recorded in `docs/decisions.md` as ADRs.
+
+---
 
 ## Core Rule
 
-> **All coordination happens ONLY via deterministic file-based artifacts (“files-as-bus”).**
+> **All coordination happens ONLY via explicit, versioned artifacts (“files-as-bus”).**
 
 There is:
-- no implicit shared state
-- no UI-driven coordination
-- no agent-to-agent RPC
-- no hidden background services required for correctness
 
-All components communicate through explicit artifacts written to disk. This enforces
-reproducibility, debuggability, and clean failure modes.
+* no implicit shared state
+* no UI-driven authority
+* no agent-to-agent RPC
+* no hidden background services required for correctness
 
-------------------------------------------------------------
+All components communicate through explicit artifacts, which enables:
 
-## Non-Negotiable Architecture (Three Planes)
+* reproducibility
+* debuggability
+* auditability
+* clean failure modes
 
-- **Planner (Clawdbot)**
-  - LLM-driven (nondeterministic) but constrained
-  - Produces versioned, validated `job.json` contracts
-  - **No side effects, no artifact writes** (except job contracts)
+---
 
-- **Control Plane (Ralph Loop)**
-  - Deterministic reconciler/state machine
-  - Coordinates execution, retries, audit logging, artifact lineage
-  - Writes logs/state only
+## CAF Invariants (Non-Negotiable)
 
-- **Worker (Renderer)**
-  - Deterministic, CPU-bound execution (FFmpeg)
-  - No LLM usage
-  - Idempotent and retry-safe
+### 1) Three-plane separation
 
-Frameworks (LangGraph, etc.), RAG, and auxiliary “agents” must be treated as **adapters**
-that preserve these plane boundaries. RAG is **planner-only**.
+CAF is permanently structured into three planes:
 
-------------------------------------------------------------
+* **Planner Plane** (Clawdbot)
 
-## Canonical Runtime Paths (Write Boundaries)
+  * LLM-driven (nondeterministic)
+  * produces contracts only
 
-- **Planner writes only**
-  - `sandbox/jobs/*.job.json`
+* **Control Plane** (Ralph Loop)
 
-- **Control Plane (Orchestrator) writes only**
-  - `sandbox/logs/<job_id>/**`
+  * deterministic reconciler/state machine
+  * idempotency, retries, audit logging
 
-- **Worker writes only**
-  - `sandbox/output/<job_id>/**`
+* **Worker Plane** (Renderer / FFmpeg)
 
-- **Ingress adapters write only**
-  - `sandbox/inbox/*.json`
+  * deterministic execution
+  * no LLM
+  * retry-safe
 
-- **Ops/Distribution writes only derived artifacts**
-  - `sandbox/dist_artifacts/<job_id>/**`
+### 2) Files are the bus
 
-Hard rule:
-- No component may modify `job.json` after it is written.
-- No component outside the Worker may modify `sandbox/output/<job_id>/**`.
+* no shared memory
+* no RPC coordination
+* no “agent chat memory” as authority
 
-------------------------------------------------------------
+### 3) Worker is always deterministic
 
-## Components
+The Worker must never:
+
+* call an LLM
+* call network APIs
+* scrape trends
+* make decisions based on nondeterministic inputs
+
+### 4) Ops/Distribution is outside the factory
+
+Publishing is nondeterministic (external platforms). It must remain outside the factory.
+
+---
+
+## Filesystem Bus Identity (job_id)
+
+CAF uses strict job identity discipline:
+
+* The canonical `job_id` is derived from the job filename stem:
+
+  * `sandbox/jobs/<job_id>.job.json`
+
+* All canonical paths are keyed by `job_id`:
+
+  * outputs: `sandbox/output/<job_id>/**`
+  * logs/state: `sandbox/logs/<job_id>/**`
+  * dist artifacts: `sandbox/dist_artifacts/<job_id>/**`
+
+If the JSON contract also contains a `job_id` field and it differs:
+
+* Ralph Loop MAY emit a warning
+* Ralph Loop MUST proceed using the filename-derived job_id
+
+---
+
+## Canonical Runtime Write Boundaries
+
+### Planner writes only
+
+* `sandbox/jobs/*.job.json`
+
+### Control Plane writes only
+
+* `sandbox/logs/<job_id>/**`
+
+### Worker writes only
+
+* `sandbox/output/<job_id>/**`
+
+### Ingress adapters write only
+
+* `sandbox/inbox/*.json`
+
+### Ops/Distribution writes only
+
+* `sandbox/dist_artifacts/<job_id>/**`
+
+Hard rules:
+
+* No component may modify `job.json` after it is written.
+* No component outside the Worker may modify `sandbox/output/<job_id>/**`.
+* No component inside the factory may write to `sandbox/dist_artifacts/**`.
+
+---
+
+## Planner Reference Inputs (Series + Audio Layer)
+
+CAF supports a minimal continuity + quality layer above `job.json`.
+
+These are **planner-only read-only reference inputs**.
+They MUST NOT be modified at runtime.
+
+Canon / continuity:
+
+* `repo/shared/hero_registry.v1.json` (planned / PR21)
+* `repo/shared/series_bible.v1.json` (planned / PR21.2)
+* `repo/shared/episode_ledger.v1.json` (planned / PR21.2)
+
+Audio allowlist:
+
+* `sandbox/assets/audio/audio_manifest.v1.json` (planned / PR21.3)
+
+Important:
+
+* The LLM may propose new facts.
+* Only committed files become canon.
+
+---
+
+## Lane Policy (Creativity-Friendly; Deterministic Routing)
+
+CAF uses lanes to streamline planning, cost, and routing.
+
+**Lanes must never restrict creativity.**
+
+Hard rules:
+
+* `job.lane` is OPTIONAL.
+* Lanes are non-binding hints.
+* Hybrid jobs are allowed.
+* JSON Schema must remain permissive.
+* Lane-based if/then/else “require/forbid” schema gating is disallowed.
+
+Deterministic routing guidance:
+
+* Prefer explicit lane routing if `job.lane` is present AND the required block exists.
+* Otherwise infer route from fields:
+
+  * if `image_motion` exists → render_image_motion
+  * else if `template_remix` exists → render_template_remix
+  * else → render_standard
+
+The Worker enforces only what is required for the chosen deterministic recipe.
+
+---
+
+## Components (Local / Phase 6)
+
+This section describes the core local-first system.
+
+---
 
 ### 🦞 Clawdbot — Planner Agent (Planner Plane)
 
-**Purpose**  
-Translate high-level intent into structured, machine-readable work contracts.
+**Purpose**
+Translate intent into structured, machine-readable work contracts.
 
 **Responsibilities**
-- Interpret product intent (`sandbox/PRD.json`) + inbox instruction artifacts
-- Generate schema-valid `job.json` contracts
-- Validate contracts before writing (fail-loud)
 
-**Inputs**
-- `sandbox/PRD.json`
-- `sandbox/inbox/*.json` (optional external instructions)
-- Optional planner-only context (e.g., RAG, style manifest read-only)
+* interpret `sandbox/PRD.json`
+* interpret `sandbox/inbox/*.json` (optional)
+* optionally consult series/audio reference inputs
+* generate schema-valid `job.json`
+* validate before writing (fail-loud)
 
-**Outputs**
-- `sandbox/jobs/<job_id>.job.json`
+**Reads**
 
-**Permissions**
-- Read-only access to repository source code
-- Write access limited to `sandbox/jobs/`
+* `sandbox/PRD.json`
+* `sandbox/inbox/*.json`
+* optional read-only references:
 
-**Explicitly Disallowed**
-- Writing anywhere outside `sandbox/jobs/`
-- Mutating existing assets, outputs, logs, or dist artifacts
-- Implementing control-plane logic (no orchestration responsibilities)
-- Any worker execution or FFmpeg invocation
+  * `repo/shared/hero_registry.v1.json`
+  * `repo/shared/series_bible.v1.json`
+  * `repo/shared/episode_ledger.v1.json`
+  * `sandbox/assets/audio/audio_manifest.v1.json`
+  * `sandbox/assets/**`
 
-------------------------------------------------------------
+**Writes (ONLY)**
+
+* `sandbox/jobs/<job_id>.job.json`
+
+**Explicitly disallowed**
+
+* writing anywhere outside `sandbox/jobs/`
+* invoking FFmpeg / Worker
+* orchestration responsibilities
+* mutating canon files
+* mutating assets
+* writing logs/outputs/dist artifacts
+
+---
 
 ### 🧠 Ralph Loop — Orchestrator (Control Plane)
 
-**Purpose**  
-Act as the deterministic control plane: reconcile desired state with observed state.
+**Purpose**
+Deterministic reconciler/state machine.
 
 **Responsibilities**
-- Interpret `job.json` contracts
-- Determine which deterministic steps should run (and in what order)
-- Enforce retries and idempotency
-- Produce audit-friendly state/log artifacts
 
-**Inputs**
-- `sandbox/jobs/*.job.json`
-- Observed artifacts in:
-  - `sandbox/output/<job_id>/**`
-  - `sandbox/logs/<job_id>/**`
+* interpret `job.json`
+* decide which deterministic steps should run
+* enforce retries and idempotency
+* write audit-friendly state/log artifacts
+* optionally fast-path completion when outputs already exist and pass QC
 
-**Outputs**
-- Logs/state only under:
-  - `sandbox/logs/<job_id>/**`
+**Reads**
 
-**Constraints**
-- MUST NOT mutate `job.json`
-- MUST NOT write worker outputs
-- Deterministic behavior only (no LLM calls)
+* `sandbox/jobs/*.job.json`
+* `sandbox/output/<job_id>/**`
+* `sandbox/logs/<job_id>/**`
 
-------------------------------------------------------------
+**Writes (ONLY)**
 
-### 🛠 Worker — Renderer (FFmpeg) (Worker Plane / Data Plane)
+* `sandbox/logs/<job_id>/**`
 
-**Purpose**  
-Execute deterministic, CPU-bound transformations to produce final artifacts.
+**Explicitly disallowed**
 
-**Responsibilities**
-- Render videos/captions deterministically from:
-  - `job.json` + `sandbox/assets/**`
-- Write stable outputs and run metadata
+* mutating job.json
+* writing worker outputs
+* calling LLMs
+* writing dist artifacts
 
-**Inputs**
-- `sandbox/jobs/*.job.json`
-- `sandbox/assets/**`
+---
 
-**Outputs**
-- `sandbox/output/<job_id>/final.mp4`
-- `sandbox/output/<job_id>/final.srt` (if applicable)
-- `sandbox/output/<job_id>/result.json`
+### 🛠 Worker — Renderer (FFmpeg) (Worker Plane)
 
-**Characteristics**
-- No LLM access
-- Fully deterministic and idempotent
-- Safe to retry without side effects
-
-------------------------------------------------------------
-
-### ✅ QC Verifier — Deterministic, Read-Only Evaluator (QC / Verification)
-
-**Purpose**  
-Provide deterministic quality control over contracts and produced artifacts.
+**Purpose**
+Deterministic, CPU-bound execution that produces publish-ready artifacts.
 
 **Responsibilities**
-- Validate `job.json` (schema / required fields)
-- Verify artifact lineage and output conformance
-- Emit a summary + logs for auditing and human review
 
-**Inputs**
-- `sandbox/jobs/*.job.json`
-- `sandbox/output/<job_id>/**`
-- `sandbox/logs/<job_id>/**`
+* render deterministic video + captions from job contract + assets
+* apply deterministic watermark overlay
+* guarantee `final.mp4` always has an audio stream (no silent MP4)
 
-**Outputs**
-- Writes logs/summary only under:
-  - `sandbox/logs/<job_id>/qc/**` (or equivalent QC subdir)
+**Reads**
 
-**Constraints**
-- Deterministic only (no LLM usage)
-- Read-only evaluation: MUST NOT modify existing artifacts (jobs/assets/outputs)
+* `sandbox/jobs/<job_id>.job.json`
+* `sandbox/assets/**`
+* repo-owned static runtime assets:
 
-------------------------------------------------------------
+  * `repo/assets/watermarks/caf-watermark.png`
+
+**Writes (ONLY)**
+
+* `sandbox/output/<job_id>/final.mp4`
+* `sandbox/output/<job_id>/final.srt` (if applicable)
+* `sandbox/output/<job_id>/result.json`
+
+**Explicitly disallowed**
+
+* any LLM usage
+* any network calls
+* reading planner continuity artifacts
+* writing outside `sandbox/output/<job_id>/**`
+
+---
+
+### ✅ QC Verifier — Deterministic Read-Only Evaluator
+
+**Purpose**
+Provide deterministic quality control over contracts and outputs.
+
+**Responsibilities**
+
+* validate job.json schema
+* verify artifact lineage
+* verify output conformance
+* emit a QC summary
+
+**Reads**
+
+* `sandbox/jobs/*.job.json`
+* `sandbox/output/<job_id>/**`
+* `sandbox/logs/<job_id>/**`
+
+**Writes (ONLY)**
+
+* `sandbox/logs/<job_id>/qc/**`
+
+**Explicitly disallowed**
+
+* modifying any artifacts
+* any LLM usage
+
+---
 
 ## Adapters (External Interfaces)
 
-Adapters are *not* authorities. They translate between external systems and the file-bus.
+Adapters are not authorities.
+They translate external systems into file-bus artifacts.
+
+---
 
 ### 📬 Telegram Bridge — Ingress + Status (Adapter)
 
 **Purpose**
-- Provide a mobile supervisor surface (human-in-the-loop)
-- Write instruction artifacts into the file-bus and read status back
+Mobile supervisor surface (human-in-the-loop).
 
 **Responsibilities**
-- Write inbox artifacts under `sandbox/inbox/`
-- Respond to the authorized user with:
-  - command acknowledgment
-  - status summaries (read-only)
 
-**Typical Commands (implemented as inbox artifacts)**
-- `/plan <prompt>` → `sandbox/inbox/plan-<nonce>.json`
-- `/approve <job_id> [platform]` → `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`
-- `/reject <job_id> [platform] [reason]` → `sandbox/inbox/reject-<job_id>-<platform>-<nonce>.json`
-- `/status <job_id> [platform]` → reads:
-  - `sandbox/logs/<job_id>/state.json`
-  - `sandbox/dist_artifacts/<job_id>/<platform>.state.json` (if present)
-- `/help` → prints supported commands
+* write inbox artifacts into `sandbox/inbox/`
+* read status artifacts and report them back
 
-**Security Constraints**
-- Authorized sender check required (e.g., `TELEGRAM_ALLOWED_USER_ID`)
-- MUST NOT invoke worker or orchestrator directly
-- MUST NOT modify outputs or dist artifacts
-- MUST NOT overwrite or delete any existing files
+**Writes (ONLY)**
 
-------------------------------------------------------------
+* `sandbox/inbox/*.json`
+
+**Reads (ONLY)**
+
+* `sandbox/logs/<job_id>/state.json`
+* `sandbox/dist_artifacts/<job_id>/<platform>.state.json` (if present)
+
+**Security constraints**
+
+* authorized sender check required (e.g., `TELEGRAM_ALLOWED_USER_ID`)
+* MUST NOT invoke orchestrator or worker
+* MUST NOT modify outputs/logs/dist artifacts
+* MUST NOT overwrite or delete any existing files
+
+---
 
 ## Ops/Distribution (Outside the Factory)
 
-Ops/Distribution performs nondeterministic external work (platform posting, approvals, notifications).
-It must remain **outside** the core factory invariant (Planner / Control Plane / Worker).
+Ops/Distribution performs nondeterministic external work.
 
 **Responsibilities**
-- Consume immutable outputs + plans
-- Produce derived artifacts for posting and/or publishing
-- Maintain idempotency keyed by `{job_id, platform}`
+
+* consume immutable worker outputs + publish plans
+* produce export bundles + checklists
+* optionally upload using official APIs (opt-in)
+* enforce human approval gates by default
+* maintain idempotency keyed by `{job_id, platform}`
+
+**Writes (ONLY)**
+
+* `sandbox/dist_artifacts/<job_id>/**`
+
+**Hard constraints**
+
+* MUST NOT mutate `job.json`
+* MUST NOT modify `sandbox/output/<job_id>/**`
+* MUST NOT bypass file-bus semantics
+* MUST NOT commit or write secrets
+
+---
+
+## Phase 7 (Mandatory Milestone): Cloud Mapping Without Breaking Invariants
+
+Phase 7 migrates CAF from local Docker Compose to a serverless, event-driven GCP architecture.
+
+This is a deployment/runtime change.
+The core invariants MUST remain identical.
+
+### Phase 7 roles (cloud runtime)
+
+These are runtime components, not new planes.
+They preserve the same boundaries.
+
+---
+
+### ☁️ Telegram Webhook Receiver (Cloud Run)
+
+**Purpose**
+Receive Telegram webhook events.
+
+**Hard requirement**
+Telegram webhooks must not block (avoid Telegram timeouts).
+
+**Responsibilities**
+
+* authenticate Telegram sender
+* immediately enqueue an async task
+* return HTTP 200 quickly
 
 **Writes**
-- Derived artifacts only under:
-  - `sandbox/dist_artifacts/<job_id>/**`
 
-**Idempotency Authority (Local)**
-- Publish state file:
-  - `sandbox/dist_artifacts/<job_id>/<platform>.state.json`
-- A terminal state (e.g., POSTED/PUBLISHED) prevents duplicate posting.
+* does NOT write job/output/log artifacts directly
 
-**Approval Gate (Local)**
-- Approval artifacts arrive via inbox:
-  - `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`
-- Default posture: human approval required before posting/publishing.
+**Enqueues**
 
-**Hard Constraints**
-- MUST NOT mutate `job.json`
-- MUST NOT modify `sandbox/output/<job_id>/**`
-- MUST NOT bypass file-bus semantics
-- Credentials/secrets must never be committed to Git or written to artifacts
+* Cloud Tasks job for planner invocation
 
-------------------------------------------------------------
+---
 
-## Safety & Guardrails
+### ☁️ Cloud Tasks Bridge (Async buffer)
 
-- All write access confined to `sandbox/**` (plus repo edits during development PRs)
-- No agent can modify source code at runtime
-- No autonomous financial transactions
-- External side effects must be approval-gated by default and idempotent
+**Purpose**
+Async bridge with retries between Receiver and Planner.
 
-These constraints are enforced by container boundaries, filesystem permissions, and process discipline,
-not by prompts.
+**Responsibilities**
 
-------------------------------------------------------------
+* retry delivery
+* decouple Telegram latency from planning
+
+---
+
+### ☁️ Planner Service (LangGraph on Cloud Run)
+
+**Purpose**
+Planner plane, hosted as a stateful workflow.
+
+**Responsibilities**
+
+* Analyze Brief (LLM)
+* Draft Contract (LLM)
+* Validate Schema (deterministic)
+* Persist Job Contract state (deterministic)
+
+**State store**
+
+* Firestore (preferred)
+
+**Artifact store**
+
+* GCS for immutable artifacts
+
+**Hard constraints**
+
+* must not execute FFmpeg
+* must not mutate worker outputs
+
+---
+
+### ☁️ Control Plane (Ralph Loop) on Cloud Run
+
+**Purpose**
+Deterministic reconciler, hosted in serverless runtime.
+
+**Responsibilities**
+
+* reconcile desired state (Firestore job contract)
+* invoke Worker (Cloud Run)
+* write logs/state to Firestore and/or GCS
+
+**Hard constraints**
+
+* deterministic only
+* no LLM usage
+
+---
+
+### ☁️ Worker Service (FFmpeg on Cloud Run)
+
+**Purpose**
+Deterministic renderer.
+
+**Responsibilities**
+
+* pull job contract state
+* read assets from GCS
+* render deterministically
+* write outputs to GCS
+
+**Hard constraints**
+
+* no LLM
+* no network calls except GCS read/write
+
+---
+
+### ☁️ Signed URL Handoff (Manual Posting)
+
+**Purpose**
+Phase 7 must produce a Signed URL for the final output so posting remains manual.
+
+**Hard rule**
+Ops/Distribution remains outside the factory.
+
+---
 
 ## Failure Philosophy
 
-- Fail fast
-- Fail loud
-- Never partially mutate state
+* Fail fast.
+* Fail loud.
+* Never partially mutate state.
 
-If required inputs are missing or invalid, the system exits immediately without producing
-partial or ambiguous artifacts.
-
+If required inputs are missing or invalid, the system exits immediately without producing partial or ambiguous artifacts.

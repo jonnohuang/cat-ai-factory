@@ -618,7 +618,7 @@ References:
 
 ## ADR-0023 — Deterministic audio stream in Worker outputs (no silent MP4)
 Date: 2026-02-10
-Status: Proposed
+Status: Accepted
 
 Context:
 - Worker outputs currently produce `final.mp4` with no audio stream (silent MP4).
@@ -645,4 +645,268 @@ References:
 - docs/PR_PROJECT_PLAN.md
 - docs/architecture.md
 - AGENTS.md
+
+
+------------------------------------------------------------
+
+## ADR-0024 — Lanes are non-binding hints; schema must remain permissive
+Date: 2026-02-11
+Status: Accepted
+
+Context:
+- CAF uses multiple production lanes (ai_video, image_motion, template_remix) to manage cost and routing.
+- Real clips are often hybrid or “mixed lane” workflows.
+- Strict lane-based schema gating (if/then/else forbids) blocks experimentation and forces premature rigidity.
+
+Decision:
+- `job.lane` is an OPTIONAL hint, not a gate.
+- `job.json` MUST remain valid even if it includes fields from multiple lanes.
+- The JSON Schema MUST remain permissive:
+  - validate shape/types
+  - do NOT add lane-based conditional rules like:
+    - "if lane=image_motion then require X else forbid X"
+- The Worker enforces only what is required for the chosen deterministic recipe at runtime.
+- Worker routing policy:
+  - Prefer explicit lane routing if lane is present AND required blocks exist.
+  - Otherwise infer route from fields:
+    - if `image_motion` exists -> image_motion recipe
+    - else -> standard render path
+  - If lane claims a recipe but required inputs are missing:
+    - prefer graceful fallback when safe
+    - fail-loud only when unsafe (e.g., path traversal, missing required asset)
+
+Consequences:
+- Preserves creativity and hybrid workflows.
+- Keeps schemas stable and avoids brittle conditional validation.
+- Maintains deterministic runtime behavior while allowing flexible planning.
+
+References:
+- docs/PR_PROJECT_PLAN.md
+- docs/system-requirements.md
+- docs/architecture.md
+
+
+------------------------------------------------------------
+
+## ADR-0025 — Series continuity layer v1 (hero registry + bible + ledger + creativity controls + audio allowlist)
+Date: 2026-02-11
+Status: Accepted
+
+Context:
+- CAF needs higher quality comedy, consistent character voice, and ongoing storyline continuity for daily Shorts/Reels/TikTok output.
+- LLM planning can drift canon over time without a structured continuity substrate.
+- CAF must remain deterministic and portfolio-ready:
+  - Worker must remain deterministic and LLM-free.
+  - Canon must be reviewable, file-based, and reproducible.
+- Audio is both a quality lever and a major copyright/Content-ID risk area.
+
+Decision:
+CAF introduces a minimal, deterministic “series layer” above `job.json`, consisting of:
+1) Hero Cats Registry (metadata only)
+2) Series Bible (tone rules + canon constraints)
+3) Episode Ledger (episode-by-episode continuity record)
+4) Job Creativity Controls (planner-only contract knobs)
+5) Audio allowlist manifest for license-safe background beds
+
+Rules:
+- These artifacts are Planner/Control-plane inputs only.
+- Worker remains deterministic and unchanged by these concepts.
+- Canon stability model:
+  - The Planner may propose new facts, new heroes, or new relationships.
+  - Only committed file artifacts become canon.
+  - No hidden “memory engine” is required or allowed as an authority source.
+
+Contract posture:
+- Provider-agnostic:
+  - No Gemini-specific or Vertex-specific knobs in contracts.
+- Creativity controls are contract-level, optional, and planner-only:
+  - `creativity.mode`: canon | balanced | experimental
+  - optional `creativity.canon_fidelity`: high | medium
+- Audio policy:
+  - Planner may only select background audio beds from a repo-owned, license-safe allowlist manifest.
+  - No trending/copyright music selection.
+  - No scraping platform trends.
+
+Consequences:
+- Improves series continuity, character voice consistency, and recurring gags without autonomy creep.
+- Keeps continuity explicit, reviewable, and reproducible via file artifacts.
+- Reduces copyright risk and supports consistent audio quality across platforms.
+- Preserves all core invariants: 3-plane separation, deterministic Worker, files-as-bus.
+
+References:
+- docs/PR_PROJECT_PLAN.md
+- docs/system-requirements.md
+- docs/architecture.md
+- docs/master.md
+- AGENTS.md
+
+
+------------------------------------------------------------
+
+## ADR-0026 — Phase 7 cloud migration posture (serverless, event-driven; preserve invariants)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- CAF is currently local-first (docker-compose + filesystem bus).
+- We want a Phase 7 migration to GCP that is serverless and event-driven, but must preserve:
+  - Planner → Control Plane → Worker separation
+  - determinism in Control Plane + Worker
+  - “files-as-bus” semantics (explicit, durable artifacts) even when artifacts live in cloud storage/state
+- External interfaces (Telegram) must remain adapters and must not block.
+
+Decision:
+- Phase 7 cloud posture is serverless + event-driven on GCP:
+  - Cloud Run for stateless services (Receiver, Orchestrator, Worker)
+  - Cloud Tasks for async bridging and retries
+  - Firestore for durable job contract/state (control-plane truth)
+  - GCS for immutable assets and outputs
+- Preserve invariants:
+  - Planner is the only nondeterministic component (LLM).
+  - Orchestrator + Worker remain deterministic and retry-safe.
+  - Ops/Distribution remains outside the factory; it consumes outputs and produces posting artifacts/URLs.
+
+Consequences:
+- Clean cloud portfolio story without rewriting core semantics.
+- Requires explicit cloud mappings for:
+  - “job contract snapshot” storage (Firestore)
+  - immutable artifacts (GCS)
+  - deterministic reconciliation (Orchestrator service)
+- Adds infra surface area (IAM, service-to-service auth) but keeps responsibilities separated.
+
+References:
+- docs/PR_PROJECT_PLAN.md
+- docs/system-requirements.md
+- docs/architecture.md
+- docs/master.md
+
+------------------------------------------------------------
+
+## ADR-0027 — Telegram Receiver must ACK fast; async bridge via Cloud Tasks
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- Telegram webhooks can time out if we do synchronous planning/orchestration in the request path.
+- Telegram is untrusted ingress; it must remain an adapter that writes “intent” without executing the factory.
+- We need retries and backpressure without losing messages.
+
+Decision:
+- Telegram webhook Receiver (Cloud Run) must:
+  - validate/auth (allowed user id)
+  - translate message → canonical “inbox-like” request record
+  - enqueue a Cloud Tasks task for downstream processing
+  - return HTTP 200 quickly (ACK fast)
+- Cloud Tasks is the required async bridge with retries between:
+  Receiver → Planner entrypoint.
+
+Consequences:
+- Prevents Telegram timeouts and removes planning from the request thread.
+- Adds at-least-once delivery semantics; downstream processing must be idempotent by a deterministic key
+  (e.g., `{source=telegram, update_id}`).
+- Keeps adapter boundary intact (no authority bypass).
+
+References:
+- docs/system-requirements.md (Telegram adapter requirement)
+- docs/architecture.md (Ops/Ingress outside factory authority)
+- docs/decisions.md (ADR-0009)
+
+------------------------------------------------------------
+
+## ADR-0028 — Planner becomes a LangGraph workflow on Cloud Run (planner-only; durable contract state)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- We want a recruiter-facing “workflow orchestration” story (LangGraph) without replacing Ralph Loop or Worker.
+- In cloud, the Planner must produce durable, reviewable job contracts and continuity artifacts.
+- Planner is nondeterministic; outputs must be validated deterministically before becoming canonical state.
+
+Decision:
+- The Planner is hosted as a LangGraph workflow on Cloud Run, planner-plane only.
+- Minimum workflow stages:
+  1) Analyze brief (LLM)
+  2) Draft contract (LLM)
+  3) Validate schema (deterministic)
+  4) Persist job contract snapshot/state (deterministic) in Firestore
+- The Planner must not execute FFmpeg or orchestration; it writes contracts/state only.
+
+Consequences:
+- Preserves ADR-0017 (LangGraph planner-only) while making it a first-class cloud component.
+- Requires deterministic schema validation in the Planner service before persisting canonical state.
+- Enables auditability: Firestore holds the canonical contract snapshot and status history.
+
+References:
+- docs/system-requirements.md
+- docs/architecture.md
+- docs/decisions.md (ADR-0017)
+- docs/PR_PROJECT_PLAN.md
+
+------------------------------------------------------------
+
+## ADR-0029 — Cloud storage/state mapping (Firestore as contract authority; GCS as immutable artifact store)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- Local CAF uses the filesystem as the bus and source of truth for artifacts.
+- In cloud we need durable equivalents:
+  - contract/state authority
+  - immutable artifacts (assets, outputs)
+  - idempotency and retries
+- We must preserve lane separation and prevent “hidden mutation” of outputs.
+
+Decision:
+- Firestore is the source of truth for job contract snapshots + job state:
+  - `jobs/{job_id}` stores:
+    - canonical job contract snapshot (schema-valid JSON or a reference to a versioned blob)
+    - lane hint (optional) + derived routing metadata
+    - status/state machine fields (deterministic)
+- GCS stores immutable artifacts:
+  - `gs://<bucket>/assets/...` (inputs)
+  - `gs://<bucket>/outputs/<job_id>/final.mp4` (and result/captions)
+  - optional: `gs://<bucket>/logs/<job_id>/...` for append-only logs
+- No service may mutate an existing output artifact in-place; new attempts write a new versioned object key or overwrite only via deterministic “atomic publish” step.
+
+Consequences:
+- Clear authority split:
+  - Firestore = contract/state truth
+  - GCS = immutable artifacts
+- Enables deterministic reconciliation + replay.
+- Requires explicit object naming/versioning rules and IAM boundaries.
+
+References:
+- docs/architecture.md
+- docs/system-requirements.md
+- docs/PR_PROJECT_PLAN.md
+- docs/decisions.md (ADR-0013)
+
+------------------------------------------------------------
+
+## ADR-0030 — Signed URL delivery is Ops/Distribution output (factory produces artifacts only)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- We want a “manual posting” workflow in cloud: retrieve media easily without giving broad bucket access.
+- Signed URLs are a distribution convenience and an external-facing artifact.
+- Ops/Distribution must remain outside the factory invariant.
+
+Decision:
+- The core factory (Planner/Orchestrator/Worker) produces artifacts only (job state + GCS objects).
+- Generating and exposing GCS Signed URLs is the responsibility of Ops/Distribution (outside factory), which:
+  - reads output object references
+  - creates signed URLs (time-bounded)
+  - writes derived distribution artifacts (and/or returns them to the human operator)
+- Signed URL artifacts must never be stored in Firestore job contract snapshots; they live in dist artifacts.
+
+Consequences:
+- Keeps the factory clean and deterministic.
+- Prevents accidental exposure of long-lived access paths.
+- Fits the bundle-first/manual-posting posture in cloud.
+
+References:
+- docs/architecture.md (Ops/Distribution outside factory)
+- docs/system-requirements.md
+- docs/decisions.md (ADR-0010..ADR-0012, ADR-0015)
 

@@ -4,7 +4,6 @@ import argparse
 import hashlib
 import json
 import os
-import subprocess
 import sys
 import tempfile
 from typing import Any, Dict, List, Optional, Tuple
@@ -15,7 +14,7 @@ from .util.redact import redact_text
 
 def _repo_root() -> str:
     here = os.path.dirname(os.path.abspath(__file__))
-    return os.path.normpath(os.path.join(here, "..", ".."))
+    return os.path.normpath(os.path.join(here, "..", "..", ".."))
 
 
 def _load_json(path: str) -> Dict[str, Any]:
@@ -83,6 +82,7 @@ def _stem_from_job_path(path: str) -> str:
 
 
 def _validate_job(temp_path: str) -> None:
+    import subprocess
     validate_script = os.path.join(_repo_root(), "tools", "validate_job.py")
     result = subprocess.run(
         ["python3", validate_script, temp_path],
@@ -165,8 +165,52 @@ def main(argv: List[str]) -> int:
             prd = _load_json(args.prd)
 
         inbox_list, inbox_with_names = _load_inbox(args.inbox)
+
+        # PR21: Load hero registry (reference only)
+        hero_registry = None
+        
+        # _repo_root() returns project root (directory containing 'repo' package)
+        project_root = _repo_root()
+        registry_path = os.path.join(project_root, "repo", "shared", "hero_registry.v1.json")
+        schema_path = os.path.join(project_root, "repo", "shared", "hero_registry.v1.schema.json")
+        
+        # Validate existence of registry file first to avoid noise if it's plainly missing
+        if os.path.exists(registry_path):
+            try:
+                # Ensure project root is on sys.path so `import repo...` works
+                if project_root not in sys.path:
+                    sys.path.insert(0, project_root)
+
+                from repo.shared.hero_registry_validate import validate_registry_data
+                
+                # Single-pass load and validate
+                reg_data = _load_json(registry_path)
+                
+                # Schema might strictly exist if registry does (co-located), but safely check
+                if os.path.exists(schema_path):
+                    schema_data = _load_json(schema_path)
+                    is_valid, errs = validate_registry_data(reg_data, schema_data)
+                    
+                    if is_valid:
+                        hero_registry = reg_data
+                    else:
+                        print(f"WARNING: Hero registry found but invalid. Proceeding without it.", file=sys.stderr)
+                        # Show first few errors to avoid log noise
+                        for i, e in enumerate(errs):
+                            if i >= 5:
+                                print(f"  ... ({len(errs) - 5} more)", file=sys.stderr)
+                                break
+                            print(f"  - {e}", file=sys.stderr)
+                else:
+                     print(f"WARNING: Hero registry schema not found at {schema_path}. Ignoring registry.", file=sys.stderr)
+
+            except ImportError as ie:
+                print(f"WARNING: Hero registry validation unavailable; ignoring registry. (Error: {ie})", file=sys.stderr)
+            except Exception as ex:
+                print(f"WARNING: Failed to load/validate hero registry: {ex}", file=sys.stderr)
+
         provider = get_provider(args.provider)
-        job = provider.generate_job(prd, inbox_list)
+        job = provider.generate_job(prd, inbox_list, hero_registry=hero_registry)
         if not isinstance(job, dict):
             raise RuntimeError("Provider returned non-object JSON")
 

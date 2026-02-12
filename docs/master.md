@@ -1,199 +1,338 @@
-# Cat AI Factory — Master Design Document (v1)
+# Cat AI Factory — Master Design Document (v2)
 
-This document is the living design brain of the Cat AI Factory project.
+This document is the living design brain of the Cat AI Factory (CAF) project.
 It captures **why** the system is structured the way it is, and the invariants that must remain true.
 
-It is intentionally principle-driven. Binding architectural changes must be recorded in `docs/decisions.md`.
+This document is principle-driven.
+Binding architectural changes must be recorded in `docs/decisions.md` as ADRs.
 
 ------------------------------------------------------------
 
-## Docs Index
+## Docs Index (Authority Map)
 
+Binding:
 - Architecture (diagram-first): `docs/architecture.md`
-- Decisions (binding ADRs): `docs/decisions.md`
+- Decisions (binding ADRs; append-only): `docs/decisions.md`
 - System requirements (reviewer-readable): `docs/system-requirements.md`
 - PR roadmap (sequencing + scope): `docs/PR_PROJECT_PLAN.md`
-- Historical context (non-authoritative): `docs/memory.md`
+
+Non-binding:
+- Historical context: `docs/memory.md`
 
 ------------------------------------------------------------
 
 ## Project Intent
 
-Cat AI Factory is not a demo chatbot or prompt experiment.
+Cat AI Factory is not a prompt demo, chatbot, or “one-off AI video generator”.
 
-It is a **production-minded agent system** designed to demonstrate how AI agents
-can be safely operationalized using real infrastructure patterns suitable for
-ML Infrastructure and Platform Engineering roles.
+CAF is a **production-minded, contract-first agent system** designed to demonstrate:
+- safe operationalization of LLM planning
+- deterministic execution boundaries
+- reproducible artifact pipelines
+- portfolio-grade architecture discipline
+- a clean migration from local → cloud without rewriting semantics
 
 The goal is not “one perfect AI video”.
-The goal is a **repeatable daily pipeline** with clear contracts, safety boundaries,
-and a clean cloud migration path.
+The goal is a **repeatable daily pipeline** with strong contracts, safety boundaries,
+and an event-driven cloud runtime.
 
 ------------------------------------------------------------
 
 ## Core Philosophy
 
 ### Determinism over Autonomy
-
-- Outputs should be reproducible from inputs.
-- Agents advise and coordinate; infrastructure enforces safety.
+- Outputs must be reproducible from explicit inputs.
+- The Planner may be nondeterministic; execution must not be.
 - Side effects occur only in controlled execution stages.
 
 ### Files as the Source of Truth
-
 - Files provide explicit contracts, durability, and debuggability.
-- Artifact-based workflows mirror real ML pipelines (data → transform → artifact).
+- Artifact-based workflows mirror real ML pipelines:
+  input → transform → artifact → verification.
 - Failure modes are observable and recoverable.
 
-------------------------------------------------------------
-
-## Three-Plane Architecture (Invariant)
-
-Cat AI Factory separates responsibilities into three planes:
-
-- **Planner**
-  - LLM-driven (non-deterministic) but constrained
-  - Produces versioned, validated `job.json` contracts
-  - **No side effects, no artifact writes**
-
-- **Control Plane (Orchestrator)**
-  - Deterministic state machine
-  - Idempotency, retries, audit logging, artifact lineage
-  - Coordinates execution; does not embed CPU-bound work
-
-- **Worker**
-  - Deterministic rendering/execution (no LLM usage)
-  - Same inputs → same outputs (within documented tolerance)
-  - Safe to retry without side effects
-
-Frameworks (e.g., orchestration libraries), RAG, and auxiliary agents must be treated as **adapters**
-that preserve this invariant. Decisions that alter plane responsibilities require an ADR.
-
-------------------------------------------------------------
-
-## Repo visibility posture (PUBLIC by design)
-
-- The Cat AI Factory core repository is intended to be PUBLIC (portfolio posture).
-- Ops/Distribution remains bundle-first by default: export bundles + checklists are credential-free artifacts.
-- Any credentialed publishing integrations (OAuth/token flows, account bindings, automated posting) MUST be external to this repo (private ops repo / separate deployment artifact).
-- No secrets, credentials, or tokens may be committed (including in docs, examples, logs, or sandbox artifacts).
-- Avoid PII and identity-tied cloud resource names in repo text/configs (no real project IDs, buckets, emails, or personal identifiers).
-
-------------------------------------------------------------
-
-## Control Plane vs Data Plane
-
-The system deliberately separates:
-
-- **Control Plane**
-  - Planning
-  - Orchestration
-  - Approval logic (file-bus mediated; outside the Worker)
-  - State reconciliation
-  - Budget enforcement (pre-spend gates; future)
-
-- **Data Plane**
-  - CPU-bound rendering
-  - Deterministic transformations
-  - Artifact generation
-
-Ralph Loop operates exclusively in the control plane.
-
-------------------------------------------------------------
-
-## Local-First, Cloud-Ready
-
-Local development:
-- Docker Compose
-- Sandboxed filesystem
-- Loopback-only networking
-
-Cloud target:
-- Cloud Run for orchestration
-- Pub/Sub for decoupling
-- GCS for artifacts
-- Firestore for state
-
-This allows fast iteration locally while preserving a clean cloud migration path.
-
-------------------------------------------------------------
-
-## Failure & Safety Model
-
-- Fail fast.
-- Fail loud.
-- Never partially mutate state.
-- No destructive actions without explicit human confirmation.
-
-These guarantees are enforced by infrastructure, not by prompts.
-
-------------------------------------------------------------
-
-## Portfolio Framing
-
-This project is intentionally designed to answer:
+### Portfolio-Ready Engineering Discipline
+CAF is intentionally designed to answer:
 - “How would you run agents in production?”
 - “How do you prevent unsafe autonomy?”
 - “How do you debug and reason about agent behavior?”
+- “How do you migrate local pipelines to serverless without breaking correctness?”
 
-The answer is: **clear contracts, separation of concerns, and infra-enforced guardrails**.
+The answer is:
+**contracts, separation of concerns, idempotency, and infra-enforced guardrails.**
+
+------------------------------------------------------------
+
+## Three-Plane Architecture (Non-Negotiable Invariant)
+
+CAF separates responsibilities into three planes:
+
+### 1) Planner Plane (Clawdbot / OpenClaw)
+- LLM-driven (nondeterministic) but constrained.
+- Produces versioned, validated `job.json` contracts.
+- Writes **ONLY**:
+  - `sandbox/jobs/*.job.json`
+- No side effects.
+- No output/log/asset writes.
+
+### 2) Control Plane (Ralph Loop)
+- Deterministic reconciler / state machine.
+- Enforces retries, idempotency, and audit logging.
+- Writes **ONLY**:
+  - `sandbox/logs/<job_id>/**`
+- Must NOT mutate `job.json`.
+- Must NOT write worker outputs.
+
+### 3) Worker Plane (Renderer / FFmpeg)
+- Deterministic rendering/execution.
+- No LLM usage.
+- Idempotent and retry-safe.
+- Writes **ONLY**:
+  - `sandbox/output/<job_id>/**`
+- Must NOT call external APIs.
+
+Frameworks (LangGraph, etc.), RAG, and auxiliary “agents” must be treated as
+**adapters**, not foundations, and must not violate these plane boundaries.
+
+------------------------------------------------------------
+
+## Filesystem Bus Identity (Job ID Discipline)
+
+CAF uses **files-as-bus** coordination.
+
+- The canonical job identity is the job filename stem:
+  `sandbox/jobs/<job_id>.job.json`
+- All canonical output/log paths are keyed by that job_id.
+
+This prevents hidden coupling and keeps every run debuggable by inspecting artifacts.
+
+------------------------------------------------------------
+
+## Canonical Output Naming (Worker)
+
+Inside:
+- `sandbox/output/<job_id>/`
+
+The Worker MUST emit canonical names:
+
+- `final.mp4` (required)
+- `final.srt` (optional)
+- `result.json` (required)
+
+Rationale:
+- The Worker is deterministic and toolable when downstream consumers can rely on stable names.
+- Uniqueness is provided by the **job_id directory**, not the filename.
+
+If a platform-friendly filename is needed, it is created by Ops/Distribution as a derived artifact.
+
+------------------------------------------------------------
+
+## Repo Visibility Posture (PUBLIC by Design)
+
+The CAF core repository is intended to be PUBLIC (portfolio posture).
+
+Non-negotiables:
+- No secrets in repo (code, docs, examples, sandbox).
+- No credentials, OAuth tokens, refresh tokens, cookies, or browser automation.
+- Avoid PII and identity-tied cloud resource names in repo text/configs:
+  - no real project IDs
+  - no bucket names
+  - no personal emails
+  - no personal identifiers
+
+Credentialed publishing integrations MUST live outside this repo:
+- private ops repo
+- separate deployment artifact
+- or runtime-only injection in cloud environments
 
 ------------------------------------------------------------
 
 ## Ops/Distribution Layer (Outside the Factory)
 
 Publishing and distribution workflows are inherently nondeterministic (external APIs).
-They must remain **outside** the core factory invariant (Planner / Control Plane / Worker).
+They must remain **outside** the core factory invariant.
 
-Ops/Distribution is a separate layer that:
+Ops/Distribution:
 - consumes immutable worker outputs
-- consumes planner-produced publish metadata
+- consumes publish metadata / publish_plan
 - enforces human approval gates by default
-- emits **derived distribution artifacts** (dist artifacts)
-- may optionally perform platform uploads (opt-in, platform-specific, credentials out-of-repo)
+- emits **derived distribution artifacts** only:
+  - `sandbox/dist_artifacts/<job_id>/**`
 
 Hard constraints:
-- Ops/Distribution is NOT a replacement for Clawdbot (Planner) or Ralph Loop (Control Plane).
-- Ops/Distribution must NOT mutate `job.json`.
-- Ops/Distribution must NOT modify worker outputs under:
+- MUST NOT mutate `job.json`
+- MUST NOT modify worker outputs under:
   - `/sandbox/output/<job_id>/final.mp4`
   - `/sandbox/output/<job_id>/final.srt`
   - `/sandbox/output/<job_id>/result.json`
 
-If platform-specific formatting is needed, write derived **dist artifacts**:
-- `sandbox/dist_artifacts/<job_id>/<platform>.json`
-- `sandbox/dist_artifacts/<job_id>/<platform>.state.json`
+Publishing must be idempotent:
+- keyed by `{job_id, platform}`
+- state authority:
+  - `sandbox/dist_artifacts/<job_id>/<platform>.state.json`
 
-Publishing should be gated by human approval by default.
-Publishing must be idempotent: store `platform_post_id` / `post_url` keyed by `{job_id, platform}`
-to prevent double-posting.
-
-------------------------------------------------------------
-
-## Daily Output Strategy (Policy; not an invariant)
-
-The system is designed to support a sustainable “daily output” workflow under strict budgets.
-
-This is intentionally achieved via multiple content lanes (policies), while preserving
-the deterministic Worker and the 3-plane invariant.
-
-The lane strategy itself is a binding roadmap decision (see ADRs), but the *existence*
-of lanes does not change the core architecture invariant.
+Operational rule:
+- Manual posting should always use export bundles, not `/sandbox/output/` directly.
 
 ------------------------------------------------------------
 
-## Future Work (Non-Binding)
+## Daily Output Strategy (Policy; Not an Invariant)
 
-This section is intentionally non-binding.
-All binding commitments belong in ADRs + `docs/PR_PROJECT_PLAN.md`.
+CAF is designed for a sustainable “daily output” workflow under strict budgets.
 
-- Multi-platform publisher adapters (bundle-first, upload optional).
-- Local distribution runner (approval-gated automation).
-- Publish plan contract + export bundle spec.
-- Hero cat cast registry (metadata; not agents).
-- Multilingual support (en + zh-Hans first).
-- Lane-based content generation (template remix, image motion, premium AI video).
-- Budget enforcement (local + cloud).
-- Cloud migration (GCS/Firestore/Cloud Run) preserving file-bus semantics.
-- CI/CD skeleton and reproducible checks.
+This is achieved via multiple production lanes (policy), while preserving:
+- deterministic Worker behavior
+- 3-plane separation
 
+Lane policy stance:
+- Lanes are planning/cost/routing hints, not creativity gates.
+- `job.lane` may be omitted.
+- Schema must remain permissive.
+- Runtime recipes decide what inputs are required.
+
+------------------------------------------------------------
+
+## Series Continuity (Planner-Only, Deterministic Canon)
+
+CAF aims for:
+- higher quality comedy
+- consistent character voices
+- ongoing storyline continuity
+
+…but without introducing autonomy creep or a “memory engine”.
+
+The solution is a minimal, deterministic **series layer** above `job.json`.
+
+Planner may read **canon artifacts** (file-based, reviewable, reproducible):
+- `repo/shared/hero_registry.v1.json`
+- `repo/shared/series_bible.v1.json`
+- `repo/shared/episode_ledger.v1.json`
+
+Key principle:
+- The LLM may propose new facts, jokes, characters, or continuity hooks,
+  but **only committed artifacts become canon**.
+
+This keeps continuity stable and prevents silent drift.
+
+------------------------------------------------------------
+
+## Audio Strategy (License-Safe, Deterministic Workflow)
+
+Audio is both a quality lever and a major copyright risk.
+
+CAF’s audio posture:
+- No music generation (v1).
+- No trending-music scraping.
+- Audio plans exist as artifacts for manual posting workflows.
+
+Worker-level requirement:
+- `final.mp4` must always contain an audio stream (no silent MP4).
+
+Continuity-safe audio workflow:
+- a repo-owned allowlist of license-safe audio beds
+- a deterministic manifest for selection
+- planner may select only from the allowlist
+
+This enables higher quality without copyright risk or nondeterministic scraping.
+
+------------------------------------------------------------
+
+## Phase 7 (Mandatory Next Milestone): Event-Driven Cloud Runtime on GCP
+
+Phase 7 is the next required milestone.
+
+Goal:
+- migrate from local docker-compose execution to a serverless, event-driven GCP architecture
+- preserve determinism, lane separation, and the file-bus mental model
+- keep Ops/Distribution outside the factory
+- produce a signed URL for manual posting workflows
+
+Phase 7 is NOT a redesign.
+It is a **mapping of the same contracts and invariants** onto cloud primitives.
+
+### Phase 7 Cloud Principles (Binding for the milestone)
+
+1) Telegram webhook receiver MUST NOT block
+- Telegram has timeouts; the receiver must ACK quickly.
+- The receiver is an ingress adapter, not an execution engine.
+
+2) Async bridge between receiver and planner is mandatory
+- Cloud Tasks is the preferred mechanism:
+  - retry-safe
+  - durable
+  - explicit backoff
+  - clean auditability
+
+3) Planner becomes a hosted workflow (LangGraph on Cloud Run)
+Planner steps (conceptual):
+- Analyze Brief (LLM)
+- Draft Contract (LLM)
+- Validate Schema (deterministic)
+- Persist Job Contract state (deterministic)
+
+Planner remains the only nondeterministic component.
+
+4) Job contract state MUST be durable (Firestore preferred)
+Firestore becomes the durable state store for:
+- job contract snapshots
+- planner attempts
+- job lifecycle state
+
+5) Worker remains deterministic and stateless (Cloud Run FFmpeg)
+- Worker pulls its recipe from the persisted job contract state.
+- Worker does not call any LLM or external model APIs.
+- Worker writes immutable outputs only.
+
+6) Artifacts stored in GCS
+- Assets and outputs live in GCS.
+- The local file-bus maps to GCS prefixes.
+- Deterministic naming remains job_id keyed.
+
+7) Signed URL is the “handoff artifact”
+- Phase 7 must produce a signed URL for `final.mp4`
+- This is for manual posting and Ops/Distribution workflows.
+- Signed URLs do NOT imply automated posting.
+
+8) CI/CD is mandatory
+- GitHub main merges trigger Cloud Build:
+  build → Artifact Registry → deploy Cloud Run services
+
+### What must remain true in Phase 7
+
+- Planner / Control Plane / Worker boundaries do not change.
+- Worker remains deterministic and LLM-free.
+- Lanes remain hints, not schema gates.
+- Ops/Distribution remains outside the factory.
+- No secrets in repo; no identity-tied resource names in repo.
+
+------------------------------------------------------------
+
+## Failure & Safety Model
+
+CAF follows a strict failure philosophy:
+- Fail fast.
+- Fail loud.
+- Never partially mutate state.
+- Never introduce hidden side effects.
+
+These guarantees are enforced by:
+- container boundaries
+- filesystem or object-store write restrictions
+- deterministic contracts
+- idempotent state models
+- durable queues (Cloud Tasks)
+
+Not by prompts.
+
+------------------------------------------------------------
+
+## What CAF Must Never Become (Explicit Anti-Goals)
+
+CAF must NOT become:
+- a “self-running autonomous agent” with hidden actions
+- a system with agent-to-agent RPC coupling across planes
+- a worker that calls LLMs or network APIs
+- a repo that contains credentials or identity-tied cloud resources
+- a platform automation bot (engagement scraping, like/follow automation)
+
+CAF is a deterministic factory with clear contracts and safe boundaries.

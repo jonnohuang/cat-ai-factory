@@ -25,13 +25,19 @@ class BaseProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def generate_job(self, prd: Dict[str, Any], inbox: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
+    def generate_job(
+        self,
+        prd: Dict[str, Any],
+        inbox: List[Dict[str, Any]] | None = None,
+        hero_registry: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
         """
         Generates a job dictionary from the given PRD and inbox.
 
         Args:
             prd: The product definition dictionary.
             inbox: An optional list of inbox message dictionaries.
+            hero_registry: Optional reference-only hero registry data (hero_registry.v1).
 
         Returns:
             A dictionary representing the generated job, ready for validation and writing.
