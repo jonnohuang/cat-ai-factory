@@ -1,0 +1,15 @@
+{
+    "project": "Cat AI Factory",
+    "schema": "episode_ledger.v1",
+    "version": "1.0.0",
+    "generated_at": "2026-02-11T19:55:00Z",
+    "episodes": [
+        {
+            "episode_id": "ep-999-fail",
+            "created_at": "2026-02-11T10:00:00Z",
+            "heroes_involved": [ "tiger-black", "ghost-cat" ],
+            "summary": { "en": "Fail", "zh-Hans": "Fail" },
+            "new_facts": []
+        }
+    ]
+}
