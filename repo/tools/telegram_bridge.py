@@ -14,13 +14,18 @@ Design Invariants:
 - It communicates strictly via the filesystem bus (/sandbox/inbox, /sandbox/logs).
 - It has no authority to execute, modify, or delete artifacts outside its scope.
 - All secrets are handled via environment variables and are never logged or exposed.
+- MUST NOT overwrite existing inbox artifacts.
 """
+
+from __future__ import annotations
 
 import json
 import logging
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 from telegram import Update
 from telegram.ext import (
@@ -43,17 +48,14 @@ LOGS_PATH = SANDBOX_PATH / "logs"
 ASSETS_PATH = SANDBOX_PATH / "assets"
 DIST_ARTIFACTS_PATH = SANDBOX_PATH / "dist_artifacts"
 
-
 # --- Security: Load secrets from environment ---
 try:
     TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
     TELEGRAM_ALLOWED_USER_ID = int(os.environ["TELEGRAM_ALLOWED_USER_ID"])
 except (KeyError, ValueError) as e:
     logger.critical(f"CRITICAL: Missing or invalid environment variable: {e}")
-    logger.critical(
-        "Please set TELEGRAM_BOT_TOKEN and TELEGRAM_ALLOWED_USER_ID."
-    )
-    exit(1)
+    logger.critical("Please set TELEGRAM_BOT_TOKEN and TELEGRAM_ALLOWED_USER_ID.")
+    raise SystemExit(1)
 
 
 def is_authorized(user_id: int) -> bool:
@@ -65,17 +67,61 @@ def _utc_now_z() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _read_manifest():
+def _read_manifest() -> Tuple[Optional[dict], Optional[str]]:
     manifest_path = ASSETS_PATH / "manifest.json"
     if not manifest_path.is_file():
         return None, "manifest.json not found at sandbox/assets/manifest.json"
     try:
-        with open(manifest_path, "r") as f:
+        with open(manifest_path, "r", encoding="utf-8") as f:
             return json.load(f), None
     except json.JSONDecodeError:
         return None, "manifest.json is invalid JSON"
     except Exception as e:
         return None, f"Error reading manifest.json: {e}"
+
+
+def _parse_creativity_tokens(prompt: str) -> Tuple[str, Optional[Dict[str, str]]]:
+    """
+    Best-effort parsing of optional creativity tokens anywhere in a prompt.
+
+    Supported tokens (case-insensitive keys):
+      - creativity=canon|balanced|experimental
+      - canon_fidelity=high|medium
+
+    Returns:
+      (cleaned_prompt, creativity_dict_or_None)
+    """
+    allowed_mode = {"canon", "balanced", "experimental"}
+    allowed_fidelity = {"high", "medium"}
+
+    tokens = prompt.split()
+    kept: list[str] = []
+    creativity: Dict[str, str] = {}
+
+    for tok in tokens:
+        if "=" not in tok:
+            kept.append(tok)
+            continue
+
+        key, value = tok.split("=", 1)
+        key_l = key.strip().lower()
+        value_l = value.strip().lower()
+
+        if key_l in {"creativity", "mode"}:
+            if value_l in allowed_mode:
+                creativity["mode"] = value_l
+            else:
+                kept.append(tok)
+        elif key_l == "canon_fidelity":
+            if value_l in allowed_fidelity:
+                creativity["canon_fidelity"] = value_l
+            else:
+                kept.append(tok)
+        else:
+            kept.append(tok)
+
+    cleaned = " ".join(kept).strip()
+    return cleaned, (creativity if creativity else None)
 
 
 async def raw_update_logger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -138,7 +184,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 🐾 CAF Telegram Bridge (authorized users only)
 
 Commands:
-/plan <prompt>
+/plan <prompt> [creativity=canon|balanced|experimental] [canon_fidelity=high|medium]
 /daily [--auto-style|--human-style] <brief text...>
 /approve <job_id>
 /reject <job_id> [reason]
@@ -153,9 +199,49 @@ A/B/C lanes: numbers are volume targets (how many videos/jobs), NOT time slots.
 Example:
 /daily --human-style A=1 B=0 C=2 theme: office cats, barista mishaps
 
+Style workflow (optional):
+1) /style list
+2) /style set <key>
+3) /daily ... or /plan ...
+
 Note: commands write inbox artifacts only; this bridge does not run the factory.
     """.strip()
     await update.message.reply_text(help_text)
+
+
+async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles /plan <prompt> with optional creativity tokens."""
+    if not is_authorized(update.effective_user.id):
+        if update.message:
+            await update.message.reply_text("Not authorized.")
+        return
+
+    args = context.args or []
+    prompt_raw = " ".join(args).strip()
+    if not prompt_raw:
+        await update.message.reply_text(
+            "Usage: /plan <prompt> [creativity=canon|balanced|experimental] [canon_fidelity=high|medium]"
+        )
+        return
+
+    cleaned_prompt, creativity = _parse_creativity_tokens(prompt_raw)
+
+    update_id = update.update_id
+    artifact: Dict[str, Any] = {
+        "source": "telegram",
+        "received_at": _utc_now_z(),
+        "command": "plan",
+        # Back-compat: keep the original field name as well as the clearer one.
+        "prompt": cleaned_prompt,
+        "brief_text": cleaned_prompt,
+        "nonce": str(update_id),
+    }
+    if creativity:
+        artifact["creativity"] = creativity
+
+    filepath = INBOX_PATH / f"plan-{update_id}.json"
+    await _write_artifact(filepath, artifact)
+    await update.message.reply_text("✅ Instruction logged to inbox: plan")
 
 
 async def daily_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -216,7 +302,7 @@ async def style_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await update.message.reply_text(error)
             return
 
-        keys = list(manifest.keys())
+        keys = list(manifest.keys()) if isinstance(manifest, dict) else []
         if not keys:
             await update.message.reply_text("No styles found in manifest.json.")
             return
@@ -239,7 +325,7 @@ async def style_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await update.message.reply_text(error)
             return
 
-        if style_key not in manifest:
+        if not isinstance(manifest, dict) or style_key not in manifest:
             await update.message.reply_text("Invalid key. Use '/style list' to see available keys.")
             return
 
@@ -260,6 +346,71 @@ async def style_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     else:
         await update.message.reply_text("Usage: /style <list|set> [key]")
+
+
+async def approve_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles /approve <job_id>."""
+    user_id = update.effective_user.id
+    if not is_authorized(user_id):
+        if update.message:
+            await update.message.reply_text("Not authorized.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /approve <job_id>")
+        return
+
+    job_id = context.args[0].strip()
+    if not job_id:
+        await update.message.reply_text("Usage: /approve <job_id>")
+        return
+
+    update_id = update.update_id
+    artifact = {
+        "source": "telegram",
+        "job_id": job_id,
+        "platform": "youtube",
+        "approved": True,
+        "approved_by": f"telegram:{user_id}",
+        "approved_at": _utc_now_z(),
+        "nonce": update_id,
+    }
+    await _write_artifact(
+        INBOX_PATH / f"approve-{job_id}-youtube-{update_id}.json", artifact
+    )
+    await update.message.reply_text("✅ Instruction logged to inbox: approve")
+
+
+async def reject_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles /reject <job_id> [reason]."""
+    user_id = update.effective_user.id
+    if not is_authorized(user_id):
+        if update.message:
+            await update.message.reply_text("Not authorized.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /reject <job_id> [reason]")
+        return
+
+    job_id = context.args[0].strip()
+    reason = " ".join(context.args[1:]).strip() if len(context.args) > 1 else ""
+
+    update_id = update.update_id
+    artifact = {
+        "source": "telegram",
+        "job_id": job_id,
+        "approved": False,
+        "reason": reason,
+        "rejected_by": f"telegram:{user_id}",
+        "rejected_at": _utc_now_z(),
+        "nonce": update_id,
+        "platform": "youtube",
+    }
+    await _write_artifact(
+        INBOX_PATH / f"reject-{job_id}-youtube-{update_id}.json", artifact
+    )
+    await update.message.reply_text("✅ Instruction logged to inbox: reject")
 
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -283,7 +434,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     state_file = LOGS_PATH / job_id / "state.json"
     if state_file.is_file():
         try:
-            with open(state_file, "r") as f:
+            with open(state_file, "r", encoding="utf-8") as f:
                 state_data = json.load(f)
                 factory_status = state_data.get("status", "UNKNOWN")
         except json.JSONDecodeError:
@@ -296,7 +447,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     dist_state_file = DIST_ARTIFACTS_PATH / job_id / f"{platform}.state.json"
     if dist_state_file.is_file():
         try:
-            with open(dist_state_file, "r") as f:
+            with open(dist_state_file, "r", encoding="utf-8") as f:
                 dist_state_data = json.load(f)
                 publish_status = dist_state_data.get("status", "UNKNOWN")
         except json.JSONDecodeError:
@@ -309,98 +460,62 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(reply)
 
 
-async def _write_artifact(filepath: Path, data: dict):
-    """Helper to write a JSON artifact to the inbox."""
+async def _write_artifact(filepath: Path, data: dict) -> None:
+    """
+    Helper to write a JSON artifact to the inbox.
+
+    Invariants:
+    - Create parent dirs if needed
+    - MUST NOT overwrite an existing file
+    - Atomic write
+    """
     INBOX_PATH.mkdir(parents=True, exist_ok=True)
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=2)
+
+    # Do not overwrite
+    if filepath.exists():
+        raise FileExistsError(f"Refusing to overwrite existing artifact: {filepath}")
+
+    # Atomic write: write to a temp file in the same directory, then rename.
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    tmp_fd, tmp_path_str = tempfile.mkstemp(
+        prefix=filepath.name + ".", suffix=".tmp", dir=str(filepath.parent)
+    )
+    tmp_path = Path(tmp_path_str)
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp_path.replace(filepath)
+    except Exception:
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except Exception:
+            pass
+        raise
+
     logger.info(f"Wrote artifact to {filepath}")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles generic messages and special commands."""
+    """
+    Handles generic non-command messages.
+
+    Note:
+    - Commands are handled by CommandHandlers.
+    - This handler is only for plain text messages (non-command).
+    """
     if not update.message:
         return
 
     user_id = update.effective_user.id
     if not is_authorized(user_id):
-        if update.message:
-            await update.message.reply_text("Not authorized.")
+        await update.message.reply_text("Not authorized.")
         return
 
-    message = update.message
-    text = message.text.strip() if message.text else ""
-    update_id = update.update_id
-    was_special_command = True  # Assume true, set to false for generic messages
-
-    try:
-        if text.startswith("/plan "):
-            prompt = text[len("/plan ") :].strip()
-            if not prompt:
-                await message.reply_text("Usage: /plan <prompt>")
-                return
-            artifact = {
-                "source": "telegram",
-                "prompt": prompt,
-                "received_at": _utc_now_z(),
-                "nonce": str(update_id),
-            }
-            await _write_artifact(INBOX_PATH / f"plan-{update_id}.json", artifact)
-            await message.reply_text("✅ Instruction logged to inbox: plan")
-
-        elif text.startswith("/approve "):
-            parts = text.split()
-            if len(parts) < 2:
-                await message.reply_text("Usage: /approve <job_id>")
-                return
-            job_id = parts[1]
-            artifact = {
-                "source": "telegram",
-                "job_id": job_id,
-                "platform": "youtube",
-                "approved": True,
-                "approved_by": f"telegram:{user_id}",
-                "approved_at": _utc_now_z(),
-                "nonce": update_id,
-            }
-            await _write_artifact(
-                INBOX_PATH / f"approve-{job_id}-youtube-{update_id}.json", artifact
-            )
-            await message.reply_text("✅ Instruction logged to inbox: approve")
-
-        elif text.startswith("/reject "):
-            parts = text.split(maxsplit=2)
-            if len(parts) < 2:
-                await message.reply_text("Usage: /reject <job_id> [reason]")
-                return
-            job_id = parts[1]
-            reason = parts[2] if len(parts) > 2 else ""
-            artifact = {
-                "source": "telegram",
-                "job_id": job_id,
-                "approved": False,
-                "reason": reason,
-                "rejected_by": f"telegram:{user_id}",
-                "rejected_at": _utc_now_z(),
-                "nonce": update_id,
-                "platform": "youtube",
-            }
-            await _write_artifact(
-                INBOX_PATH / f"reject-{job_id}-youtube-{update_id}.json", artifact
-            )
-            await message.reply_text("✅ Instruction logged to inbox: reject")
-
-        else:
-            # Not a special command we handle in this message handler
-            was_special_command = False
-
-    except Exception as e:
-        logger.error(f"Failed during special command processing: {e}")
-        await message.reply_text("Error processing command.")
-        return
-
-    if not was_special_command and message.text:
-        await message.reply_text("OK: Message received by inbox.")
+    if update.message.text:
+        await update.message.reply_text("OK: Message received by inbox.")
 
 
 def main() -> None:
@@ -422,13 +537,15 @@ def main() -> None:
     # Register handlers
     app.add_handler(CommandHandler("start", start_command), group=1)
     app.add_handler(CommandHandler("help", help_command), group=1)
+    app.add_handler(CommandHandler("plan", plan_command), group=1)
     app.add_handler(CommandHandler("daily", daily_command), group=1)
+    app.add_handler(CommandHandler("approve", approve_command), group=1)
+    app.add_handler(CommandHandler("reject", reject_command), group=1)
     app.add_handler(CommandHandler("status", status_command), group=1)
     app.add_handler(CommandHandler("style", style_command), group=1)
 
-    # MessageHandler for commands that write artifacts and for raw message logging
+    # Non-command text handler (kept minimal)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1)
-    app.add_handler(MessageHandler(filters.COMMAND, handle_message), group=1)
 
     logger.info("Telegram bridge started. Polling for updates...")
     app.run_polling()
