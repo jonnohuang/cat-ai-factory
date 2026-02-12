@@ -520,7 +520,7 @@ Outcome:
 ---
 
 ### PR-21 — Hero cats registry (metadata only) + planner bindings
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add character registry + schema + validator
@@ -533,7 +533,7 @@ Outcome:
 ---
 
 ### PR-21.1 — Job creativity controls (contract-only; provider-agnostic)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Extend `repo/shared/job.schema.json` with an optional top-level `creativity` object:
@@ -549,7 +549,7 @@ Outcome:
 ---
 
 ### PR-21.2 — Series Bible + Episode Ledger v1 (contracts + docs only)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add minimal continuity artifacts as versioned contracts:
@@ -576,7 +576,7 @@ Outcome:
 ---
 
 ### PR-21.3 — Audio Strategy v1 (assets + manifest + usage rules; license-safe)
-Status: **PLANNED**
+Status: **ACTIVE**
 
 Scope:
 - Add repo-owned, license-safe loopable audio beds:

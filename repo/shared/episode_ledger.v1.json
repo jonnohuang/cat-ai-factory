@@ -1,0 +1,41 @@
+{
+    "project": "Cat AI Factory",
+    "schema": "episode_ledger.v1",
+    "version": "1.0.0",
+    "generated_at": "2026-02-11T19:55:00Z",
+    "episodes": [
+        {
+            "episode_id": "ep-001-pilot",
+            "created_at": "2026-02-11T10:00:00Z",
+            "job_id": "job-example-001",
+            "heroes_involved": [
+                "tiger-black",
+                "mochi-grey-tabby"
+            ],
+            "summary": {
+                "en": "Tiger tries to optimize the nap schedule but accidentally deletes the production database.",
+                "zh-Hans": "Tiger 试图优化午睡时间表，但不小心删除了生产数据库。"
+            },
+            "new_facts": [
+                {
+                    "en": "Tiger is terrified of vacuum cleaners.",
+                    "zh-Hans": "Tiger 害怕吸尘器。"
+                }
+            ],
+            "next_hook": {
+                "en": "Mochi finds a strange glowing bug in the server room.",
+                "zh-Hans": "Mochi 在服务器机房发现了一只发光的虫子。"
+            },
+            "tags": [
+                "fail",
+                "office-life"
+            ],
+            "continuity_links": {
+                "gags_used": [
+                    "red-dot-latency"
+                ],
+                "setting_id": "control-room"
+            }
+        }
+    ]
+}

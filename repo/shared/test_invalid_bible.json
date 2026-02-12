@@ -1,0 +1,20 @@
+{
+    "project": "Cat AI Factory",
+    "schema": "series_bible.v1",
+    "version": "1.0.0",
+    "generated_at": "2026-02-11T19:50:00Z",
+    "tone": {
+        "logline": { "en": "Test", "zh-Hans": "Test" },
+        "voice_style": { "en": "Test", "zh-Hans": "Test" }
+    },
+    "boundaries": {
+        "forbidden_topics": [],
+        "allowed_humor": []
+    },
+    "canon": {
+        "core_rules": [],
+        "default_cast": [ "tiger-black", "fake-hero-id" ]
+    },
+    "running_gags": [],
+    "settings": []
+}

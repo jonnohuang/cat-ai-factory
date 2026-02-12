@@ -1,0 +1,69 @@
+{
+    "project": "Cat AI Factory",
+    "schema": "series_bible.v1",
+    "version": "1.0.0",
+    "generated_at": "2026-02-11T19:50:00Z",
+    "tone": {
+        "logline": {
+            "en": "A factory run by cats who think they are serious engineers but are actually just cats.",
+            "zh-Hans": "一家由猫经营的工厂，它们自以为是严肃的工程师，但实际上只是猫。"
+        },
+        "voice_style": {
+            "en": "Deadpan, corporate jargon mixed with cat behaviors. 'Fail fast' means knocking a glass off the table.",
+            "zh-Hans": "一本正经，企业术语夹杂着猫的行为。“快速失败”意味着把杯子从桌子上推下去。"
+        }
+    },
+    "boundaries": {
+        "forbidden_topics": [
+            "Politics",
+            "Religion",
+            "Animal cruelty",
+            "Explicit content"
+        ],
+        "allowed_humor": [
+            "Workplace satire",
+            "Cat logic",
+            "Physical comedy (safe)",
+            "Tech bros parody"
+        ]
+    },
+    "canon": {
+        "core_rules": [
+            "Cats cannot speak human languages naturally (unless translated by AI).",
+            "The factory produces 'internet content' but the cats don't know what it is.",
+            "No magic wands; all tech must look like cardboard or scratched metal."
+        ],
+        "default_cast": [
+            "tiger-black",
+            "mochi-grey-tabby"
+        ]
+    },
+    "running_gags": [
+        {
+            "gag_id": "red-dot-latency",
+            "setup": {
+                "en": "A laser pointer dot appears on the wall.",
+                "zh-Hans": "墙上出现了一个激光笔红点。"
+            },
+            "payoff": {
+                "en": "The cat engineer claims it's a 'network latency issue' and tries to debug it.",
+                "zh-Hans": "猫工程师声称这是'网络延迟问题'并试图调试它。"
+            },
+            "usage_notes": "Use when discussing performance metrics."
+        }
+    ],
+    "settings": [
+        {
+            "setting_id": "control-room",
+            "description": {
+                "en": "A room filled with cardboard boxes stacked like servers. Cables are yarn.",
+                "zh-Hans": "一个装满像服务器一样堆叠的纸箱的房间。电缆是毛线。"
+            },
+            "props": [
+                "Cardboard server rack",
+                "Yarn cables",
+                "Mouse (computer)"
+            ]
+        }
+    ]
+}

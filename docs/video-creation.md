@@ -31,7 +31,42 @@ only for planning and writing.
 
 The worker must remain deterministic and infrastructure-enforced.
 
+
 ------------------------------------------------------------
+
+## Series Connectivity (Continuity Layer)
+
+Cat AI Factory implements a **deterministic continuity layer** to support consistent character voices, recurring gags, and story progression without autonomous memory creep.
+
+The Planner reads these artifacts as **canon inputs** but cannot modify them directly.
+
+### 1) Series Bible (Canon Rules)
+- **Contract**: `repo/shared/series_bible.v1.schema.json`
+- **Canonical Instance**: `repo/shared/series_bible.v1.json`
+- **Scope**: Tone, forbidden topics, running gags, setting descriptions, and character cross-references.
+- **Validation**:
+  
+  # Basic validation
+  python3 repo/tools/validate_series_bible.py repo/shared/series_bible.v1.json
+  
+  # With explicit hero registry path (optional)
+  python3 repo/tools/validate_series_bible.py repo/shared/series_bible.v1.json repo/shared/hero_registry.v1.json
+
+
+### 2) Episode Ledger (History)
+- **Contract**: `repo/shared/episode_ledger.v1.schema.json`
+- **Canonical Instance**: `repo/shared/episode_ledger.v1.json`
+- **Scope**: Ordered list of published episodes, summary of events, new facts introduced, and continuity hooks for future episodes.
+- **Validation**:
+
+  # Basic validation
+  python3 repo/tools/validate_episode_ledger.py repo/shared/episode_ledger.v1.json
+  
+  # With explicit cross-references (optional)
+  python3 repo/tools/validate_episode_ledger.py repo/shared/episode_ledger.v1.json repo/shared/hero_registry.v1.json repo/shared/series_bible.v1.json
+
+------------------------------------------------------------
+
 
 ## Production Archetypes (v0.1 Registry)
 
