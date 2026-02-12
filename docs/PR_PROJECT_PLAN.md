@@ -595,7 +595,7 @@ Outcome:
 ---
 
 ### PR-21.4 — Telegram daily_plan: optional creativity hints (adapter-only)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Extend the Telegram daily_plan ingress artifact to optionally include:
