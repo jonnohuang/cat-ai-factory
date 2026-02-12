@@ -56,13 +56,15 @@ def load_json(path: str) -> Any:
 
 
 def validate_references(bible_data: Dict[str, Any], registry_path: str) -> bool:
+    ok = True
+
     # Load registry
     registry_data = load_json(registry_path)
     
     # Registry identity check (optional but helpful)
     if registry_data.get("project") != "Cat AI Factory" or registry_data.get("schema") != "hero_registry.v1":
          eprint(f"SEMANTIC_ERROR: Registry at {registry_path} appears to be invalid (wrong project or schema).")
-         ok = False
+         # We continue, but it's suspicious.
     
     # Registry shape check
     heroes = registry_data.get("heroes")

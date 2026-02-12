@@ -576,7 +576,7 @@ Outcome:
 ---
 
 ### PR-21.3 — Audio Strategy v1 (assets + manifest + usage rules; license-safe)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Add repo-owned, license-safe loopable audio beds:
@@ -594,8 +594,28 @@ Outcome:
 
 ---
 
-### PR-22 — LangGraph demo workflow (planner-only)
+### PR-21.4 — Telegram daily_plan: optional creativity hints (adapter-only)
 Status: **PLANNED**
+
+Scope:
+- Extend the Telegram daily_plan ingress artifact to optionally include:
+  - `creativity.mode`: canon | balanced | experimental
+  - `creativity.canon_fidelity`: high | medium
+- Backward compatible:
+  - if absent, behavior is unchanged
+- Update Telegram command documentation with example syntax for setting creativity.
+- No schema changes required.
+- No Worker changes.
+- No Planner changes required (Planner may ignore until it is wired in later).
+
+Outcome:
+- Daily planning can steer “canon vs experimental” tone from mobile without breaking contracts.
+- Keeps creativity control as planner-only intent, consistent with ADR-0025.
+
+---
+
+### PR-22 — LangGraph demo workflow (planner-only)
+Status: **ACTIVE**
 
 Scope:
 - LangGraph workflow adapter in Planner plane only
@@ -604,6 +624,32 @@ Scope:
 
 Outcome:
 - Mandatory Google demo signal without architecture compromise
+
+---
+
+### PR-22.1 — Planner RAG v1 (deterministic retrieval; docs + manifest; planner-only)
+Status: **PLANNED**
+
+Scope:
+- Add a minimal, license-safe RAG “pack” that is **planner-only** and **deterministic**:
+  - `repo/shared/rag_manifest.v1.schema.json`
+  - `repo/shared/rag_manifest.v1.json` (example)
+  - `repo/shared/rag/` (small set of repo-owned guidance docs, e.g. tone, safety, lane guidance, caption rules)
+- Retrieval MUST be deterministic and reproducible (no embeddings required):
+  - tag + priority selection from `rag_manifest`
+  - stable tie-break rules (e.g., `priority` then `doc_id` lexical)
+- Planner integration is read-only:
+  - Planner MAY read RAG docs to improve contract quality
+  - Planner MUST NOT write or modify any RAG artifacts at runtime
+- No changes to:
+  - Worker logic
+  - Ralph Loop logic
+  - job schema (unless explicitly required later via ADR)
+
+Outcome:
+- A portfolio-credible RAG story that preserves CAF invariants:
+  deterministic “reference context” for the Planner, file-based and reviewable,
+  without embeddings, vector DBs, or hidden memory.
 
 ------------------------------------------------------------
 

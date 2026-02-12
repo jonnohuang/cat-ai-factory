@@ -127,7 +127,7 @@ Hard rules:
 
 ---
 
-## Planner Reference Inputs (Series + Audio Layer)
+## Planner Reference Inputs (Series + Audio + RAG)
 
 CAF supports a minimal continuity + quality layer above `job.json`.
 
@@ -136,18 +136,24 @@ They MUST NOT be modified at runtime.
 
 Canon / continuity:
 
-* `repo/shared/hero_registry.v1.json` (planned / PR21)
-* `repo/shared/series_bible.v1.json` (planned / PR21.2)
-* `repo/shared/episode_ledger.v1.json` (planned / PR21.2)
+* `repo/shared/hero_registry.v1.json` (PR21)
+* `repo/shared/series_bible.v1.json` (PR21.2)
+* `repo/shared/episode_ledger.v1.json` (PR21.2)
 
 Audio allowlist:
 
-* `sandbox/assets/audio/audio_manifest.v1.json` (planned / PR21.3)
+* `sandbox/assets/audio/audio_manifest.v1.json` (PR21.3)
+
+RAG (planner-only; deterministic, file-based):
+
+* `repo/shared/rag_manifest.v1.json` (PR22.1)
+* `repo/shared/rag/**` (PR22.1)
 
 Important:
 
 * The LLM may propose new facts.
 * Only committed files become canon.
+* RAG must never become an authority source outside committed artifacts.
 
 ---
 
@@ -334,6 +340,9 @@ Mobile supervisor surface (human-in-the-loop).
 **Responsibilities**
 
 * write inbox artifacts into `sandbox/inbox/`
+* daily_plan artifacts MAY include optional creativity hints for the Planner:
+  - `creativity.mode`: canon | balanced | experimental
+  - `creativity.canon_fidelity`: high | medium
 * read status artifacts and report them back
 
 **Writes (ONLY)**

@@ -88,6 +88,16 @@ Telegram is the human-facing ingress for daily planning and approvals.
 - Telegram MUST NOT bypass the file-bus.
 - Telegram MUST NOT mutate worker outputs or `job.json`.
 
+### FR-09.1 — Telegram daily_plan supports optional creativity hints
+Telegram daily planning MUST support optional creativity hints for the Planner.
+
+- The daily_plan ingress artifact MAY include:
+  - `creativity.mode`: canon | balanced | experimental
+  - `creativity.canon_fidelity`: high | medium
+- This is planner-only intent (no Worker meaning).
+- Backward compatible: if omitted, behavior is unchanged.
+- Telegram MUST remain an adapter and MUST NOT bypass the file-bus.
+
 ### FR-10 — Ops/Distribution is outside the factory (required)
 Ops/Distribution automation (e.g., runners, publisher adapters, bundles) MUST remain outside the three-plane factory.
 
@@ -189,6 +199,25 @@ deterministic “series layer” above job contracts.
 - The Worker MUST remain unchanged by this layer (planner/control-plane only).
 - The system MUST treat continuity as **explicit canon artifacts**:
   - LLM may propose new facts, but only committed artifacts become canon.
+- The Planner MAY use optional creativity hints (canon/balanced/experimental) to control canon fidelity.
+
+### FR-19 — Planner RAG (deterministic, file-based, planner-only)
+The system MUST support Retrieval-Augmented Generation (RAG) as a **planner-only, deterministic, file-based** reference mechanism to improve job contract quality and continuity.
+
+- Canonical artifacts:
+  - `repo/shared/rag_manifest.v1.json` (references available docs, tags, priority)
+  - `repo/shared/rag/` (repo-owned reference documents)
+- Deterministic retrieval:
+  - Planner selects RAG docs using manifest tags/filters with stable tie-break rules
+    (e.g., `priority` then `doc_id` lexical).
+  - No embeddings/vector DBs are required for v1.
+- Read-only inputs:
+  - Planner MAY read RAG docs when generating `job.json`.
+  - Planner MUST NOT modify any RAG artifacts at runtime.
+- Hard constraints:
+  - RAG MUST NOT move into the Control Plane or Worker.
+  - Worker MUST remain LLM-free and deterministic.
+  - No hidden “memory” store becomes an authority source; only committed files count.
 
 ------------------------------------------------------------
 

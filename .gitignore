@@ -1,14 +1,6 @@
 # Secrets
 .env
 
-# Sandbox runtime data
-sandbox/assets/
-sandbox/output/
-sandbox/logs/
-sandbox/inbox/
-sandbox/outbox/
-sandbox/jobs/cat-*.job.json
-
 # OS / editor
 .DS_Store
 __pycache__/
@@ -19,9 +11,26 @@ __pycache__/
 *.tfstate.backup
 **/.terraform/
 
+# Sandbox runtime data
+sandbox/output/
+sandbox/logs/
+sandbox/inbox/
+sandbox/outbox/
 
 # Clawdbot runtime workspace
 sandbox/home/
 sandbox/jobs/*.job.json
 sandbox/jobs/*.tmp
 sandbox/dist_artifacts/
+
+# Sandbox assets:
+# We commit ONLY deterministic, license-safe manifests/docs and demo assets.
+# Large/private assets must stay untracked.
+sandbox/assets/*
+!sandbox/assets/README.md
+!sandbox/assets/audio/audio_manifest.v1.json
+!sandbox/assets/audio/audio_manifest.v1.schema.json
+!sandbox/assets/demo/
+!sandbox/assets/demo/**
+!sandbox/assets/audio/
+!sandbox/assets/audio/**
