@@ -117,11 +117,11 @@ class GeminiAIStudioProvider(BaseProvider):
 
 def _repo_root() -> str:
     here = os.path.dirname(os.path.abspath(__file__))
-    return os.path.normpath(os.path.join(here, "..", "..", ".."))
+    return os.path.normpath(os.path.join(here, "..", "..", "..", ".."))
 
 
 def _validate_job(job: Dict[str, Any]) -> Tuple[bool, str]:
-    validate_script = os.path.join(_repo_root(), "tools", "validate_job.py")
+    validate_script = os.path.join(_repo_root(), "repo", "tools", "validate_job.py")
     fd, temp_path = tempfile.mkstemp(prefix="planner-validate-", suffix=".job.json")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:

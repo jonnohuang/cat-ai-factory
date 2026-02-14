@@ -4,10 +4,12 @@ from typing import Dict, List, Type
 
 from .base import BaseProvider
 from .gemini_ai_studio import GeminiAIStudioProvider
+from .langgraph_demo import LangGraphDemoProvider
 
 
 PROVIDERS: Dict[str, Type[BaseProvider]] = {
     "ai_studio": GeminiAIStudioProvider,
+    "langgraph_demo": LangGraphDemoProvider,
 }
 
 
