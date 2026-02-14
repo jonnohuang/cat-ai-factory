@@ -83,7 +83,7 @@ def _stem_from_job_path(path: str) -> str:
 
 def _validate_job(temp_path: str) -> None:
     import subprocess
-    validate_script = os.path.join(_repo_root(), "tools", "validate_job.py")
+    validate_script = os.path.join(_repo_root(), "repo", "tools", "validate_job.py")
     result = subprocess.run(
         ["python3", validate_script, temp_path],
         check=False,

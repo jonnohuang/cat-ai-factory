@@ -14,6 +14,17 @@ python3 -m repo.services.planner.planner_cli \
   --out sandbox/jobs \
   --provider ai_studio
 
+LangGraph demo (planner-only adapter):
+
+python3 -m repo.services.planner.planner_cli \
+  --prd sandbox/PRD.json \
+  --inbox sandbox/inbox \
+  --out sandbox/jobs \
+  --provider langgraph_demo
+
+Note: `langgraph_demo` requires `pip install langgraph` and still uses the Gemini AI Studio provider
+for the draft step, followed by deterministic schema validation.
+
 Optional (prompt-only):
 
 python3 -m repo.services.planner.planner_cli \
