@@ -1,0 +1,30 @@
+{
+  "version": "rag_manifest.v1",
+  "generated_at": "2026-02-14T09:00:00Z",
+  "documents": [
+    {
+      "doc_id": "tone-guidelines",
+      "title": "Tone Guidelines",
+      "tags": ["tone", "humor", "style"],
+      "priority": 80,
+      "relpath": "repo/shared/rag/tone_guidelines.md",
+      "summary": "Tone guardrails: light, playful, workplace-safe, no cruelty."
+    },
+    {
+      "doc_id": "safety-boundaries",
+      "title": "Safety Boundaries",
+      "tags": ["safety", "boundaries"],
+      "priority": 90,
+      "relpath": "repo/shared/rag/safety_boundaries.md",
+      "summary": "Hard constraints: avoid harm, disallowed topics, no unsafe acts."
+    },
+    {
+      "doc_id": "lane-guidance",
+      "title": "Lane Guidance",
+      "tags": ["lanes", "planning"],
+      "priority": 70,
+      "relpath": "repo/shared/rag/lane_guidance.md",
+      "summary": "Lane intent and planning posture (A/B/C)."
+    }
+  ]
+}

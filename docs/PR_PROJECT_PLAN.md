@@ -615,7 +615,7 @@ Outcome:
 ---
 
 ### PR-21.5 — PlanRequest v1 (guided input contract; cloud-agnostic)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Add a deterministic, versioned request contract for guided inputs (UI/front-end neutral):
@@ -636,7 +636,7 @@ Outcome:
 ---
 
 ### PR-21.6 — EpisodePlan v1 (planner-only intermediate artifact)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add a schema-validated planner-only intermediate artifact:
@@ -654,7 +654,7 @@ Outcome:
 ---
 
 ### PR-22 — LangGraph demo workflow (planner-only)
-Status: **NEXT**
+Status: **COMPLETED**
 
 Scope:
 - LangGraph workflow adapter in Planner plane only
@@ -709,19 +709,6 @@ Scope:
 Outcome:
 - Portfolio-required multi-agent planning demo (CrewAI) without breaking CAF invariants:
   CrewAI improves planning quality, while deterministic validation + commit remain authoritative.
-
----
-
-### PR-22.3 — LangGraph demo workflow (planner-only)
-Status: **PLANNED**
-
-Scope:
-- Add LangGraph workflow adapter in Planner plane only
-- Must NOT replace Ralph or Worker
-- Demonstrate recruiter-facing workflow orchestration story
-
-Outcome:
-- Mandatory Google demo signal without architecture compromise
 
 ------------------------------------------------------------
 
