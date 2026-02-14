@@ -36,6 +36,10 @@ No plane may “borrow” responsibilities from another plane.
 - Allowed writes: `/sandbox/jobs/*.job.json`
 - Forbidden writes: everything else
 
+Planned planner-only artifacts:
+- PlanRequest v1 is adapter ingress only (input).
+- EpisodePlan v1 is a planner-only intermediate artifact; Control Plane/Worker MUST NOT require it.
+
 ### Control Plane (Ralph Loop)
 - Allowed writes: `/sandbox/logs/<job_id>/**`
 - Forbidden writes: `/sandbox/jobs/**`, `/sandbox/output/**`, `/sandbox/assets/**`
@@ -62,6 +66,11 @@ No plane may “borrow” responsibilities from another plane.
 ### RAG (planner-only)
 - RAG is planner-only.
 - RAG MUST NOT move into the Control Plane or Worker.
+
+### CrewAI (planner-only; contained)
+- CrewAI MUST run only inside the Planner plane.
+- CrewAI MUST be contained to a single LangGraph node (or subgraph).
+- CrewAI MUST NOT write artifacts directly.
 
 ### Worker
 - Worker MUST NOT call any LLMs or external generation APIs.
@@ -145,9 +154,12 @@ Publishing must be:
 - human-approved by default
 - idempotent via `{job_id, platform}` keys
 
+n8n posture:
+- n8n is ops workflow automation only (notifications, approvals, manual publish triggers).
+- n8n MUST remain outside the factory and MUST NOT replace Cloud Tasks for internal execution retries/backoff.
+
 ------------------------------------------------------------
 
 ## If a task conflicts with these rules
 
 Stop immediately and escalate to ARCH for an ADR decision.
-

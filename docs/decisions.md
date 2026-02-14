@@ -940,4 +940,286 @@ References:
 - docs/system-requirements.md (SEC-01, SEC-03)
 - docs/decisions.md (ADR-0026..ADR-0030)
 
+------------------------------------------------------------
+
+## ADR-0032 — CrewAI is planner-only and contained inside a single LangGraph node
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- CAF requires a recruiter-facing workflow orchestration story (LangGraph) while preserving strict 3-plane separation.
+- We also want to showcase multi-agent planning quality (CrewAI) for portfolio value.
+- Uncontained multi-agent frameworks can accidentally become a “control plane” and violate determinism + files-as-bus semantics.
+- The Worker and Control Plane must remain deterministic and LLM-free.
+
+Decision:
+- CrewAI is REQUIRED for the portfolio, but it MUST remain planner-plane only.
+- CrewAI MUST be contained inside exactly one LangGraph node (or subgraph) within the Planner workflow.
+- CrewAI MUST NOT:
+  - replace Ralph Loop
+  - perform orchestration retries
+  - invoke the Worker
+  - write artifacts directly
+- All canonical artifact writes MUST occur only in deterministic LangGraph nodes:
+  - schema validation
+  - normalization
+  - commit/write steps
+
+Consequences:
+- Enables a clean “LangGraph + CrewAI” portfolio demo without compromising CAF invariants.
+- Prevents framework creep where CrewAI becomes a hidden orchestrator.
+- Forces clear deterministic gates:
+  - CrewAI output must be schema-valid JSON or fail closed.
+- Keeps Control Plane and Worker unchanged and deterministic.
+
+References:
+- docs/master.md
+- docs/architecture.md
+- docs/system-requirements.md (FR-02, FR-03, FR-15, FR-19)
+- docs/decisions.md (ADR-0001, ADR-0002, ADR-0017)
+- AGENTS.md
+
+------------------------------------------------------------
+
+## ADR-0033 — PlanRequest v1 (Ingress contract; adapter-neutral)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- CAF currently accepts planning intent via Telegram inbox artifacts (daily_plan, /plan).
+- We want to support additional front ends (Coze web UI, future web forms) without rewriting the Planner.
+- CAF must remain contract-first and deterministic at boundaries.
+- Ingress adapters must remain replaceable and must not become authorities.
+- Telegram is functional but not ideal for guided, structured inputs (heroes/tone/continuity knobs).
+
+Decision:
+- Introduce a versioned ingress request contract: PlanRequest v1.
+- PlanRequest v1 is adapter-neutral:
+  - Telegram, Coze, and future UIs produce the same schema.
+- PlanRequest v1 is NOT a job contract and does not replace job.json.
+  - Planner consumes PlanRequest and produces job.json.
+- PlanRequest is treated as untrusted input:
+  - strict schema validation
+  - deterministic normalization (defaults, enum clamping, sorting)
+  - safe string length limits
+- PlanRequest v1 is planner-plane input only:
+  - it must not be consumed by Worker
+  - it must not become a coordination channel
+- The adapter may provide a nonce, but CAF remains the authority for:
+  - job_id generation
+  - contract commit decisions
+  - canonical storage paths (local now; Firestore/GCS in Phase 7)
+
+Consequences:
+- Multiple UIs can exist without changing planner semantics.
+- Cloud migration is simpler: local inbox and cloud ingress both map to PlanRequest v1.
+- Enables guided UX (Coze) while keeping CAF as the authority.
+- Requires a small deterministic normalization layer in the Planner.
+
+References:
+- docs/master.md
+- docs/system-requirements.md (FR-01, FR-09, SEC-01)
+- docs/architecture.md (files-as-bus + adapter boundaries)
+- AGENTS.md (Ingress adapter write boundaries)
+
+------------------------------------------------------------
+
+## ADR-0034 — EpisodePlan v1 (Planner-only planning artifact; schema-validated)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- CAF currently produces job.json directly from planning inputs.
+- As continuity (heroes, series bible, episode ledger), lanes, and creativity controls expand,
+  the Planner needs an explicit intermediate artifact that is:
+  - reviewable
+  - schema-valid
+  - reproducible
+  - independent of any specific framework (LangGraph, CrewAI)
+- We also want to showcase agent orchestration quality (CrewAI) without allowing it to directly
+  mutate contracts or bypass deterministic gates.
+
+Decision:
+- Introduce a versioned planner-only planning artifact: EpisodePlan v1.
+- EpisodePlan v1 is a deterministic, schema-validated intermediate plan that sits above job.json.
+- EpisodePlan v1 is produced by the Planner and then deterministically transformed into job.json.
+
+Hard constraints:
+- EpisodePlan v1 is Planner-plane only:
+  - Worker must never read it
+  - Control Plane must never require it for execution correctness
+- All writes of EpisodePlan v1 must occur only as committed artifacts (not hidden memory).
+- CrewAI may be used to draft EpisodePlan v1, but:
+  - CrewAI must be contained inside one Planner node (or subgraph)
+  - deterministic validation + commit gates must be outside CrewAI
+- EpisodePlan v1 must be strict JSON:
+  - schema-validated
+  - fail-closed on invalid output
+  - deterministic normalization applied before commit
+
+Canonical content of EpisodePlan v1 (conceptual):
+- selected lane mix (A/B/C)
+- selected hero ids (from hero_registry)
+- continuity hooks (derived from series bible + ledger)
+- beat outline (setup → gag → payoff)
+- captions/copy intent (en + zh-Hans)
+- asset intent (seed frames needed, template keys, etc.)
+- job generation parameters (duration, style key, etc.)
+
+Consequences:
+- Improves planner quality and debuggability:
+  reviewers can inspect EpisodePlan separately from job.json.
+- Allows CrewAI showcase without contaminating deterministic boundaries.
+- Makes LangGraph adoption cleaner (graph nodes can pass EpisodePlan between deterministic gates).
+- Adds an extra artifact type to maintain (schema + examples).
+
+References:
+- docs/master.md (series continuity layer posture)
+- docs/system-requirements.md (FR-01, FR-14, FR-15, FR-18)
+- docs/architecture.md (Planner reference inputs)
+- AGENTS.md (Planner write boundary; files-as-bus)
+- docs/decisions.md (ADR-0032 CrewAI containment requirement)
+
+------------------------------------------------------------
+
+## ADR-0035 — Coze is UI-only (PlanRequest in; CAF remains source of truth)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- Telegram commands are functional but not ideal for guided inputs (heroes, tone, continuity knobs).
+- Coze can provide a better guided UX (web UI / form-filler) for structured planning requests.
+- CAF must remain deterministic, contract-first, and vendor-neutral.
+- Continuity logic (series bible, episode ledger, hero registry reasoning) must remain inside CAF Planner,
+  not inside a third-party UI tool.
+
+Decision:
+- Coze is permitted as an optional guided-input front end only.
+- Coze must be treated as a replaceable adapter, not an authority.
+- Coze produces PlanRequest v1 only (never job.json).
+- Coze must not become a required runtime dependency:
+  - Telegram remains supported
+  - PlanRequest v1 is the stable contract for all UIs
+- Coze must not store or own continuity canon:
+  - canon remains file-based artifacts in CAF
+  - LangGraph Planner is the continuity reasoning engine
+
+Consequences:
+- Enables a better UX without breaking CAF invariants.
+- Prevents vendor lock-in and continuity drift.
+- Keeps cloud migration clean: Coze wiring happens after PR-23 (cloud artifact layout).
+
+References:
+- docs/master.md
+- docs/system-requirements.md (FR-01, FR-09, SEC-01)
+- docs/architecture.md (adapter boundary + planner reference inputs)
+- docs/decisions.md (ADR-0033 PlanRequest v1)
+- AGENTS.md
+
+------------------------------------------------------------
+
+## ADR-0036 — n8n is Ops Workflow Automation (Cloud Tasks remains internal queue)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- Phase 7 migrates CAF to Cloud Run + Cloud Tasks + Firestore/GCS.
+- CAF requires:
+  - durable retries/backoff for internal work steps
+  - a clean human approval + manual publish workflow
+- Cloud Tasks is the correct primitive for internal step execution.
+- n8n is valuable for human workflow automation and integrations, but it must not become the orchestrator.
+
+Decision:
+- Cloud Tasks is the internal CAF queue for all “do work” steps:
+  - planner invocation
+  - control-plane reconciliation
+  - worker rendering
+  - (later) publisher steps
+- n8n is permitted only as an Ops/Distribution workflow layer:
+  - notifications
+  - human approval buttons
+  - manual publish triggers
+  - integrations (Sheets/Notion/etc.)
+- n8n must not replace:
+  - Ralph Loop semantics
+  - Cloud Tasks retry/backoff authority
+  - CAF contract/state authority (Firestore/GCS)
+- n8n interactions with CAF must be via explicit, idempotent endpoints or artifacts.
+
+Consequences:
+- Keeps CAF production semantics correct and portfolio-grade.
+- Allows rapid iteration on human workflow without rewriting CAF core.
+- Prevents “workflow tool drift” from becoming architecture drift.
+
+References:
+- docs/master.md
+- docs/system-requirements.md (FR-10, FR-11, NFR-02)
+- docs/architecture.md (Phase 7 mapping)
+- docs/decisions.md (ADR-0031 Cloud asset posture)
+- AGENTS.md
+
+------------------------------------------------------------
+
+## ADR-0037 — Cloud Tasks is the async bridge (Receiver must ACK fast; no Telegram timeouts)
+Date: 2026-02-11
+Status: Proposed
+
+Context:
+- Telegram webhooks have strict timeouts.
+- In Phase 7, CAF must run in a serverless, event-driven architecture on GCP.
+- The Receiver is an ingress adapter, not an execution engine.
+- Planner work (LangGraph + LLM calls) is nondeterministic and can be slow.
+- CAF requires durable retries, backoff, and at-least-once delivery semantics for ingress-triggered planning.
+
+Decision:
+- The Telegram Webhook Receiver MUST:
+  - authenticate the sender
+  - enqueue an async work item
+  - return HTTP 200 immediately (fast ACK)
+- Cloud Tasks is the required async bridge between Receiver and Planner:
+  - retries + backoff
+  - explicit throttling
+  - durable delivery
+  - clear auditability
+- The Receiver MUST NOT call the Planner synchronously.
+- The Receiver MUST NOT write job/output/log artifacts directly.
+
+Consequences:
+- Prevents Telegram timeouts and duplicate planning due to client retries.
+- Provides production-grade durability for planner invocation.
+- Keeps CAF aligned with its “adapter only” posture for ingress.
+
+References:
+- docs/master.md (Phase 7 principles)
+- docs/system-requirements.md (FR-09, NFR-02)
+- docs/architecture.md (Phase 7 lifecycle)
+- AGENTS.md (Receiver + Cloud Tasks roles)
+- docs/decisions.md (ADR-0031 Cloud asset posture)
+
+------------------------------------------------------------
+
+## ADR-0038 — Lane Hints Are Non-Binding; Schema Must Remain Permissive
+Date: 2026-02-14
+Status: Proposed
+
+Context:
+- CAF lane policy states `job.lane` is optional and non-binding.
+- Authoritative docs (AGENTS.md, docs/master.md) prohibit lane-based schema gating.
+- `repo/shared/job.schema.json` currently enforces lane-based `if/then` requirements.
+
+Decision:
+- Remove lane-based `if/then` requirements from `job.schema.json`.
+- Lanes remain optional planner hints; routing/requirements are enforced only by deterministic runtime logic (planner/control/worker).
+
+Consequences:
+- Schema becomes permissive as intended.
+- Validation for lane-specific blocks is shifted to runtime logic and/or QC checks, not schema.
+- Aligns schema with documented invariants.
+
+References:
+- AGENTS.md
+- docs/master.md
+- docs/architecture.md
+- docs/system-requirements.md
 

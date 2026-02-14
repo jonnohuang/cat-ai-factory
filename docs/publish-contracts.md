@@ -1,8 +1,6 @@
 # Ops/Distribution: Publish Contracts & Idempotency
 
-**Status: Proposed (non-binding)**
-
-**Note:** The recommended defaults in this document have been accepted and are now binding. See `docs/decisions.md` (ADR-0010..ADR-0013).
+**Status: Binding (ADR-0010..ADR-0013)**
 
 This document outlines the proposed (non-binding) file contracts for the Ops/Distribution layer. This layer sits outside the core Planner/Control/Worker planes and is responsible for publishing content to external platforms.
 
@@ -18,9 +16,7 @@ References:
 
 The Ops/Distribution layer **MUST NOT** modify worker outputs. Instead, it creates **derived artifacts** in a dedicated location.
 
-- **Recommended Default (ARCH):** `sandbox/dist_artifacts/`
-
-- **Option B:** `sandbox/outbox/dist_artifacts/`. This might offer clearer semantic separation but adds path depth.
+- **Canonical Root:** `sandbox/dist_artifacts/`
 
 ---
 
@@ -78,10 +74,8 @@ This file is the local source-of-truth for the publish state of a specific `{job
 
 Following the ingress model of `ADR-0009`, human or automated approvals are delivered via the file-bus into the `inbox`.
 
-- **Recommended Default (ARCH):** `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`
+- **Canonical Path:** `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`
   - The `nonce` (e.g., a timestamp or message ID from the source system like Telegram) prevents replay conflicts.
-
-- **Option B:** A new top-level directory like `sandbox/approvals/`. This could simplify inbox processing but introduces a new monitored path.
 
 **Minimal Fields:**
 ```json
@@ -196,4 +190,3 @@ sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/
 3. Operator pastes text from `clips/<clip_id>/copy/copy.en.txt` (or target language).
 4. Operator applies audio per instructions in `clips/<clip_id>/audio/audio_notes.txt`.
 5. Operator clicks "Post".
-

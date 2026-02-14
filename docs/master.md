@@ -75,6 +75,10 @@ CAF separates responsibilities into three planes:
 - No side effects.
 - No output/log/asset writes.
 
+Planned (ADR-0034):
+- Introduce a planner-only intermediate artifact (EpisodePlan v1) that is schema-validated and committed before job.json.
+- EpisodePlan MUST remain planner-only and must not be required by Control Plane or Worker.
+
 ### 2) Control Plane (Ralph Loop)
 - Deterministic reconciler / state machine.
 - Enforces retries, idempotency, and audit logging.
@@ -91,8 +95,10 @@ CAF separates responsibilities into three planes:
   - `sandbox/output/<job_id>/**`
 - Must NOT call external APIs.
 
-Frameworks (LangGraph, etc.), RAG, and auxiliary “agents” must be treated as
+Frameworks (LangGraph, CrewAI, etc.), RAG, and auxiliary “agents” must be treated as
 **adapters**, not foundations, and must not violate these plane boundaries.
+CrewAI (when used) MUST be contained inside the Planner workflow (LangGraph) and must not become a control plane.
+
 
 ------------------------------------------------------------
 
@@ -173,6 +179,10 @@ Publishing must be idempotent:
 
 Operational rule:
 - Manual posting should always use export bundles, not `/sandbox/output/` directly.
+
+Ops workflow automation (e.g., n8n) is allowed only in this layer:
+- n8n is ops UX/integrations only (notifications, approvals, manual publish triggers)
+- n8n MUST NOT replace Cloud Tasks for internal execution retries/backoff
 
 ------------------------------------------------------------
 
@@ -276,6 +286,12 @@ Planner steps (conceptual):
 - Draft Contract (LLM)
 - Validate Schema (deterministic)
 - Persist Job Contract state (deterministic)
+- (optional sub-step) CrewAI inside a single LangGraph node (LLM; planner-only)
+  - used to improve creative quality + continuity editing
+  - MUST NOT write artifacts directly; commit happens in deterministic nodes
+
+Note:
+- CrewAI is a planner-only implementation detail (contained); it must not replace Ralph Loop or the Worker.
 
 Planner remains the only nondeterministic component.
 

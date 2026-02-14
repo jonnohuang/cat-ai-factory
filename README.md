@@ -56,21 +56,24 @@ This project showcases ML-infrastructure skills beyond model training:
 
 PRD / Instructions  
 → Planner Agent (Clawdbot)  
+→ EpisodePlan v1 (planner-only intermediate)  
 → `job.json` (structured contract)  
 → Control Plane (Ralph Loop orchestrator)  
 → Worker (FFmpeg renderer)  
 → MP4 + captions  
 
-Optional ingress:
+Optional ingress (adapter-only):
 
-Telegram Message  
-→ Telegram Bridge  
-→ `/sandbox/inbox/*.json`
+Telegram / Coze / future UI  
+→ Adapter  
+→ PlanRequest v1 (`/sandbox/inbox/*.json`)
+→ Planner (source of truth)
 
 All coordination happens through **files**, not shared memory, RPC, or browser UIs.
 
 Frameworks (LangGraph, etc.) are treated as **adapters**, not foundations.
 RAG is **planner-only**.
+CrewAI (when used) is planner-only and contained inside a single LangGraph node.
 
 ------------------------------------------------------------
 
@@ -142,12 +145,15 @@ It is responsible for:
 - approvals (human-in-the-loop)
 - publisher adapters (bundle-first, platform-specific)
 - idempotent publish state tracking
+ - optional ops workflow automation (e.g., n8n) for notifications/approvals only
 
 Hard constraints:
 - MUST NOT mutate `job.json`
 - MUST NOT modify worker outputs under `sandbox/output/<job_id>/...`
 - MUST emit derived artifacts only under:
   - `sandbox/dist_artifacts/<job_id>/...`
+
+n8n MUST remain outside the factory and MUST NOT replace Cloud Tasks for internal execution retries/backoff.
 
 This is intentionally designed so cloud migration is a mapping exercise, not a redesign.
 
@@ -217,4 +223,3 @@ This project serves two purposes:
 
 The design intentionally avoids “magic demos” and instead emphasizes clarity,
 safety, reproducibility, and deployability.
-

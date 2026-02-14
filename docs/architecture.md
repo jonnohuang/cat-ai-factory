@@ -10,7 +10,7 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
 ## Architecture Invariants
 
 - Three-plane separation (non-negotiable):
-  - Planner → produces job.json only (no side effects)
+  - Planner → produces job.json only (no side effects; EpisodePlan v1 planned)
   - Control Plane → deterministic orchestrator (reconciler/state machine)
   - Worker → deterministic renderer (no LLM usage)
 
@@ -88,6 +88,7 @@ flowchart TB
 Notes:
 - Canonical output/log directories are keyed by job_id derived from the job filename stem (<job-file>). This is the filesystem bus identity.
 - If job.json also contains job_id and it differs, Ralph Loop emits a warning event and proceeds using the filename-derived job_id.
+ - Planned (ADR-0034): EpisodePlan v1 is a planner-only intermediate artifact that precedes job.json and is not required by Control Plane or Worker.
 
 ### Planner reference inputs (optional; read-only)
 
@@ -106,6 +107,16 @@ These are inputs only. The Planner MUST NOT modify them.
 - RAG (planner-only; deterministic, file-based):
   - `repo/shared/rag_manifest.v1.json`
   - `repo/shared/rag/**`
+
+- PlanRequest (UI-agnostic input contract):
+  - `repo/examples/plan_request.v1.example.json`
+  - (schema) `repo/shared/plan_request.v1.schema.json`
+  - Adapters (Telegram, Coze, future UIs) emit PlanRequest v1; Planner remains the authority.
+
+Note:
+- CrewAI (PR-22.2) is a planner-only implementation detail and must be contained inside a LangGraph node/subgraph.
+ - Planned (ADR-0034): EpisodePlan v1 is a planner-only intermediate artifact (schema-validated, committed) produced before job.json.
+
 
 ------------------------------------------------------------
 
