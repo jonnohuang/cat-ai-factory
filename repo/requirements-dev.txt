@@ -24,5 +24,8 @@ black>=24.1.0
 # --- Optional: LangGraph demo (planner-only) ---
 langgraph>=0.1.0
 
+# --- Optional: CrewAI demo (planner-only) ---
+crewai>=0.35.0
+
 # --- Optional: static typing (keep lightweight) ---
 mypy>=1.8.0

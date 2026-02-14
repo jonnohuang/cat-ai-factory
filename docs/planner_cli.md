@@ -25,6 +25,12 @@ python3 -m repo.services.planner.planner_cli \
 Note: `langgraph_demo` requires `pip install langgraph` and still uses the Gemini AI Studio provider
 for the draft step, followed by deterministic schema validation.
 
+CrewAI demo (optional, planner-only):
+- Install: `pip install crewai`
+- Enable: `CREWAI_ENABLED=1`
+- Run the same `langgraph_demo` provider. CrewAI is contained to a single LangGraph node and its
+  output is validated deterministically before commit.
+
 Optional (prompt-only):
 
 python3 -m repo.services.planner.planner_cli \
