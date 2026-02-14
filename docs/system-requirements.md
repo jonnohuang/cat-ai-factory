@@ -283,6 +283,9 @@ The system MUST support an optional Ops workflow automation layer (e.g., n8n) to
 ### FR-24 — EpisodePlan v1 (planner-only intermediate artifact; schema-validated)
 The system MUST support a planner-only intermediate artifact (EpisodePlan v1) to improve continuity and make planning outputs auditable before job.json is written.
 
+- Canonical artifacts:
+  - `repo/shared/episode_plan.v1.schema.json`
+  - `repo/examples/episode_plan.v1.example.json`
 - Posture:
   - EpisodePlan v1 is planner-only and MUST NOT be required by Control Plane or Worker.
   - EpisodePlan v1 is schema-validated and committed as an explicit artifact (no hidden memory).
