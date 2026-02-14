@@ -6,7 +6,7 @@ but they **do not change the core Worker invariant**.
 
 ## Lane Identifiers
 
-PR17 represents lane intent via an optional `lane` field in `job.json`. If present, it must be one of:
+Lane intent is represented via an optional `lane` field in `job.json`. If present, it must be one of:
 
 | Lane ID | Intent | Worker Behavior |
 |---|---|---|
@@ -16,11 +16,11 @@ PR17 represents lane intent via an optional `lane` field in `job.json`. If prese
 
 If `lane` is omitted, the job is treated as a generic/legacy job (fully supported).
 
-> **Planning Note**: PR17 establishes these identifiers as planning intent only. Future PRs (PR18/PR19) will add lane-specific recipes and logic.
+> **Planning Note**: Lanes are non-binding hints (ADR-0014, ADR-0038). The schema must remain permissive and must not require lane-specific blocks.
 
 ## Invariants
 
-- **Worker Determinism**: The Worker MAY route based on lane to select a deterministic recipe; routing must be deterministic and must not change output paths. The Worker remains fully deterministic: it renders only from `job.json` + sandbox assets and never calls LLMs or networks.
+- **Worker Determinism**: The Worker MAY route based on explicit blocks (e.g., `image_motion`, `template`) to select a deterministic recipe. Lane is a hint only. Routing must be deterministic and must not change output paths. The Worker remains fully deterministic: it renders only from `job.json` + sandbox assets and never calls LLMs or networks.
 - **Output Stability**: Regardless of lane, the canonical worker outputs are ALWAYS:
   - `/sandbox/output/<job_id>/final.mp4`
   - `/sandbox/output/<job_id>/final.srt` (if captions are present)
@@ -54,7 +54,7 @@ For `lane="template_remix"`, the Worker resolves the `template_id` from a local 
 > [!IMPORTANT]
 > All input paths defined in `required_inputs` (e.g. background assets) are **sandbox-relative**. The Worker validates them using `validate_safe_path()` to ensure they do not escape the sandbox environment.
 
-If `lane="template_remix"`, the job contract must include:
+If a `template` block is present, the job contract should include:
 ```json
 "template": {
   "template_id": "simple_remix",

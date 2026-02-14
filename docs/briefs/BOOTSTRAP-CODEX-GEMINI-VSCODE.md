@@ -114,6 +114,49 @@ In Worker plane code (renderer / FFmpeg worker):
 
 ------------------------------------------------------------
 
+## CAF-Safe SOP (CRITICAL — prevents doc damage)
+
+This repo is portfolio-grade and doc-heavy. AI agents are prone to “helpful rewrites” that delete important context.
+
+Therefore:
+
+### 1) Docs are human-owned by default
+CODEX MUST NOT modify ANY of these unless the PR prompt explicitly allows it AND lists exact lines/sections to change:
+
+- `docs/master.md`
+- `docs/architecture.md`
+- `docs/system-requirements.md`
+- `docs/decisions.md`
+- `docs/PR_PROJECT_PLAN.md`
+- `AGENTS.md`
+- `README.md`
+- `SECURITY.md`
+- `docs/telegram-commands.md`
+
+If docs updates are needed:
+- CODEX must STOP and request a human (me/ARCH) to apply the edits manually.
+
+### 2) “No rewrite” rule
+Even when doc edits are explicitly allowed:
+- NO reformatting
+- NO section renumbering
+- NO deleting examples
+- NO “summarizing”
+- Only add the smallest necessary snippet.
+
+### 3) Allowlist-only file edits (default)
+Unless the PR prompt provides an explicit file allowlist, CODEX must assume:
+
+- New files are OK.
+- Edits to existing files are NOT OK.
+
+### 4) PR scope discipline
+If CODEX discovers missing docs references:
+- Mention it in the PR notes,
+- but do NOT patch docs automatically unless explicitly instructed.
+
+------------------------------------------------------------
+
 ## Required Output Style (Gemini VS Code)
 
 ### 1) Implementation Plan (required)

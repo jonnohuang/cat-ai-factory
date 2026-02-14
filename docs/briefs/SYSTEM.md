@@ -33,6 +33,11 @@ Three-plane separation is non-negotiable:
 - Output: versioned, schema-valid `/sandbox/jobs/*.job.json`
 - **No side effects, no artifact writes beyond job contracts**
 
+Planned (ADR-0033, ADR-0034, ADR-0032):
+- PlanRequest v1 is the adapter-neutral ingress contract (from Telegram/Coze/future UIs).
+- EpisodePlan v1 is a planner-only intermediate artifact (schema-validated) that precedes job.json.
+- CrewAI (when used) is planner-only and contained inside a single LangGraph node/subgraph.
+
 ### Control Plane (Ralph Loop)
 - Deterministic reconciler / state machine
 - Reads job contracts and observed artifacts
@@ -92,6 +97,10 @@ Hard constraints:
 - Publishing idempotency is keyed by `{job_id, platform}` via:
   - `/sandbox/dist_artifacts/<job_id>/<platform>.state.json`
 
+Ops workflow automation (e.g., n8n) is allowed only in this layer:
+- n8n is ops UX/integrations only (notifications, approvals, manual publish triggers)
+- n8n MUST NOT replace Cloud Tasks for internal execution retries/backoff
+
 ------------------------------------------------------------
 
 ## Required pre-cloud posture (summary)
@@ -113,4 +122,3 @@ If there is any conflict:
 - `docs/decisions.md` wins for binding decisions
 - `docs/architecture.md` wins for diagrams and repo mapping
 - `docs/PR_PROJECT_PLAN.md` wins for sequencing/scope
-

@@ -69,11 +69,12 @@ Zero-spend day:
 Daily v0.2 is defined as:
 
 1) Human sends a **Daily Plan Brief** (Telegram preferred)
-2) Planner generates **exactly N jobs**
-3) Ralph/Worker deterministically produce outputs
-4) System produces **publish-ready export bundles**
-5) Human posts manually using bundles (fast)
-6) Optional automation is allowed only where safe (YouTube later)
+2) Planner may produce an EpisodePlan v1 (planner-only intermediate) before committing job.json
+3) Planner generates **exactly N jobs**
+4) Ralph/Worker deterministically produce outputs
+5) System produces **publish-ready export bundles**
+6) Human posts manually using bundles (fast)
+7) Optional automation is allowed only where safe (YouTube later)
 
 ------------------------------------------------------------
 
@@ -96,6 +97,7 @@ It should allow the human to specify:
 - optional hero cats
 - optional templates to remix
 - optional “auto style” behavior (best-effort)
+- structured inputs are expected to map into PlanRequest v1 (adapter-neutral)
 
 ------------------------------------------------------------
 
@@ -241,4 +243,3 @@ Daily v0.2 is considered “real” when:
   - posting checklist
   - audio_plan.json + audio_notes.txt (+ optional audio assets)
 - The human can manually post each clip in < 2 minutes using the bundle
-

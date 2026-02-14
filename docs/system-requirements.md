@@ -205,8 +205,9 @@ deterministic “series layer” above job contracts.
 The system MUST support Retrieval-Augmented Generation (RAG) as a **planner-only, deterministic, file-based** reference mechanism to improve job contract quality and continuity.
 
 - Canonical artifacts:
+  - `repo/shared/rag_manifest.v1.schema.json`
   - `repo/shared/rag_manifest.v1.json` (references available docs, tags, priority)
-  - `repo/shared/rag/` (repo-owned reference documents)
+  - `repo/shared/rag/` (repo-owned, license-safe reference documents)
 - Deterministic retrieval:
   - Planner selects RAG docs using manifest tags/filters with stable tie-break rules
     (e.g., `priority` then `doc_id` lexical).
@@ -218,6 +219,77 @@ The system MUST support Retrieval-Augmented Generation (RAG) as a **planner-only
   - RAG MUST NOT move into the Control Plane or Worker.
   - Worker MUST remain LLM-free and deterministic.
   - No hidden “memory” store becomes an authority source; only committed files count.
+
+
+### FR-20 — PlanRequest v1 (UI-agnostic daily planning input contract)
+The system MUST support a versioned, schema-valid “plan request” contract to capture daily planning intent in a structured, UI-agnostic way.
+
+- Purpose:
+  - enable guided UI inputs (Coze later) without making any UI a dependency
+  - normalize daily intent before the Planner runs
+- Canonical artifacts:
+  - `repo/shared/plan_request.v1.schema.json`
+  - `repo/examples/plan_request.v1.example.json`
+- Invariants:
+  - PlanRequest is an input only; it does not replace `job.json`
+  - The Planner remains the only component that writes `sandbox/jobs/*.job.json`
+  - Any adapter (Telegram, Coze, future UIs) must map into PlanRequest v1 deterministically
+
+
+### FR-21 — CrewAI planning (planner-only; contract-gated; required portfolio signal)
+The system MUST support a CrewAI-based planning step as part of the Planner plane to improve creative quality and continuity consistency.
+
+- Scope constraints:
+  - CrewAI MUST run only inside the Planner plane.
+  - CrewAI MUST be contained to a single LangGraph node (or subgraph) to prevent framework creep.
+- Determinism gates:
+  - CrewAI outputs MUST be normalized and validated deterministically before becoming canonical.
+  - CrewAI MUST NOT write artifacts directly.
+  - Only deterministic commit steps may persist canonical state (job contracts, ledger updates).
+- Hard constraints:
+  - CrewAI MUST NOT replace Ralph Loop.
+  - CrewAI MUST NOT run in the Worker.
+  - CrewAI MUST NOT introduce agent-to-agent RPC across planes.
+
+
+### FR-22 — Optional guided UI front end (Coze; adapter-only; post-cloud wiring)
+The system MUST support an optional guided UI front end for daily planning inputs.
+
+- Posture:
+  - Coze is treated as an adapter/UI only.
+  - Coze MUST NOT become a required runtime dependency.
+  - CAF remains the source of truth for contracts and canon.
+- Requirements:
+  - Coze (or any UI) must emit PlanRequest v1 and submit it to CAF ingress.
+  - Continuity reasoning and canon enforcement must remain in the Planner (LangGraph), not in Coze.
+
+
+### FR-23 — Ops workflow automation layer (n8n; outside factory; post-cloud)
+The system MUST support an optional Ops workflow automation layer (e.g., n8n) to improve human approvals, notifications, and manual publish workflows.
+
+- Posture:
+  - n8n MUST remain outside the core factory invariant.
+  - n8n MUST NOT replace Cloud Tasks for internal execution retries/backoff.
+- Allowed responsibilities:
+  - notifications (Telegram/Email/Slack)
+  - human approval UI/buttons
+  - manual publish triggers
+  - external logging (Sheets/Notion)
+- Hard constraints:
+  - n8n MUST NOT mutate worker outputs or job contracts.
+  - Cloud Tasks remains the internal queue for all “do work” steps.
+
+
+### FR-24 — EpisodePlan v1 (planner-only intermediate artifact; schema-validated)
+The system MUST support a planner-only intermediate artifact (EpisodePlan v1) to improve continuity and make planning outputs auditable before job.json is written.
+
+- Posture:
+  - EpisodePlan v1 is planner-only and MUST NOT be required by Control Plane or Worker.
+  - EpisodePlan v1 is schema-validated and committed as an explicit artifact (no hidden memory).
+- Determinism gates:
+  - EpisodePlan outputs MUST be normalized and validated deterministically before becoming canonical.
+  - EpisodePlan MUST NOT bypass job.json validation/commit steps.
+
 
 ------------------------------------------------------------
 

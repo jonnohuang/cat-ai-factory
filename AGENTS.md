@@ -125,6 +125,11 @@ Hard rules:
 * No component outside the Worker may modify `sandbox/output/<job_id>/**`.
 * No component inside the factory may write to `sandbox/dist_artifacts/**`.
 
+Planned (ADR-0034):
+
+* EpisodePlan v1 is a planner-only intermediate artifact.
+* It will be stored as a committed file (path TBD) and MUST NOT be required by Control Plane or Worker.
+
 ---
 
 ## Planner Reference Inputs (Series + Audio + RAG)
@@ -149,11 +154,22 @@ RAG (planner-only; deterministic, file-based):
 * `repo/shared/rag_manifest.v1.json` (PR22.1)
 * `repo/shared/rag/**` (PR22.1)
 
+PlanRequest (UI-agnostic plan input contract):
+
+* `repo/shared/plan_request.v1.schema.json` (PR21.5)
+* `repo/examples/plan_request.v1.example.json` (PR21.5)
+
+Creativity controls (planner-only; optional):
+
+* `job.creativity` (PR21.1)
+
 Important:
 
 * The LLM may propose new facts.
 * Only committed files become canon.
 * RAG must never become an authority source outside committed artifacts.
+* CrewAI (PR-22.2) is planner-only and MUST be contained inside a LangGraph node/subgraph.
+
 
 ---
 
@@ -200,6 +216,7 @@ Translate intent into structured, machine-readable work contracts.
 * interpret `sandbox/PRD.json`
 * interpret `sandbox/inbox/*.json` (optional)
 * optionally consult series/audio reference inputs
+* optionally produce EpisodePlan v1 (planner-only; intermediate) before job.json
 * generate schema-valid `job.json`
 * validate before writing (fail-loud)
 
@@ -363,6 +380,32 @@ Mobile supervisor surface (human-in-the-loop).
 
 ---
 
+### 🧭 Guided UI (Coze or equivalent) — PlanRequest Ingress (Adapter)
+
+**Purpose**
+Provide a guided UI for structured planning inputs.
+
+**Responsibilities**
+
+* emit PlanRequest v1 artifacts (adapter-neutral)
+* submit to CAF ingress without bypassing the file-bus
+
+**Writes (ONLY)**
+
+* `sandbox/inbox/*.json` (PlanRequest v1)
+
+**Reads (ONLY)**
+
+* none (UI-only; no authority)
+
+**Explicitly disallowed**
+
+* emitting `job.json` directly
+* storing or mutating canon/continuity artifacts
+* bypassing CAF Planner authority
+
+---
+
 ## Ops/Distribution (Outside the Factory)
 
 Ops/Distribution performs nondeterministic external work.
@@ -385,6 +428,12 @@ Ops/Distribution performs nondeterministic external work.
 * MUST NOT modify `sandbox/output/<job_id>/**`
 * MUST NOT bypass file-bus semantics
 * MUST NOT commit or write secrets
+
+Ops workflow automation (e.g., n8n) is allowed only in this layer:
+
+* n8n is ops UX/integrations only (notifications, approvals, manual publish triggers)
+* n8n MUST NOT replace Cloud Tasks for internal execution retries/backoff
+* n8n MUST NOT bypass CAF contract/state authority (files-as-bus locally; Firestore/GCS in cloud)
 
 ---
 

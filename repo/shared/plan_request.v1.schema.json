@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/plan_request.v1.schema.json",
+  "title": "Plan Request v1",
+  "description": "A UI-agnostic contract for daily planning intent (ingress).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "source",
+    "received_at"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "request_id"
+      ]
+    },
+    {
+      "required": [
+        "nonce"
+      ]
+    }
+  ],
+  "properties": {
+    "version": {
+      "const": "plan_request.v1",
+      "description": "Schema version identifier."
+    },
+    "source": {
+      "type": "string",
+      "description": "Origin of the request (e.g., 'telegram', 'coze', 'web')."
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of when the request was received by the adapter."
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Optional idempotency key or upstream message ID."
+    },
+    "nonce": {
+      "type": "string",
+      "description": "Unique entropy for filename safety."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "daily_plan",
+        "plan"
+      ],
+      "description": "Type of planning request."
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Target production date (YYYY-MM-DD)."
+    },
+    "brief_text": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Raw text input or brief from the user."
+    },
+    "lanes": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Target volume per lane (A/B/C).",
+      "properties": {
+        "a": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "b": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "c": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "theme": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Daily theme or topic."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 40
+      },
+      "maxItems": 32,
+      "description": "Categorization tags."
+    },
+    "languages_enabled": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]{2,3}(-[A-Z][a-z]{3})?(-[A-Z]{2})?$",
+        "description": "BCP-47 language tag (e.g., 'en', 'zh-Hans', 'es-MX')."
+      },
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "description": "Languages required for this plan."
+    },
+    "creativity": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Planner creativity hints.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "canon",
+            "balanced",
+            "experimental"
+          ]
+        },
+        "canon_fidelity": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium"
+          ]
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Additional planning notes."
+    }
+  }
+}

@@ -614,8 +614,47 @@ Outcome:
 
 ---
 
-### PR-22 — LangGraph demo workflow (planner-only)
+### PR-21.5 — PlanRequest v1 (guided input contract; cloud-agnostic)
 Status: **ACTIVE**
+
+Scope:
+- Add a deterministic, versioned request contract for guided inputs (UI/front-end neutral):
+  - `repo/shared/plan_request.v1.schema.json`
+  - `repo/examples/plan_request.v1.example.json`
+- Add docs describing:
+  - how Telegram/free-text can map into PlanRequest fields
+  - normalization rules (planner-side deterministic defaults)
+- Optional: add a minimal local validator/normalizer tool (does not change runtime authority):
+  - produces a canonical inbox artifact (still file-bus)
+- No changes to Worker or Ralph Loop.
+- No secrets; public repo safe.
+
+Outcome:
+- A stable, schema-valid request interface that supports future guided UIs (Coze) without coupling,
+  while keeping CAF planner as the source of truth.
+
+---
+
+### PR-21.6 — EpisodePlan v1 (planner-only intermediate artifact)
+Status: **PLANNED**
+
+Scope:
+- Add a schema-validated planner-only intermediate artifact:
+  - `repo/shared/episode_plan.v1.schema.json`
+  - `repo/examples/episode_plan.v1.example.json`
+- Update docs to describe EpisodePlan v1:
+  - planner-only
+  - deterministic normalization + validation
+  - does not replace `job.json`
+- No changes to Worker or Ralph Loop.
+
+Outcome:
+- A reviewable, deterministic planning artifact that improves continuity without changing execution boundaries.
+
+---
+
+### PR-22 — LangGraph demo workflow (planner-only)
+Status: **NEXT**
 
 Scope:
 - LangGraph workflow adapter in Planner plane only
@@ -650,6 +689,39 @@ Outcome:
 - A portfolio-credible RAG story that preserves CAF invariants:
   deterministic “reference context” for the Planner, file-based and reviewable,
   without embeddings, vector DBs, or hidden memory.
+
+---
+
+### PR-22.2 — CrewAI inside Planner node (contained; deterministic gates preserved)
+Status: **PLANNED**
+
+Scope:
+- Add CrewAI as a planning quality layer contained inside exactly one LangGraph node (or subgraph).
+- CrewAI must NOT become the control plane and must NOT bypass deterministic gates.
+- Determinism posture:
+  - CrewAI output must be strict JSON (EpisodePlan / draft job inputs) only.
+  - Schema validation, normalization, and artifact commits remain deterministic and outside CrewAI.
+- No changes to:
+  - Worker logic
+  - Ralph Loop logic
+  - file-bus write boundaries
+
+Outcome:
+- Portfolio-required multi-agent planning demo (CrewAI) without breaking CAF invariants:
+  CrewAI improves planning quality, while deterministic validation + commit remain authoritative.
+
+---
+
+### PR-22.3 — LangGraph demo workflow (planner-only)
+Status: **PLANNED**
+
+Scope:
+- Add LangGraph workflow adapter in Planner plane only
+- Must NOT replace Ralph or Worker
+- Demonstrate recruiter-facing workflow orchestration story
+
+Outcome:
+- Mandatory Google demo signal without architecture compromise
 
 ------------------------------------------------------------
 
@@ -715,6 +787,36 @@ Scope:
 
 Outcome:
 - Portfolio-grade hygiene
+
+### PR-28 — Coze wiring (Cloud Run ingress client; PlanRequest.v1 → Firestore/GCS)
+Status: **PLANNED**
+
+Scope:
+- Wire Coze to call CAF Cloud Run ingress endpoint (e.g., `/ingress/plan`).
+- Receiver validates PlanRequest.v1 deterministically and persists request/state per Phase 7 mapping.
+- Cloud Tasks remains the async bridge for downstream work (Receiver must ACK fast).
+- No changes to Worker rendering logic.
+
+Outcome:
+- Guided-input UI becomes functional in cloud without coupling Coze into core CAF logic.
+
+---
+
+### PR-29 — n8n workflows (post-cloud ops layer; human approval + manual publish)
+Status: **PLANNED**
+
+Scope:
+- Introduce n8n as an ops/workflow client layer after cloud state exists (Firestore/GCS).
+- Cloud Tasks remains CAF’s internal queue for “do work” steps.
+- Provide:
+  - n8n workflow exports + setup docs
+  - minimal idempotent CAF endpoints if needed (approve/publish triggers)
+- No changes to Worker rendering logic.
+
+Outcome:
+- Smoother human approval + manual publish loop, with a clear separation:
+  n8n = ops UX/integrations; Cloud Tasks = backend reliability.
+
 
 ------------------------------------------------------------
 

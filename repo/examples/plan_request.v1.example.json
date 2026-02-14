@@ -1,0 +1,30 @@
+{
+    "version": "plan_request.v1",
+    "source": "telegram",
+    "received_at": "2026-02-12T12:00:00Z",
+    "request_id": "telegram:390167494",
+    "nonce": "987654321",
+    "type": "daily_plan",
+    "date": "2026-02-12",
+    "brief_text": "Production targets set. Theme: office cats.",
+    "lanes": {
+        "a": 0,
+        "b": 1,
+        "c": 2
+    },
+    "theme": "office cats",
+    "tags": [
+        "cats",
+        "comedy",
+        "office"
+    ],
+    "languages_enabled": [
+        "en",
+        "zh-Hans"
+    ],
+    "creativity": {
+        "mode": "balanced",
+        "canon_fidelity": "medium"
+    },
+    "notes": "Ensure the barista cat spills the latte specifically on the quarterly report."
+}

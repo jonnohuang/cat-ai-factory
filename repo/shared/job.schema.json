@@ -14,42 +14,6 @@
     "hashtags",
     "render"
   ],
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "lane": {
-            "const": "image_motion"
-          }
-        },
-        "required": [
-          "lane"
-        ]
-      },
-      "then": {
-        "required": [
-          "image_motion"
-        ]
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "lane": {
-            "const": "template_remix"
-          }
-        },
-        "required": [
-          "lane"
-        ]
-      },
-      "then": {
-        "required": [
-          "template"
-        ]
-      }
-    }
-  ],
   "properties": {
     "job_id": {
       "type": "string",
