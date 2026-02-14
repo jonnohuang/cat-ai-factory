@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/rag_manifest.v1.schema.json",
+  "title": "RAG Manifest v1",
+  "description": "Deterministic, file-based RAG manifest for planner-only reference docs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "generated_at",
+    "documents"
+  ],
+  "properties": {
+    "version": {
+      "const": "rag_manifest.v1",
+      "description": "Schema version identifier."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when the manifest was generated."
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/document"
+      }
+    }
+  },
+  "definitions": {
+    "kebab_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "doc_id",
+        "title",
+        "tags",
+        "priority",
+        "relpath"
+      ],
+      "properties": {
+        "doc_id": {
+          "$ref": "#/definitions/kebab_id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tags": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/kebab_id"
+          },
+          "uniqueItems": true
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "relpath": {
+          "type": "string",
+          "pattern": "^repo/shared/rag/.+"
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 280
+        }
+      }
+    }
+  }
+}
