@@ -731,7 +731,7 @@ Outcome:
 ---
 
 ### PR-24 — Cloud Run execution stubs (orchestrator + worker)
-Status: **PLANNED**
+Status: **ACTIVE**
 
 Scope:
 - Minimal Cloud Run stubs (no live deploy required)
