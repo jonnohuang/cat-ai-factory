@@ -26,6 +26,7 @@ If `lane` is omitted, the job is treated as a generic/legacy job (fully supporte
   - `/sandbox/output/<job_id>/final.srt` (if captions are present)
   - `/sandbox/output/<job_id>/result.json`
 - **No LLM in Worker**: "AI Video" generation happens in the Planner plane (or pre-worker), delivering video assets to the Worker. The Worker never calls generation APIs.
+- **Planner-side generation allowed**: Seed frames or templates MAY be generated planner-side and treated as explicit inputs. Worker remains deterministic.
 
 ## Template Registry (Lane C)
 

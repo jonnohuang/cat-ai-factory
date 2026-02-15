@@ -52,6 +52,7 @@ Before proposing any code changes, read these files in order:
 6) AGENTS.md
 7) docs/briefs/SYSTEM.md
 8) docs/briefs/GUARDRAILS.md
+9) docs/now.md (live PR status ledger)
 
 Then confirm you understand the 3-plane separation and file-bus model.
 
@@ -136,6 +137,13 @@ CODEX MUST NOT modify ANY of these unless the PR prompt explicitly allows it AND
 If docs updates are needed:
 - CODEX must STOP and request a human (me/ARCH) to apply the edits manually.
 
+Exception:
+- `docs/now.md` MAY be updated for handoff fields only:
+  - status by role
+  - what changed (diff summary)
+  - open findings / conditions
+  - next action (owner + exact task)
+
 ### 2) “No rewrite” rule
 Even when doc edits are explicitly allowed:
 - NO reformatting
@@ -187,3 +195,11 @@ Before outputting any code blocks, diffs, or cat commands:
 - If scope creep is detected, STOP and call it out.
 
 Confirm acknowledgement and wait.
+
+------------------------------------------------------------
+
+## End-of-PR Review Flow (Awareness)
+
+- ARCH: final invariant + ADR alignment check
+- CLOUD-REVIEW: required for cloud-phase PRs only
+- IMPL: optional, for tricky runtime implications

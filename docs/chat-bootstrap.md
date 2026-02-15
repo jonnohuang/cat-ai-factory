@@ -33,6 +33,9 @@ Role bootstraps:
 - IMPL: `docs/briefs/BOOTSTRAP-IMPL.md`
 - CODEX: `docs/briefs/BOOTSTRAP-CODEX.md`
 
+Live status ledger:
+- `docs/now.md` (current PR status + role sync + handoff diff summary)
+
 ------------------------------------------------------------
 
 ## Project Context (One Sentence)

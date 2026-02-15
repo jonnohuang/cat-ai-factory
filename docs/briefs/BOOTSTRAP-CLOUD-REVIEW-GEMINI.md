@@ -44,6 +44,7 @@ Read these docs before reviewing anything (in order):
 4) `docs/system-requirements.md`
 5) `AGENTS.md`
 6) `docs/publish-contracts.md` (Ops/Distribution boundaries)
+7) `docs/now.md` (live PR status ledger)
 
 If the PR prompt includes a file list, treat it as higher priority.
 
@@ -90,6 +91,13 @@ If docs must change, output **review notes** only:
 - exact file
 - exact section heading
 - 1–3 line patch suggestion (no reformatting)
+
+Exception:
+- You MAY update `docs/now.md` handoff fields only:
+  - status by role
+  - open findings / conditions
+  - next action (owner + exact task)
+  (no other docs).
 
 ### 2) No scope creep
 If the PR touches more than the explicit Phase/PR scope:
@@ -138,5 +146,18 @@ When you review a PR plan/diff, respond with:
 - You must return **review comments only** (no code).
 - Keep feedback PR-sized and actionable.
 - If uncertain, explicitly mark assumptions and ask ARCH to decide.
+- If you have repo write access, update `docs/now.md` with:
+  - CLOUD-REVIEW status
+  - open findings / conditions
+  - next action (owner + exact task)
+  Otherwise, include the status update in your review comments for ARCH to apply.
 
 Confirm acknowledgement and wait.
+
+------------------------------------------------------------
+
+## End-of-PR Review Flow (Awareness)
+
+- ARCH: final invariant + ADR alignment check
+- CLOUD-REVIEW: required for cloud-phase PRs only
+- IMPL: optional, for tricky runtime implications

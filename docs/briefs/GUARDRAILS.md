@@ -7,6 +7,7 @@ Authoritative sources:
 - Binding decisions (ADRs): `docs/decisions.md`
 - Agent permissions: `AGENTS.md`
 - Diagrams + repo mapping: `docs/architecture.md`
+ - Live PR status ledger: `docs/now.md`
 
 ------------------------------------------------------------
 
@@ -163,3 +164,14 @@ n8n posture:
 ## If a task conflicts with these rules
 
 Stop immediately and escalate to ARCH for an ADR decision.
+
+------------------------------------------------------------
+
+## PR Sync Ledger (Required)
+
+- For any active PR, update `docs/now.md` with:
+  - status by role
+  - what changed (diff summary)
+  - open findings / conditions
+  - next action (owner + exact task)
+- The ledger is the single shared “source of truth” for cross-role coordination.

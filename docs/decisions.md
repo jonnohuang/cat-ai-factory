@@ -1199,27 +1199,56 @@ References:
 
 ------------------------------------------------------------
 
-## ADR-0038 — Lane Hints Are Non-Binding; Schema Must Remain Permissive
-Date: 2026-02-14
-Status: Proposed
+## ADR-0038 — Phase 7 infra provisioning is deferred to a dedicated Terraform PR
+Date: 2026-02-15
+Status: Accepted
 
 Context:
-- CAF lane policy states `job.lane` is optional and non-binding.
-- Authoritative docs (AGENTS.md, docs/master.md) prohibit lane-based schema gating.
-- `repo/shared/job.schema.json` currently enforces lane-based `if/then` requirements.
+- Phase 7 introduces cloud mapping (GCS + Firestore) and Cloud Run stubs.
+- The repo is public and must avoid committing real project IDs, buckets, or secrets.
+- We want PR-sized, reviewable changes without conflating mapping docs with live infra.
 
 Decision:
-- Remove lane-based `if/then` requirements from `job.schema.json`.
-- Lanes remain optional planner hints; routing/requirements are enforced only by deterministic runtime logic (planner/control/worker).
+- Phase 7 PRs up through PR-29 are docs + local stubs only (no live GCP provisioning).
+- Terraform-based live provisioning is deferred to a dedicated infra PR (PR-30).
+- Terraform configs must use placeholders only; real values are injected at runtime.
 
 Consequences:
-- Schema becomes permissive as intended.
-- Validation for lane-specific blocks is shifted to runtime logic and/or QC checks, not schema.
-- Aligns schema with documented invariants.
+- Keeps Phase 7 PRs reviewable and aligned with public-repo posture.
+- Live cloud deployment becomes explicit and PR-scoped (required in PR-30).
+- Actual GCP validation is deferred to the infra PR.
 
 References:
-- AGENTS.md
+- docs/PR_PROJECT_PLAN.md
 - docs/master.md
 - docs/architecture.md
+- docs/system-requirements.md (SEC-01, SEC-03)
+
+------------------------------------------------------------
+
+## ADR-0039 — Planner-side AI template generation is allowed (Worker remains deterministic)
+Date: 2026-02-15
+Status: Accepted
+
+Context:
+- Lane B/C outputs can look too similar when template variety is low.
+- We want higher novelty without violating determinism or moving generation into the Worker.
+- Vertex AI is already planned as a planner-side provider (ADR-0006, PR-25).
+
+Decision:
+- AI-generated template assets are allowed as a Planner-side, nondeterministic step.
+- Generated templates are treated as inputs to deterministic rendering (Worker unchanged).
+- The Worker MUST NOT call generation APIs and MUST remain deterministic.
+- Generated assets must be stored as explicit artifacts (no hidden state).
+
+Consequences:
+- Increases visual novelty while preserving the three-plane invariant.
+- Requires budget guardrails and provider gating (planner-side).
+- Does not change canonical output paths or Worker recipes.
+
+References:
+- docs/master.md
 - docs/system-requirements.md
+- docs/PR_PROJECT_PLAN.md
+- docs/decisions.md (ADR-0006, ADR-0007, ADR-0014, ADR-0017, ADR-0024)
 

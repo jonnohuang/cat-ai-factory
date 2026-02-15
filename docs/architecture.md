@@ -23,6 +23,8 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
   - Orchestration frameworks (e.g., LangGraph) may wrap planner logic, but must not change plane responsibilities.
 
 - RAG is planner-only.
+- Planner-side asset generation (e.g., AI-generated templates or seed frames) is permitted,
+  but generated assets are treated as explicit inputs and must not change Worker determinism.
 
 - Verification agents are deterministic QC only:
   - Read-only evaluation of contracts and outputs
@@ -254,6 +256,8 @@ Phase 7 migrates the local architecture to GCP while preserving:
 - deterministic Worker behavior
 - contract-first job planning
 - file-bus semantics (mapped to GCS + Firestore)
+Phase 7 is staged: early PRs define mappings and local stubs; live GCP provisioning
+is deferred to a dedicated infra PR.
 
 Important:
 - Telegram webhooks MUST NOT block (Telegram timeouts are short).

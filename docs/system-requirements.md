@@ -71,8 +71,10 @@ The system MUST support multiple production lanes for daily output.
   - Video generation via cloud providers (Vertex AI) is allowed in this lane only.
 - Lane B: `image_motion` (cheap / scalable)
   - 1–3 seed frames + deterministic FFmpeg motion presets.
+  - Seed frames MAY be AI-generated planner-side (never in Worker).
 - Lane C: `template_remix` (near-free / scalable)
   - Uses existing templates/clips + deterministic FFmpeg recipes.
+  - Templates MAY be AI-generated planner-side (never in Worker).
 
 Constraints:
 - Worker MUST remain deterministic in all lanes.
