@@ -30,6 +30,7 @@ You are NOT responsible for:
 - `docs/system-requirements.md`
 - `docs/PR_PROJECT_PLAN.md`
 - `AGENTS.md`
+ - `docs/now.md` (live PR status ledger)
 
 Non-authoritative:
 - `docs/memory.md`
@@ -89,3 +90,18 @@ Non-authoritative:
 Bootstrap base rules apply:
 - `docs/chat-bootstrap.md` is authoritative for system-wide rules.
 Confirm acknowledgement and wait.
+
+------------------------------------------------------------
+
+## End-of-PR Review Flow (Awareness)
+
+- ARCH: final invariant + ADR alignment check
+- CLOUD-REVIEW: required for cloud-phase PRs only
+- IMPL: optional, for tricky runtime implications
+
+Sync note:
+- If you have repo write access, update `docs/now.md` with:
+  - IMPL status
+  - what changed (diff summary, if any)
+  - next action (owner + exact task)
+- Otherwise, include the status update in your handoff for ARCH to apply.

@@ -8,6 +8,7 @@ Key docs:
 - `docs/PR_PROJECT_PLAN.md` (roadmap / PR sizing)
 - `docs/decisions.md` (binding ADRs)
 - `docs/briefs/MILESTONE-daily-v0.2.md` (daily output workflow)
+- `docs/now.md` (live PR status ledger; role sync)
 
 ------------------------------------------------------------
 

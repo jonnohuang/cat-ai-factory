@@ -83,6 +83,7 @@ Before implementing anything, read these in order:
 4) `docs/system-requirements.md`
 5) `docs/PR_PROJECT_PLAN.md`
 6) `AGENTS.md`
+7) `docs/now.md` (live PR status ledger)
 
 ------------------------------------------------------------
 
@@ -131,6 +132,13 @@ CODEX MUST NOT modify ANY of these unless the PR prompt explicitly allows it AND
 If docs updates are needed:
 - CODEX must STOP and request a human (me/ARCH) to apply the edits manually.
 
+Exception:
+- `docs/now.md` MAY be updated for handoff fields only:
+  - status by role
+  - what changed (diff summary)
+  - open findings / conditions
+  - next action (owner + exact task)
+
 ### 2) “No rewrite” rule
 Even when doc edits are explicitly allowed:
 - NO reformatting
@@ -168,3 +176,11 @@ If CODEX discovers missing docs references:
 - **Constraint:** Do not output implementation code until the user responds with "Approved," "Proceed," or similar confirmation.
 
 Confirm acknowledgement and wait.
+
+------------------------------------------------------------
+
+## End-of-PR Review Flow (Awareness)
+
+- ARCH: final invariant + ADR alignment check
+- CLOUD-REVIEW: required for cloud-phase PRs only
+- IMPL: optional, for tricky runtime implications

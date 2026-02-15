@@ -28,6 +28,7 @@ Highest priority:
 5) docs/system-requirements.md (reviewer-readable requirements)
 6) docs/PR_PROJECT_PLAN.md (roadmap sequencing + PR scope)
 7) AGENTS.md (roles + permissions)
+8) docs/now.md (live PR status ledger)
 
 Non-authoritative:
 - docs/memory.md
@@ -205,6 +206,25 @@ All ARCH outputs must still:
   - produce a crisp PR-scoped prompt
   - include acceptance criteria + contract references
   - avoid implementation details unless required
+
+------------------------------------------------------------
+
+## Sync Ledger (Required)
+
+- Update `docs/now.md` for the current PR:
+  - status by role (ARCH/CODEX/CLOUD-REVIEW)
+  - ADRs touched
+  - what changed (diff summary)
+  - open findings / conditions
+  - next action (owner + exact task)
+
+------------------------------------------------------------
+
+## End-of-PR Review Flow
+
+- ARCH: final invariant + ADR alignment check
+- CLOUD-REVIEW: required for cloud-phase PRs only
+- IMPL: optional, for tricky runtime implications
 
 ------------------------------------------------------------
 

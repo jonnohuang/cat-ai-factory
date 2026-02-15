@@ -98,6 +98,8 @@ Planned (ADR-0034):
 Frameworks (LangGraph, CrewAI, etc.), RAG, and auxiliary “agents” must be treated as
 **adapters**, not foundations, and must not violate these plane boundaries.
 CrewAI (when used) MUST be contained inside the Planner workflow (LangGraph) and must not become a control plane.
+Planner-side asset generation (e.g., AI-generated templates or seed frames) is permitted,
+but any generated assets must be treated as explicit inputs and must not change Worker determinism.
 
 
 ------------------------------------------------------------
@@ -266,6 +268,8 @@ Goal:
 
 Phase 7 is NOT a redesign.
 It is a **mapping of the same contracts and invariants** onto cloud primitives.
+Phase 7 is staged: early PRs define mappings and local stubs; live GCP provisioning
+(e.g., Terraform + real deployments) is deferred to a dedicated infra PR.
 
 ### Phase 7 Cloud Principles (Binding for the milestone)
 

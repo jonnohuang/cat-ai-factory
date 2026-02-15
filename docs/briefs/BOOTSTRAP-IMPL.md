@@ -32,6 +32,14 @@ Before proposing fixes, you MUST read:
 4) docs/system-requirements.md
 5) docs/PR_PROJECT_PLAN.md
 6) AGENTS.md
+7) docs/now.md (live PR status ledger)
+
+Sync note:
+- If you have repo write access, update `docs/now.md` with:
+  - IMPL status
+  - what changed (diff summary, if any)
+  - next action (owner + exact task)
+- Otherwise, include the status update in your handoff for ARCH to apply.
 
 ------------------------------------------------------------
 
@@ -84,3 +92,11 @@ When suggesting any change, always classify it as exactly one:
 5) **CODEX Handoff**: A crisp PR-scoped prompt for implementation including exact files and acceptance criteria.
 
 Confirm acknowledgement and wait.
+
+------------------------------------------------------------
+
+## End-of-PR Review Flow (Awareness)
+
+- ARCH: final invariant + ADR alignment check
+- CLOUD-REVIEW: required for cloud-phase PRs only
+- IMPL: optional, for tricky runtime implications

@@ -667,7 +667,7 @@ Outcome:
 ---
 
 ### PR-22.1 — Planner RAG v1 (deterministic retrieval; docs + manifest; planner-only)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add a minimal, license-safe RAG “pack” that is **planner-only** and **deterministic**:
@@ -693,7 +693,7 @@ Outcome:
 ---
 
 ### PR-22.2 — CrewAI inside Planner node (contained; deterministic gates preserved)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add CrewAI as a planning quality layer contained inside exactly one LangGraph node (or subgraph).
@@ -715,9 +715,11 @@ Outcome:
 ## Phase 7 — Cloud v0.5 Migration (PLANNED)
 
 Purpose: demonstrate cloud literacy while preserving LOCAL guarantees.
+Phase 7 is staged: early PRs define mappings and local stubs; live GCP provisioning
+is deferred to a dedicated infra PR.
 
 ### PR-23 — Cloud artifact layout (GCS + Firestore mapping)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - GCS path conventions (immutable artifacts)
@@ -732,7 +734,7 @@ Outcome:
 Status: **PLANNED**
 
 Scope:
-- Minimal Cloud Run deployment
+- Minimal Cloud Run stubs (no live deploy required)
 - Preserve contracts and states; no redesign
 
 Outcome:
@@ -746,6 +748,7 @@ Status: **PLANNED**
 Scope:
 - Vertex AI provider adapters (planner-side)
 - Lane A: Veo (ai_video), Lane B: Imagen (seed frames) as applicable
+- Optional: AI-generated template assets (planner-side only)
 - Maintain adapter boundaries and deterministic worker behavior
 
 Outcome:
@@ -803,6 +806,19 @@ Scope:
 Outcome:
 - Smoother human approval + manual publish loop, with a clear separation:
   n8n = ops UX/integrations; Cloud Tasks = backend reliability.
+
+---
+
+### PR-30 — Terraform infra (live GCP provisioning; required)
+Status: **PLANNED**
+
+Scope:
+- Terraform for Cloud Run + Cloud Tasks + Firestore + GCS (placeholders only in repo)
+- No real project IDs or bucket names committed
+- Live provisioning is explicit and opt-in
+
+Outcome:
+- Reproducible, reviewable infra provisioning without polluting core docs or contracts
 
 
 ------------------------------------------------------------

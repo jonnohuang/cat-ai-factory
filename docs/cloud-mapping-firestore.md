@@ -37,6 +37,8 @@ This document acts as the central record for a job, mirroring the state managed 
   "created_at": "timestamp",
   "completed_at": "timestamp",
 
+  "job_contract": { ... }, // Canonical contract snapshot (Firestore authority)
+
   // Artifact Pointers (immutable)
   "artifacts": {
     "job_file_gcs": "gs://<bucket>/jobs/archive/<job_id>.job.json",
@@ -78,9 +80,15 @@ This document records the state of a publish action for a single platform, servi
   "idempotency_key": "string (e.g., <job_id>_<platform>)",
 
   // Outcome
-  "platform_post_id": "string",
-  "post_url": "string",
-  "error_message": "string (if FAILED)",
+  "platform_post_id": "string|null",
+  "post_url": "string|null",
+  "error_message": "string|null",
+
+  "signed_urls": {
+    "final_mp4_url": "string|null",
+    "final_srt_url": "string|null",
+    "bundle_zip_url": "string|null"
+  },
 
   // Approval Info
   "approval": {
@@ -93,9 +101,12 @@ This document records the state of a publish action for a single platform, servi
   "timestamps": {
     "created_at": "timestamp",
     "updated_at": "timestamp",
-    "published_at": "timestamp"
+    "published_at": "timestamp|null"
   }
 }
 ```
 
 This schema provides a robust, retry-safe mechanism for managing publishing workflows in a distributed, event-driven cloud environment. An external system (like a Cloud Function triggered by Pub/Sub) can safely attempt to publish, checking and then setting the document in this subcollection within a transaction to guarantee idempotency.
+
+Boundary note:
+- `signed_urls` are distribution handoff artifacts and must remain outside Worker execution responsibility.

@@ -20,6 +20,7 @@ CAF is designed as a production-minded portfolio system:
 - strict separation of concerns (Planner vs Control vs Worker)
 - infra-enforced safety and debuggability
 - local-first execution with a clean cloud migration path
+  - cloud rollout is staged; live GCP provisioning is deferred to a dedicated infra PR
 
 ------------------------------------------------------------
 
@@ -32,6 +33,7 @@ Three-plane separation is non-negotiable:
 - Inputs: `/sandbox/PRD.json` + optional `/sandbox/inbox/*.json` + optional RAG (planner-only)
 - Output: versioned, schema-valid `/sandbox/jobs/*.job.json`
 - **No side effects, no artifact writes beyond job contracts**
+  - Planner may generate assets (e.g., templates/seed frames) as explicit inputs; Worker remains deterministic
 
 Planned (ADR-0033, ADR-0034, ADR-0032):
 - PlanRequest v1 is the adapter-neutral ingress contract (from Telegram/Coze/future UIs).
