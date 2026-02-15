@@ -14,28 +14,31 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-23 — Cloud artifact layout (GCS + Firestore mapping)**
+PR: **PR-24 — Cloud Run execution stubs (orchestrator + worker)**
 Last Updated: 2026-02-15
 
 ### Status by Role
-- ARCH: Completed
-- CODEX: Completed
+- ARCH: Completed (ready to merge)
+- CODEX: Completed (stub implementation + smoke checks)
 - CLOUD-REVIEW: Completed (Approved)
 
 ### Decisions / ADRs Touched
-- ADR-0013 (Cloud State Mapping)
-- ADR-0029 (Cloud storage/state mapping)
-- ADR-0030 (Signed URL delivery)
+- ADR-0026 (Phase 7 cloud migration posture)
+- ADR-0031 (Cloud asset posture)
+- ADR-0038 (Infra provisioning deferred to PR-30)
 
 ### What Changed (Diff Summary)
-- `docs/cloud-mapping-firestore.md`: aligned Firestore/GCS mapping content and schema examples.
-- `docs/PR_PROJECT_PLAN.md`: PR-23 status set to COMPLETED.
-- `docs/now.md`: normalized to status + handoff format.
+- `docs/PR_PROJECT_PLAN.md`: PR-24 status set to ACTIVE.
+- `docs/now.md`: switched ledger from PR-23 closeout to PR-24 kickoff.
+- `repo/services/orchestrator/cloud_run_stub.py`: added minimal Cloud Run HTTP stub (`/healthz`, `/trigger`) with deterministic JSON responses and input validation.
+- `repo/worker/cloud_run_stub.py`: added minimal Cloud Run HTTP stub (`/healthz`, `/trigger`) with deterministic JSON responses and input validation.
 
 ### Open Findings / Conditions
-- None
+- Sandbox limitation: local socket bind is blocked in this environment, so full HTTP bind/curl smoke tests could not run here.
+- Cloud Risk: Stubs rely on IAM (infra layer) for auth; ensure PR-30 restricts public access.
+- Non-blocking improvement: add minimal request logging (e.g., `job_id`) in stub POST handlers for Cloud Run connectivity debugging.
 
 ### Next Action (Owner + Task)
-- ARCH: Merge PR-23.
+- ARCH: Merge PR-24 and proceed to PR-25 (Vertex AI providers).
 
 ------------------------------------------------------------
