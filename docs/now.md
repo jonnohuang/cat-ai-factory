@@ -14,13 +14,13 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-32.1 — Analyzer implementation (planner-side runtime; metadata-only output)**
+PR: **PR-32.2 — Voice/Style registries (contracts + validation)**
 Last Updated: 2026-02-16
 
 ### Status by Role
 - ARCH: In Progress
 - CODEX: Pending
-- CLOUD-REVIEW: Not Required (PR-32.1 is non-cloud scope)
+- CLOUD-REVIEW: Not Required (PR-32.2 is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
@@ -29,7 +29,8 @@ Last Updated: 2026-02-16
 - `docs/PR_PROJECT_PLAN.md`:
   - PR-31 status updated to COMPLETED
   - PR-32 status updated to COMPLETED
-  - PR-32.1 status updated to ACTIVE
+  - PR-32.1 status updated to COMPLETED
+  - PR-32.2 status updated to ACTIVE
   - added implementation sub-PRs:
     - PR-32.1 (analyzer runtime implementation)
     - PR-33.1 (Dance Swap deterministic recipe implementation)
@@ -75,6 +76,21 @@ Last Updated: 2026-02-16
 - PR-32 closeout:
   - contracts/examples/canon samples + deterministic validation glue completed and verified
   - roadmap + docs alignment updated for implementation handoff
+- Added PR-32.1 analyzer runtime implementation:
+  - `repo/tools/analyze_video.py`
+  - deterministic offline tool: video input -> `video_analysis.v1` output
+  - optional index upsert to `video_analysis_index.v1`
+  - OpenCV-aware path implemented with deterministic fallback when `cv2` is unavailable
+- `repo/requirements-dev.txt`:
+  - added optional deterministic CV dependency:
+    - `opencv-python-headless>=4.10.0`
+- PR-32.1 smoke validation (Conda `cat-ai-factory`):
+  - generated local sample video and produced schema-valid analysis output
+  - `validate_video_analysis.py` passed on generated output
+  - optional index-update path validated, then cleaned to keep repo diff focused
+- PR-32.1 closeout:
+  - analyzer runtime implementation completed with OpenCV-aware deterministic fallback
+  - requirements/ledger alignment updated for CV dependency visibility
 
 ### Open Findings / Conditions
 - Roadmap policy:
@@ -83,22 +99,22 @@ Last Updated: 2026-02-16
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
-- PR-32.1 scope lock:
-  - planner-side/offline analyzer implementation only
-  - metadata-only outputs (`video_analysis.v1`) with deterministic validation
-  - no Worker runtime authority change
+- PR-32.2 scope lock:
+  - contracts/validators/examples only for voice/style registries
+  - provider-agnostic metadata posture (no secrets/PII)
+  - no Worker runtime behavior changes
 
 ### Next Action (Owner + Task)
-- CODEX: implement PR-32.1 analyzer runtime and smoke validation path in the active Conda environment.
-- ARCH: review PR-32.1 implementation for boundary compliance and then hand off PR-32.2.
+- CODEX: implement PR-32.2 voice/style registry schemas, examples, and deterministic validators.
+- ARCH: review PR-32.2 for boundary compliance and prepare PR-33 handoff.
 
-### ARCH Decision Queue Snapshot (PR-32.1 Focus)
+### ARCH Decision Queue Snapshot (PR-32.2 Focus)
 1) Video Analyzer contracts:
 - Approved as planner enrichment layer.
 - Metadata-only canon and index/query contracts.
 - ADR required and now locked (ADR-0041).
-2) Video Analyzer runtime implementation:
-- Approved as planner-side/offline tooling with deterministic validation gates.
-- Must preserve runtime write boundaries and Worker authority separation.
+2) Voice/style registry contracts:
+- Approved as provider-agnostic planner/control metadata inputs.
+- Must include deterministic validation and no secrets/PII in committed artifacts.
 
 ------------------------------------------------------------
