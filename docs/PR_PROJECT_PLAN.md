@@ -719,7 +719,7 @@ Phase 7 is staged: early PRs define mappings and local stubs; live GCP provision
 is deferred to a dedicated infra PR.
 Execution policy:
 - Phase 7 implementation PRs (PR-26..PR-30) are explicitly postponed until quality-video track
-  PR-31..PR-34 reaches accepted output quality and deterministic handoff readiness.
+  PR-31..PR-34.5 reaches accepted output quality and deterministic handoff readiness.
 - Execution order override: Phase 8 is intentionally executed before returning to Phase 7.
 
 ### PR-23 — Cloud artifact layout (GCS + Firestore mapping)
@@ -833,7 +833,12 @@ Outcome:
 Purpose: lock deterministic media contracts and quality/recast pathways without breaking
 three-plane authority or cloud sequencing.
 Execution order:
-- Active now; complete PR-31..PR-34 before resuming deferred Phase 7 PRs.
+- Active now; complete PR-31..PR-34.5 before resuming deferred Phase 7 PRs.
+
+Planning directive (effective 2026-02-16):
+- New PR planning is restricted to the quality-path track only.
+- Fallback-only or scaffolding work is deferred unless it directly improves output quality, identity fidelity, or choreography fidelity.
+- Cloud-phase PR planning remains paused until quality-path acceptance criteria are met.
 
 ### PR-31 — Media contracts + analyzer + lane docs/ADRs (no runtime code)
 Status: **COMPLETED**
@@ -918,7 +923,7 @@ Outcome:
 ---
 
 ### PR-33.1 — Dance Swap implementation (deterministic recipe wiring)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Implement deterministic Dance Swap recipe wiring from explicit artifacts:
@@ -934,6 +939,7 @@ Scope:
 
 Outcome:
 - Dance Swap lane is executable with deterministic, artifact-driven behavior and reviewable validation surfaces.
+- Current implementation is a deterministic baseline/fallback path; production-quality recast remains on the external HITL quality path (PR-34.x) and future dedicated motion-swap engine work.
 
 ---
 
@@ -1028,6 +1034,38 @@ Scope:
 
 Outcome:
 - Viggle-class HITL handoff is standardized and validation-backed for future automation.
+
+---
+
+### PR-34.4 — Recast quality gates + deterministic scoring
+Status: **PLANNED**
+
+Scope:
+- Define deterministic quality metrics and report artifacts for recast outputs:
+  - identity consistency
+  - mask bleed/edge artifacts
+  - temporal jitter/flicker
+  - loop seam quality
+  - audio/video sync + audio-stream presence
+- Add deterministic pass/fail thresholds and a QC report schema under logs/output validation flow.
+- Keep scoring artifact-only; no model-side autonomy or external API dependence inside Worker.
+
+Outcome:
+- Recast quality is measurable and gateable with deterministic, reviewable signals.
+
+---
+
+### PR-34.5 — Recast benchmark harness (quality regression set)
+Status: **PLANNED**
+
+Scope:
+- Add deterministic benchmark harness for a fixed set of demo loops + hero targets.
+- Produce comparable quality reports across runs (baseline vs HITL outputs).
+- Add smoke command path for repeatable quality regression checks.
+- Keep benchmark inputs/outputs contract-bound and repo-safe (no copyrighted media committed).
+
+Outcome:
+- Quality improvements and regressions are visible, testable, and auditable before release decisions.
 
 
 ------------------------------------------------------------

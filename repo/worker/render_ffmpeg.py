@@ -4,6 +4,7 @@ import json
 import math
 import os
 import pathlib
+import statistics
 import subprocess
 
 
@@ -212,6 +213,173 @@ def validate_safe_path(path: pathlib.Path, root: pathlib.Path) -> None:
         path.resolve().relative_to(root.resolve())
     except ValueError:
         raise ValueError(f"Path is strictly forbidden outside sandbox root: {path}")
+
+
+def load_json_file(path: pathlib.Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as ex:
+        raise SystemExit(f"Invalid JSON artifact: {path} ({ex})")
+
+
+def _with_temp_env(overrides: dict[str, str], fn):
+    original: dict[str, str | None] = {k: os.environ.get(k) for k in overrides}
+    try:
+        for key, value in overrides.items():
+            os.environ[key] = value
+        return fn()
+    finally:
+        for key, old in original.items():
+            if old is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = old
+
+
+def resolve_dance_swap_contracts(job: dict, sandbox_root: pathlib.Path) -> dict:
+    dance_swap = job.get("dance_swap")
+    if not isinstance(dance_swap, dict):
+        raise SystemExit("Lane 'dance_swap' requires 'dance_swap' object in job.json")
+
+    required_fields = ["loop_artifact", "tracks_artifact", "foreground_asset"]
+    missing = [k for k in required_fields if not isinstance(dance_swap.get(k), str) or not dance_swap.get(k, "").strip()]
+    if missing:
+        raise SystemExit(f"dance_swap missing required string field(s): {', '.join(missing)}")
+
+    loop_path = normalize_sandbox_path(dance_swap["loop_artifact"], sandbox_root)
+    tracks_path = normalize_sandbox_path(dance_swap["tracks_artifact"], sandbox_root)
+    fg_path = normalize_sandbox_path(dance_swap["foreground_asset"], sandbox_root)
+    validate_safe_path(loop_path, sandbox_root)
+    validate_safe_path(tracks_path, sandbox_root)
+    validate_safe_path(fg_path, sandbox_root)
+
+    beatflow_path = None
+    if dance_swap.get("beatflow_artifact"):
+        beatflow_path = normalize_sandbox_path(dance_swap["beatflow_artifact"], sandbox_root)
+        validate_safe_path(beatflow_path, sandbox_root)
+
+    for p in [loop_path, tracks_path, fg_path, beatflow_path]:
+        if p and not p.exists():
+            raise SystemExit(f"Dance Swap artifact not found: {p}")
+
+    loop = load_json_file(loop_path)
+    tracks = load_json_file(tracks_path)
+    beatflow = load_json_file(beatflow_path) if beatflow_path else None
+
+    if loop.get("version") != "dance_swap_loop.v1":
+        raise SystemExit("dance_swap.loop_artifact must be a dance_swap_loop.v1 artifact")
+    if tracks.get("version") != "dance_swap_tracks.v1":
+        raise SystemExit("dance_swap.tracks_artifact must be a dance_swap_tracks.v1 artifact")
+    if beatflow is not None and beatflow.get("version") != "dance_swap_beatflow.v1":
+        raise SystemExit("dance_swap.beatflow_artifact must be a dance_swap_beatflow.v1 artifact")
+
+    source_rel = loop.get("source_video_relpath")
+    if not isinstance(source_rel, str) or not source_rel.startswith("sandbox/"):
+        raise SystemExit("dance_swap.loop.source_video_relpath must be a sandbox-relative path")
+    if tracks.get("source_video_relpath") != source_rel:
+        raise SystemExit("Dance Swap source mismatch: loop and tracks source_video_relpath differ")
+    if beatflow is not None and beatflow.get("source_video_relpath") != source_rel:
+        raise SystemExit("Dance Swap source mismatch: beatflow source_video_relpath differs")
+
+    source_video = normalize_sandbox_path(source_rel, sandbox_root)
+    validate_safe_path(source_video, sandbox_root)
+    if not source_video.exists():
+        raise SystemExit(f"Dance Swap source video not found: {source_video}")
+
+    render_bg = normalize_sandbox_path(job["render"]["background_asset"], sandbox_root)
+    validate_safe_path(render_bg, sandbox_root)
+    if render_bg.resolve() != source_video.resolve():
+        raise SystemExit(
+            "dance_swap source mismatch: render.background_asset must match loop.source_video_relpath"
+        )
+
+    loop_start = int(loop["loop_start_frame"])
+    loop_end = int(loop["loop_end_frame"])
+    if loop_end <= loop_start:
+        raise SystemExit("Dance Swap loop_end_frame must be > loop_start_frame")
+
+    subjects = tracks.get("subjects")
+    if not isinstance(subjects, list) or not subjects:
+        raise SystemExit("dance_swap.tracks.subjects must contain at least one subject")
+    subject_id = dance_swap.get("subject_id") or subjects[0].get("subject_id")
+    subject = None
+    for s in subjects:
+        if isinstance(s, dict) and s.get("subject_id") == subject_id:
+            subject = s
+            break
+    if subject is None:
+        raise SystemExit(f"Dance Swap subject_id not found in tracks: {subject_id}")
+
+    subject_frames = []
+    for row in subject.get("frames", []):
+        frame = int(row["frame"])
+        if loop_start <= frame <= loop_end:
+            mask_rel = row.get("mask_relpath")
+            if not isinstance(mask_rel, str) or not mask_rel.startswith("sandbox/"):
+                raise SystemExit(f"Dance Swap frame has invalid mask_relpath: frame={frame}")
+            mask_path = normalize_sandbox_path(mask_rel, sandbox_root)
+            validate_safe_path(mask_path, sandbox_root)
+            if not mask_path.exists():
+                raise SystemExit(f"Dance Swap mask file missing: {mask_path}")
+            bbox = row.get("bbox") or {}
+            subject_frames.append(
+                {
+                    "frame": frame,
+                    "x": int(bbox["x"]),
+                    "y": int(bbox["y"]),
+                    "w": int(bbox["w"]),
+                    "h": int(bbox["h"]),
+                    "mask_relpath": mask_rel,
+                }
+            )
+
+    if not subject_frames:
+        raise SystemExit(
+            f"Dance Swap subject '{subject_id}' has no frame rows within loop bounds [{loop_start}, {loop_end}]"
+        )
+
+    xs = [x["x"] for x in subject_frames]
+    ys = [x["y"] for x in subject_frames]
+    ws = [x["w"] for x in subject_frames]
+    hs = [x["h"] for x in subject_frames]
+
+    slot_x = int(statistics.median(xs))
+    slot_y = int(statistics.median(ys))
+    slot_w = max(1, int(statistics.median(ws)))
+    slot_h = max(1, int(statistics.median(hs)))
+    slot_dx = max(0.0, (max(xs) - min(xs)) / 2.0)
+    slot_dy = max(0.0, (max(ys) - min(ys)) / 2.0)
+
+    fps = float(loop.get("fps", 30.0))
+    slot_hz = 1.6
+    if beatflow and beatflow.get("beats"):
+        beats = sorted(int(b["frame"]) for b in beatflow["beats"])
+        if len(beats) >= 2:
+            gaps = [b - a for a, b in zip(beats, beats[1:]) if (b - a) > 0]
+            if gaps:
+                avg_gap = sum(gaps) / len(gaps)
+                if avg_gap > 0:
+                    slot_hz = max(0.2, min(4.0, fps / avg_gap))
+
+    return {
+        "source_video_relpath": source_rel,
+        "foreground_asset_relpath": dance_swap["foreground_asset"],
+        "subject_id": subject_id,
+        "hero_id": subject.get("hero_id"),
+        "loop_start_frame": loop_start,
+        "loop_end_frame": loop_end,
+        "blend_strategy": loop.get("blend_strategy"),
+        "frame_rows_in_loop": len(subject_frames),
+        "slot": {
+            "x": slot_x,
+            "y": slot_y,
+            "w": slot_w,
+            "h": slot_h,
+            "dx": round(slot_dx, 3),
+            "dy": round(slot_dy, 3),
+            "hz": round(slot_hz, 6),
+        },
+    }
 
 
 
@@ -1437,6 +1605,38 @@ def render_dance_loop_replace_dino_with_mochi(
     }
 
 
+def render_dance_swap(
+    job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path
+) -> dict:
+    contracts = resolve_dance_swap_contracts(job, sandbox_root)
+    slot = contracts["slot"]
+
+    overlay_job = json.loads(json.dumps(job))
+    overlay_job.setdefault("template", {})
+    overlay_job["template"]["params"] = {
+        "foreground_asset": contracts["foreground_asset_relpath"],
+        "duration_seconds": int(job["video"]["length_seconds"]),
+    }
+    overlay_job["render"]["background_asset"] = contracts["source_video_relpath"]
+
+    env_overrides = {
+        "CAF_REPLACE_DINO_X": str(slot["x"]),
+        "CAF_REPLACE_DINO_Y": str(slot["y"]),
+        "CAF_REPLACE_DINO_W": str(slot["w"]),
+        "CAF_REPLACE_DINO_H": str(slot["h"]),
+        "CAF_REPLACE_SLOT_DX": str(slot["dx"]),
+        "CAF_REPLACE_SLOT_DY": str(slot["dy"]),
+        "CAF_REPLACE_SLOT_HZ": str(slot["hz"]),
+    }
+
+    render_result = _with_temp_env(
+        env_overrides,
+        lambda: render_dance_loop_replace_dino_with_mochi(overlay_job, sandbox_root, out_dir, wm_path),
+    )
+    render_result["dance_swap"] = contracts
+    return render_result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Deterministic FFmpeg renderer.")
     parser.add_argument("--job", dest="job_path", help="Path to a job.json file")
@@ -1536,6 +1736,9 @@ def main():
     elif lane == "image_motion":
         # PR19 Lane B Logic
         render_result = render_image_motion(job, sandbox_root, out_dir, wm_path)
+    elif lane == "dance_swap":
+        # PR-33.1 deterministic Dance Swap route
+        render_result = render_dance_swap(job, sandbox_root, out_dir, wm_path)
 
     else:
         # Legacy / Default behavior (Lane A, Lane B, or no lane)
@@ -1570,6 +1773,9 @@ def main():
     elif lane == "image_motion":
         final_result["motion_preset"] = render_result["motion_preset"]
         final_result["seed_frames_count"] = render_result["seed_frames_count"]
+    elif lane == "dance_swap":
+        final_result["dance_swap"] = render_result.get("dance_swap")
+        final_result["recipe_id"] = "dance_swap_slot_overlay_v1"
     
     if render_result.get("failed_ffmpeg_cmd"):
         final_result["failed_ffmpeg_cmd"] = render_result["failed_ffmpeg_cmd"]

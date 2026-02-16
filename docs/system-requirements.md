@@ -393,6 +393,35 @@ The system MUST support deterministic contract surfaces for external HITL recast
   - re-ingest remains explicit, auditable, and idempotent
   - deterministic CV tooling (e.g., OpenCV) MAY be used for offline validation/preflight checks
 
+### FR-28.2 — Recast quality gates and deterministic scoring
+The system MUST support deterministic quality-gate scoring artifacts for recast outputs.
+
+- Required quality dimensions:
+  - identity consistency
+  - mask edge/bleed artifact checks
+  - temporal stability (jitter/flicker)
+  - loop seam continuity
+  - audio/video sync and audio stream presence
+- Required behavior:
+  - deterministic pass/fail thresholds
+  - explicit report artifact(s) for reviewer inspection and control-plane gating
+- Hard constraints:
+  - no nondeterministic authority from scoring artifacts
+  - no external recast invocation inside Worker
+  - quality scoring remains artifact-driven and auditable
+
+### FR-28.3 — Recast benchmark regression harness
+The system MUST support a deterministic benchmark harness for recast quality regression tracking.
+
+- Required behavior:
+  - fixed benchmark set definition (demo loops + hero mappings)
+  - repeatable run command path
+  - comparable output metrics/reports across runs
+- Hard constraints:
+  - benchmark artifacts remain contract-bound and deterministic
+  - benchmark process MUST NOT bypass runtime write boundaries
+  - no copyrighted source media committed into repo canon
+
 
 ------------------------------------------------------------
 

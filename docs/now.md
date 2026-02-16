@@ -18,8 +18,8 @@ PR: **PR-33.1 — Dance Swap implementation (deterministic recipe wiring)**
 Last Updated: 2026-02-16
 
 ### Status by Role
-- ARCH: In Progress
-- CODEX: Pending
+- ARCH: In Progress (review/closeout)
+- CODEX: Completed
 - CLOUD-REVIEW: Not Required (PR-33.1 is non-cloud scope)
 
 ### Decisions / ADRs Touched
@@ -44,11 +44,15 @@ Last Updated: 2026-02-16
     - PR-33.3 (optional Mode B contract expansion)
     - PR-34.2 (HITL lifecycle + inbox pointer contracts)
     - PR-34.3 (`viggle_pack.v1` schema + validation)
+    - PR-34.4 (recast quality gates + deterministic scoring)
+    - PR-34.5 (recast benchmark regression harness)
 - Docs alignment updates for new sub-PR scope:
   - `docs/system-requirements.md`:
     - FR-26.2 (voice/style registries)
     - FR-27.1 (optional Mode B planning contracts)
     - FR-28.1 (HITL lifecycle + pack/pointer validation contracts)
+    - FR-28.2 (recast quality gates + deterministic scoring)
+    - FR-28.3 (recast benchmark regression harness)
   - `docs/architecture.md`:
     - added voice/style registry posture + optional Mode B contract note
     - added explicit HITL lifecycle/pointer/pack-schema notes
@@ -119,11 +123,44 @@ Last Updated: 2026-02-16
   - dance swap schemas/examples JSON parse checks passed
   - `validate_dance_swap_contracts.py` passed on full example set
   - negative case confirms fail-loud semantics (invalid loop bounds rejected)
+- Added PR-33.1 Dance Swap deterministic implementation wiring:
+  - `repo/worker/render_ffmpeg.py`:
+    - adds `lane == "dance_swap"` routing
+    - resolves and validates explicit artifacts:
+      - `dance_swap_loop.v1`
+      - `dance_swap_tracks.v1`
+      - optional `dance_swap_beatflow.v1`
+    - enforces fail-loud checks for source-video consistency, loop bounds, subject selection, and mask path existence
+    - derives deterministic slot geometry/motion from tracks (and optional beatflow timing)
+  - `repo/shared/job.schema.json`:
+    - adds `lane: dance_swap`
+    - adds `dance_swap` job block:
+      - `loop_artifact`
+      - `tracks_artifact`
+      - optional `beatflow_artifact`
+      - `foreground_asset`
+      - optional `subject_id`
+  - `repo/tools/validate_job.py`:
+    - adds minimal-v1 fail-loud checks for `lane=dance_swap` required fields
+  - Added smoke runner:
+    - `repo/tools/smoke_dance_swap.py`
+    - creates deterministic Dance Swap artifacts/job and executes:
+      - contract validator
+      - job validator
+      - worker render
+- PR-33.1 smoke validation (Conda `cat-ai-factory`):
+  - `python -m py_compile repo/worker/render_ffmpeg.py repo/tools/validate_job.py repo/tools/smoke_dance_swap.py` passed
+  - `python -m repo.tools.validate_dance_swap_contracts --loop repo/examples/dance_swap_loop.v1.example.json --tracks repo/examples/dance_swap_tracks.v1.example.json --beatflow repo/examples/dance_swap_beatflow.v1.example.json` passed
+  - `python repo/tools/smoke_dance_swap.py` passed and produced:
+    - `sandbox/output/smoke-dance-swap-v1/final.mp4`
+    - `sandbox/output/smoke-dance-swap-v1/result.json`
 
 ### Open Findings / Conditions
 - Roadmap policy:
-  - Cloud migration PRs are postponed until quality-video track (PR-31..PR-34) is complete and accepted.
+  - Cloud migration PRs are postponed until quality-video track (PR-31..PR-34.5) is complete and accepted.
   - Execution order override: Phase 8 runs first; Phase 7 resumes after Phase 8 closeout.
+  - Planning directive (2026-02-16): only quality-path PRs will be planned from this point forward.
+  - Fallback-only/scaffolding PRs are deferred unless they directly raise output quality or recast fidelity.
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
@@ -131,10 +168,13 @@ Last Updated: 2026-02-16
   - implementation wiring only from explicit Dance Swap artifacts
   - preserve non-binding lane policy (ADR-0024)
   - no LLM/network side effects in Worker
+- PR-33.1 completion notes:
+  - implementation uses explicit artifact inputs only for Dance Swap lane behavior
+  - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: review PR-33 contract closeout and confirm PR-33.1 implementation boundaries.
-- CODEX: implement PR-33.1 deterministic Dance Swap recipe wiring + smoke validation.
+- ARCH: review PR-33.1 implementation closeout against ADR-0042 boundaries.
+- CODEX: prepare PR-33.1 branch/PR metadata and proceed only with quality-path scoped PRs (next: PR-33.2 / PR-34.x, including PR-34.4/PR-34.5 quality gating).
 
 ### ARCH Decision Queue Snapshot (PR-33.1 Focus)
 1) Video Analyzer contracts:
