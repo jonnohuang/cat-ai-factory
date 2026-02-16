@@ -901,7 +901,7 @@ Outcome:
 ---
 
 ### PR-33 — Dance Swap v1 deterministic lane (tracks/masks/loop artifacts)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Introduce lane-specific contracts for:
@@ -918,7 +918,7 @@ Outcome:
 ---
 
 ### PR-33.1 — Dance Swap implementation (deterministic recipe wiring)
-Status: **PLANNED**
+Status: **ACTIVE**
 
 Scope:
 - Implement deterministic Dance Swap recipe wiring from explicit artifacts:

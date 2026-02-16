@@ -14,16 +14,17 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-33 — Dance Swap v1 deterministic lane (tracks/masks/loop artifacts)**
+PR: **PR-33.1 — Dance Swap implementation (deterministic recipe wiring)**
 Last Updated: 2026-02-16
 
 ### Status by Role
 - ARCH: In Progress
 - CODEX: Pending
-- CLOUD-REVIEW: Not Required (PR-33 is non-cloud scope)
+- CLOUD-REVIEW: Not Required (PR-33.1 is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
+- ADR-0042 (Dance Swap v1 deterministic lane)
 
 ### What Changed (Diff Summary)
 - `docs/PR_PROJECT_PLAN.md`:
@@ -31,7 +32,8 @@ Last Updated: 2026-02-16
   - PR-32 status updated to COMPLETED
   - PR-32.1 status updated to COMPLETED
   - PR-32.2 status updated to COMPLETED
-  - PR-33 status updated to ACTIVE
+  - PR-33 status updated to COMPLETED
+  - PR-33.1 status updated to ACTIVE
   - added implementation sub-PRs:
     - PR-32.1 (analyzer runtime implementation)
     - PR-33.1 (Dance Swap deterministic recipe implementation)
@@ -105,6 +107,18 @@ Last Updated: 2026-02-16
   - registry schemas/examples JSON parse checks passed
   - `validate_voice_registry.py` passed
   - `validate_style_registry.py` passed
+- Added PR-33 Dance Swap contracts + examples + validator:
+  - `repo/shared/dance_swap_loop.v1.schema.json`
+  - `repo/shared/dance_swap_tracks.v1.schema.json`
+  - `repo/shared/dance_swap_beatflow.v1.schema.json`
+  - `repo/examples/dance_swap_loop.v1.example.json`
+  - `repo/examples/dance_swap_tracks.v1.example.json`
+  - `repo/examples/dance_swap_beatflow.v1.example.json`
+  - `repo/tools/validate_dance_swap_contracts.py`
+- PR-33 smoke validation (Conda `cat-ai-factory`):
+  - dance swap schemas/examples JSON parse checks passed
+  - `validate_dance_swap_contracts.py` passed on full example set
+  - negative case confirms fail-loud semantics (invalid loop bounds rejected)
 
 ### Open Findings / Conditions
 - Roadmap policy:
@@ -113,16 +127,16 @@ Last Updated: 2026-02-16
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
-- PR-33 scope lock:
-  - lane contracts/artifacts only (loop bounds/tracks/masks/optional beat-flow)
+- PR-33.1 scope lock:
+  - implementation wiring only from explicit Dance Swap artifacts
   - preserve non-binding lane policy (ADR-0024)
-  - no Worker runtime behavior change in PR-33 (implementation is PR-33.1)
+  - no LLM/network side effects in Worker
 
 ### Next Action (Owner + Task)
-- ARCH: review PR-32.2 closeout and confirm PR-33 contract scope boundaries.
-- CODEX: implement PR-33 contract artifacts/schemas/examples for Dance Swap v1 lane.
+- ARCH: review PR-33 contract closeout and confirm PR-33.1 implementation boundaries.
+- CODEX: implement PR-33.1 deterministic Dance Swap recipe wiring + smoke validation.
 
-### ARCH Decision Queue Snapshot (PR-33 Focus)
+### ARCH Decision Queue Snapshot (PR-33.1 Focus)
 1) Video Analyzer contracts:
 - Approved as planner enrichment layer.
 - Metadata-only canon and index/query contracts.
@@ -133,5 +147,8 @@ Last Updated: 2026-02-16
 3) Dance Swap v1 contracts:
 - Approved as deterministic choreography-preserving lane artifact layer.
 - Contract set must remain lane-permissive and preserve `job.json` authority.
+4) Dance Swap v1 implementation:
+- Must consume explicit loop/tracks/mask/beatflow artifacts only.
+- Preserve Worker determinism and output boundary constraints.
 
 ------------------------------------------------------------

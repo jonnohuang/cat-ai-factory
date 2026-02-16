@@ -1,0 +1,26 @@
+{
+  "version": "dance_swap_beatflow.v1",
+  "source_video_relpath": "sandbox/assets/demo/dance_loop_03.mp4",
+  "beats": [
+    {
+      "frame": 24,
+      "strength": 0.81
+    },
+    {
+      "frame": 48,
+      "strength": 0.76
+    }
+  ],
+  "flow_windows": [
+    {
+      "start_frame": 12,
+      "end_frame": 48,
+      "mean_magnitude": 4.2
+    },
+    {
+      "start_frame": 49,
+      "end_frame": 96,
+      "mean_magnitude": 3.5
+    }
+  ]
+}

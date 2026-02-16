@@ -1,0 +1,9 @@
+{
+  "version": "dance_swap_loop.v1",
+  "source_video_relpath": "sandbox/assets/demo/dance_loop_03.mp4",
+  "fps": 30.0,
+  "loop_start_frame": 12,
+  "loop_end_frame": 348,
+  "blend_strategy": "crossfade",
+  "notes": "Loop bounds chosen to preserve choreography reset pose."
+}
