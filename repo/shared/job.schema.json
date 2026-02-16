@@ -208,6 +208,10 @@
             "clip_end_seconds": {
               "type": "number",
               "minimum": 0
+            },
+            "foreground_asset": {
+              "type": "string",
+              "pattern": "^(assets|sandbox/assets)/.+"
             }
           }
         }

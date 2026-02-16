@@ -8,6 +8,32 @@
                 "render.background_asset"
             ],
             "default_params": {}
+        },
+        "dance_duet_mochi": {
+            "recipe_id": "duet_overlay_mochi",
+            "description": "Overlay Mochi dance clip over demo dance loop group scene",
+            "required_inputs": [
+                "render.background_asset"
+            ],
+            "default_params": {}
+        },
+        "motion_source_overlay_mochi": {
+            "recipe_id": "motion_source_overlay_mochi",
+            "description": "Use human/source dance clip as motion authority and overlay Mochi foreground clip",
+            "required_inputs": [
+                "render.background_asset",
+                "template.params.foreground_asset"
+            ],
+            "default_params": {}
+        },
+        "dance_loop_replace_dino_with_mochi": {
+            "recipe_id": "dance_loop_replace_dino_with_mochi",
+            "description": "Replace the demo dance-loop dino slot with keyed Mochi foreground clip",
+            "required_inputs": [
+                "render.background_asset",
+                "template.params.foreground_asset"
+            ],
+            "default_params": {}
         }
     }
 }

@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import pathlib
 import subprocess
 
@@ -11,6 +12,7 @@ OPACITY = 0.35
 SCALE_FACTOR = 0.12
 MIN_WM_WIDTH = 64
 MAX_WM_WIDTH = 256
+_HAS_SUBTITLES_FILTER: bool | None = None
 
 
 def repo_root_from_here() -> pathlib.Path:
@@ -114,6 +116,76 @@ def get_video_dims(path: pathlib.Path) -> tuple[int, int]:
     return w, h
 
 
+def get_video_duration(path: pathlib.Path) -> float:
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=duration",
+        "-of",
+        "csv=p=0",
+        str(path),
+    ]
+    out = subprocess.check_output(cmd, text=True).strip()
+    try:
+        return float(out)
+    except Exception:
+        return 0.0
+
+
+def build_loop_ready_bg(
+    bg_path: pathlib.Path, out_dir: pathlib.Path, target_seconds: int, fps: int
+) -> pathlib.Path:
+    out_path = out_dir / "bg_loop.mp4"
+    first = target_seconds // 2
+    if first < 2:
+        first = 4
+    second = target_seconds - first
+    if second < 2:
+        second = first
+        target_seconds = first + second
+    fade_dur = min(0.5, max(0.2, first * 0.08))
+    fade_offset = max(0.0, first - fade_dur)
+
+    filter_complex = (
+        f"[0:v]trim=0:{first},setpts=PTS-STARTPTS[v1];"
+        f"[0:v]trim={first}:{first + second},setpts=PTS-STARTPTS[v2];"
+        f"[v1][v2]xfade=transition=fade:duration={fade_dur:.3f}:offset={fade_offset:.3f}[v]"
+    )
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-stream_loop",
+        "-1",
+        "-i",
+        str(bg_path),
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[v]",
+        "-t",
+        str(target_seconds),
+        "-r",
+        str(fps),
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-map_metadata",
+        "-1",
+        "-map_chapters",
+        "-1",
+        str(out_path),
+    ]
+    run_ffmpeg(cmd, out_path)
+    return out_path
+
+
 def normalize_sandbox_path(rel_path_str: str, sandbox_root: pathlib.Path) -> pathlib.Path:
     # Deterministic normalization:
     # If path starts with "sandbox/", strip it.
@@ -204,6 +276,22 @@ def escape_ffmpeg_path(path: pathlib.Path) -> str:
     safe_path = safe_path.replace(",", "\\,")
     safe_path = safe_path.replace("'", "\\'")
     return safe_path
+
+
+def ffmpeg_has_subtitles_filter() -> bool:
+    global _HAS_SUBTITLES_FILTER
+    if _HAS_SUBTITLES_FILTER is not None:
+        return _HAS_SUBTITLES_FILTER
+    try:
+        out = subprocess.check_output(
+            ["ffmpeg", "-hide_banner", "-filters"],
+            text=True,
+            stderr=subprocess.STDOUT,
+        )
+        _HAS_SUBTITLES_FILTER = " subtitles " in f" {out} "
+    except Exception:
+        _HAS_SUBTITLES_FILTER = False
+    return _HAS_SUBTITLES_FILTER
 
 
 def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path) -> dict:
@@ -375,6 +463,9 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
             subtitles_status = "skipped_unsafe_path"
 
     attempt_burn = (subtitles_status == "ready_to_burn")
+    if attempt_burn and not ffmpeg_has_subtitles_filter():
+        subtitles_status = "skipped_missing_subtitles_filter"
+        attempt_burn = False
     
     def build_final_chain(burning: bool):
         c = list(filter_chain)
@@ -390,9 +481,16 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     executed_cmd = []
     failed_cmd = None
     
-    # Audio filters to guarantee duration (pad if short, trim if long)
-    # This fixes the logical race where looped audio might end prematurely or extend beyond video
-    audio_filter = f"apad=pad_dur={duration},atrim=0:{duration}"
+    # Audio filters:
+    # 1) guarantee duration (pad/trim),
+    # 2) basic loudness normalization,
+    # 3) limiter to prevent clipping peaks.
+    audio_filter = (
+        f"apad=pad_dur={duration},"
+        f"atrim=0:{duration},"
+        "loudnorm=I=-16:TP=-1.5:LRA=11,"
+        "alimiter=limit=0.95"
+    )
 
     output_args = [
         "-map", "[out]",
@@ -495,8 +593,32 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     wm_width = max(MIN_WM_WIDTH, min(raw_wm_width, MAX_WM_WIDTH))
 
     # Duration and FPS
-    duration = str(job["video"]["length_seconds"])
-    fps = str(job["video"]["fps"])
+    lane = str(job.get("lane", ""))
+    job_duration = int(job["video"]["length_seconds"])
+    fps_i = int(job["video"]["fps"])
+    duration_i = job_duration
+
+    # Quality-first lane-A mode:
+    # by default, align output duration to generated source video duration to avoid
+    # long padded outputs that feel unsynced.
+    if lane == "ai_video":
+        match_source = os.environ.get("CAF_AI_VIDEO_MATCH_SOURCE_DURATION", "0").strip().lower()
+        if match_source in ("1", "true", "yes"):
+            src_dur = get_video_duration(bg)
+            if src_dur > 0.0:
+                duration_i = max(4, int(round(src_dur)))
+
+        # Optional loop builder for cleaner longer outputs.
+        build_loop = os.environ.get("CAF_AI_VIDEO_BUILD_LOOP", "").strip().lower()
+        if build_loop in ("1", "true", "yes"):
+            loop_target = int(os.environ.get("CAF_AI_VIDEO_LOOP_DURATION", "16"))
+            loop_target = max(8, min(60, loop_target))
+            bg = build_loop_ready_bg(bg, out_dir, loop_target, fps_i)
+            duration_i = loop_target
+            video_w, _ = get_video_dims(bg)
+
+    duration = str(duration_i)
+    fps = str(fps_i)
 
     # Inputs Construction
     inputs = []
@@ -579,8 +701,16 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     final_cmd_executed = []
     failed_cmd = None
     
-    # Audio filters to guarantee duration (pad if short, trim if long)
-    audio_filter = f"apad=pad_dur={duration},atrim=0:{duration}"
+    # Audio filters:
+    # 1) guarantee duration (pad/trim),
+    # 2) basic loudness normalization,
+    # 3) limiter to prevent clipping peaks.
+    audio_filter = (
+        f"apad=pad_dur={duration},"
+        f"atrim=0:{duration},"
+        "loudnorm=I=-16:TP=-1.5:LRA=11,"
+        "alimiter=limit=0.95"
+    )
     
     output_args = [
         "-map", "[out]",
@@ -600,8 +730,8 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
         str(out_mp4),
     ]
 
-    # Attempt 1: With Subtitles (if available and non-empty)
-    if srt_path.exists() and srt_path.stat().st_size > 0:
+    # Attempt 1: With Subtitles (if available and non-empty and ffmpeg supports subtitles filter)
+    if srt_path.exists() and srt_path.stat().st_size > 0 and ffmpeg_has_subtitles_filter():
         try:
             full_filter = build_filter(include_subtitles=True)
             cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", full_filter] + output_args
@@ -657,7 +787,654 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
         "ffmpeg_cmd_executed": final_cmd_executed,
         "failed_ffmpeg_cmd": failed_cmd
     }
+def render_duet_overlay_mochi(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path) -> dict:
+    job_id = job["job_id"]
+    fg_rel = job["render"]["background_asset"]
+    bg_rel = "assets/demo/dance_loop.mp4"
 
+    try:
+        fg = normalize_sandbox_path(fg_rel, sandbox_root)
+        bg = normalize_sandbox_path(bg_rel, sandbox_root)
+        validate_safe_path(fg, sandbox_root)
+        validate_safe_path(bg, sandbox_root)
+    except ValueError as e:
+        raise SystemExit(str(e))
+
+    if not fg.exists():
+        raise SystemExit(f"Missing foreground duet asset: {fg}")
+    if not bg.exists():
+        raise SystemExit(f"Missing base duet asset: {bg}")
+
+    out_mp4 = out_dir / "final.mp4"
+    srt_path = out_dir / "final.srt"
+    if "captions" in job and job["captions"]:
+        make_srt(job["captions"], srt_path)
+    else:
+        atomic_write_text(srt_path, "")
+
+    duration = str(job["video"]["length_seconds"])
+    fps = str(job["video"]["fps"])
+    video_w = 1080
+
+    inputs = [
+        "-stream_loop", "-1", "-i", str(bg),
+        "-stream_loop", "-1", "-i", str(fg),
+    ]
+    next_input_idx = 2
+
+    audio_asset = resolve_audio_asset(job, sandbox_root)
+    has_bg_audio = has_audio_stream(bg)
+    if audio_asset:
+        audio_source = "job_asset"
+        inputs.extend(["-stream_loop", "-1", "-i", str(audio_asset)])
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+    elif has_bg_audio:
+        audio_source = "bg_audio"
+        audio_input_idx = 0
+    else:
+        audio_source = "silence"
+        inputs.extend([
+            "-f", "lavfi",
+            "-t", duration,
+            "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+        ])
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+
+    wm_input_idx = next_input_idx
+    inputs.extend(["-i", str(wm_path)])
+
+    wm_width = max(MIN_WM_WIDTH, min(math.floor(video_w * SCALE_FACTOR), MAX_WM_WIDTH))
+    key_color = os.environ.get("CAF_DUET_KEY_COLOR", "0x66DDEE")
+    key_sim = float(os.environ.get("CAF_DUET_KEY_SIMILARITY", "0.26"))
+    key_blend = float(os.environ.get("CAF_DUET_KEY_BLEND", "0.08"))
+    panel_w = int(os.environ.get("CAF_DUET_PANEL_W", "560"))
+    panel_h = int(os.environ.get("CAF_DUET_PANEL_H", "996"))
+    panel_x = os.environ.get("CAF_DUET_PANEL_X", "W-w-120")
+    panel_y = os.environ.get("CAF_DUET_PANEL_Y", "H-h-220")
+
+    base_chain = (
+        f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[v_bg];"
+        # Foreground path is expected to be a single-subject clip on cyan background.
+        # We key cyan out to blend Mochi into the demo dance scene.
+        f"[1:v]scale={panel_w}:{panel_h}:force_original_aspect_ratio=decrease,"
+        f"pad={panel_w}:{panel_h}:(ow-iw)/2:(oh-ih)/2:color={key_color},setsar=1,format=rgba,"
+        f"colorkey={key_color}:{key_sim}:{key_blend}[v_fg];"
+        f"[v_bg][v_fg]overlay=x={panel_x}:y={panel_y}:format=auto[v_duet];"
+        f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
+    )
+
+    if "captions" not in job or not job["captions"]:
+        subtitles_status = "skipped_no_captions"
+    elif srt_path.exists() and srt_path.stat().st_size == 0:
+        subtitles_status = "skipped_empty"
+    else:
+        subtitles_status = "ready_to_burn"
+
+    if subtitles_status == "ready_to_burn" and not ffmpeg_has_subtitles_filter():
+        subtitles_status = "skipped_missing_subtitles_filter"
+
+    if subtitles_status == "ready_to_burn":
+        try:
+            validate_safe_path(srt_path, sandbox_root)
+        except ValueError:
+            subtitles_status = "skipped_unsafe_path"
+
+    def build_filter(with_subtitles: bool) -> str:
+        parts = [base_chain]
+        ref = "[v_duet]"
+        if with_subtitles:
+            safe_srt = escape_ffmpeg_path(srt_path)
+            parts.append(f"{ref}subtitles=filename='{safe_srt}'[v_sub]")
+            ref = "[v_sub]"
+        parts.append(f"{ref}[wm]overlay=W-w-{PADDING_PX}:H-h-{PADDING_PX}[out]")
+        return ";".join(parts)
+
+    audio_filter = (
+        f"apad=pad_dur={duration},"
+        f"atrim=0:{duration},"
+        "loudnorm=I=-16:TP=-1.5:LRA=11,"
+        "alimiter=limit=0.95"
+    )
+    output_args = [
+        "-map", "[out]",
+        "-map", f"{audio_input_idx}:a:0",
+        "-t", duration,
+        "-r", fps,
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        "-b:a", "192k",
+        "-ar", "48000",
+        "-ac", "2",
+        "-af", audio_filter,
+        "-movflags", "+faststart",
+        "-map_metadata", "-1",
+        "-map_chapters", "-1",
+        str(out_mp4),
+    ]
+
+    failed_cmd = None
+    if subtitles_status == "ready_to_burn":
+        try:
+            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(True)] + output_args
+            executed_cmd = run_ffmpeg(cmd, out_mp4)
+            subtitles_status = "burned"
+        except subprocess.CalledProcessError:
+            failed_cmd = cmd
+            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(False)] + output_args
+            executed_cmd = run_ffmpeg(cmd, out_mp4)
+            subtitles_status = "failed_ffmpeg_subtitles"
+    else:
+        cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(False)] + output_args
+        executed_cmd = run_ffmpeg(cmd, out_mp4)
+
+    return {
+        "job_id": job_id,
+        "outputs": {
+            "final_mp4": str(out_mp4),
+            "final_srt": str(srt_path),
+        },
+        "hashes": {
+            "final_mp4_sha256": sha256_file(out_mp4),
+            "final_srt_sha256": sha256_file(srt_path),
+        },
+        "watermark": {
+            "bg_path": str(bg),
+            "wm_path": str(wm_path),
+            "video_width": video_w,
+            "wm_width": wm_width,
+            "padding": PADDING_PX,
+            "opacity": OPACITY,
+        },
+        "audio_source": audio_source,
+        "audio_asset_path": str(audio_asset) if audio_asset else None,
+        "has_bg_audio": has_bg_audio,
+        "subtitles_status": subtitles_status,
+        "ffmpeg_cmd": cmd,
+        "ffmpeg_cmd_executed": executed_cmd,
+        "failed_ffmpeg_cmd": failed_cmd,
+    }
+
+
+def render_motion_source_overlay_mochi(
+    job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path
+) -> dict:
+    """Lane C bootstrap recipe:
+    - background motion authority from render.background_asset (human/source dance clip)
+    - foreground cat clip from template.params.foreground_asset (prefer cyan keyed source)
+    """
+    job_id = job["job_id"]
+    bg_rel = job["render"]["background_asset"]
+    params = job.get("template", {}).get("params", {})
+    fg_rel = params.get("foreground_asset")
+    if not isinstance(fg_rel, str) or not fg_rel.strip():
+        raise SystemExit("motion_source_overlay_mochi requires template.params.foreground_asset")
+
+    try:
+        bg = normalize_sandbox_path(bg_rel, sandbox_root)
+        fg = normalize_sandbox_path(fg_rel, sandbox_root)
+        validate_safe_path(bg, sandbox_root)
+        validate_safe_path(fg, sandbox_root)
+    except ValueError as e:
+        raise SystemExit(str(e))
+
+    if not bg.exists():
+        raise SystemExit(f"Missing motion source background asset: {bg}")
+    if not fg.exists():
+        raise SystemExit(f"Missing foreground overlay asset: {fg}")
+
+    out_mp4 = out_dir / "final.mp4"
+    srt_path = out_dir / "final.srt"
+    if "captions" in job and job["captions"]:
+        make_srt(job["captions"], srt_path)
+    else:
+        atomic_write_text(srt_path, "")
+
+    duration = str(job["video"]["length_seconds"])
+    fps = str(job["video"]["fps"])
+    video_w = 1080
+
+    inputs = [
+        "-stream_loop",
+        "-1",
+        "-i",
+        str(bg),
+        "-stream_loop",
+        "-1",
+        "-i",
+        str(fg),
+    ]
+    next_input_idx = 2
+
+    audio_asset = resolve_audio_asset(job, sandbox_root)
+    has_bg_audio = has_audio_stream(bg)
+    if audio_asset:
+        audio_source = "job_asset"
+        inputs.extend(["-stream_loop", "-1", "-i", str(audio_asset)])
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+    elif has_bg_audio:
+        audio_source = "bg_audio"
+        audio_input_idx = 0
+    else:
+        audio_source = "silence"
+        inputs.extend(
+            [
+                "-f",
+                "lavfi",
+                "-t",
+                duration,
+                "-i",
+                "anullsrc=channel_layout=stereo:sample_rate=48000",
+            ]
+        )
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+
+    wm_input_idx = next_input_idx
+    inputs.extend(["-i", str(wm_path)])
+
+    wm_width = max(MIN_WM_WIDTH, min(math.floor(video_w * SCALE_FACTOR), MAX_WM_WIDTH))
+    key_color = os.environ.get("CAF_DUET_KEY_COLOR", "0x66DDEE")
+    key_sim = float(os.environ.get("CAF_DUET_KEY_SIMILARITY", "0.26"))
+    key_blend = float(os.environ.get("CAF_DUET_KEY_BLEND", "0.08"))
+    panel_w = int(os.environ.get("CAF_DUET_PANEL_W", "560"))
+    panel_h = int(os.environ.get("CAF_DUET_PANEL_H", "996"))
+    panel_x = os.environ.get("CAF_DUET_PANEL_X", "W-w-120")
+    panel_y = os.environ.get("CAF_DUET_PANEL_Y", "H-h-220")
+
+    base_chain = (
+        f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[v_bg];"
+        f"[1:v]scale={panel_w}:{panel_h}:force_original_aspect_ratio=decrease,"
+        f"pad={panel_w}:{panel_h}:(ow-iw)/2:(oh-ih)/2:color={key_color},setsar=1,format=rgba,"
+        f"colorkey={key_color}:{key_sim}:{key_blend}[v_fg];"
+        f"[v_bg][v_fg]overlay=x={panel_x}:y={panel_y}:format=auto[v_mix];"
+        f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
+    )
+
+    if "captions" not in job or not job["captions"]:
+        subtitles_status = "skipped_no_captions"
+    elif srt_path.exists() and srt_path.stat().st_size == 0:
+        subtitles_status = "skipped_empty"
+    else:
+        subtitles_status = "ready_to_burn"
+
+    if subtitles_status == "ready_to_burn" and not ffmpeg_has_subtitles_filter():
+        subtitles_status = "skipped_missing_subtitles_filter"
+
+    if subtitles_status == "ready_to_burn":
+        try:
+            validate_safe_path(srt_path, sandbox_root)
+        except ValueError:
+            subtitles_status = "skipped_unsafe_path"
+
+    def build_filter(with_subtitles: bool) -> str:
+        parts = [base_chain]
+        ref = "[v_mix]"
+        if with_subtitles:
+            safe_srt = escape_ffmpeg_path(srt_path)
+            parts.append(f"{ref}subtitles=filename='{safe_srt}'[v_sub]")
+            ref = "[v_sub]"
+        parts.append(f"{ref}[wm]overlay=W-w-{PADDING_PX}:H-h-{PADDING_PX}[out]")
+        return ";".join(parts)
+
+    audio_filter = (
+        f"apad=pad_dur={duration},"
+        f"atrim=0:{duration},"
+        "loudnorm=I=-16:TP=-1.5:LRA=11,"
+        "alimiter=limit=0.95"
+    )
+    output_args = [
+        "-map",
+        "[out]",
+        "-map",
+        f"{audio_input_idx}:a:0",
+        "-t",
+        duration,
+        "-r",
+        fps,
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-af",
+        audio_filter,
+        "-movflags",
+        "+faststart",
+        "-map_metadata",
+        "-1",
+        "-map_chapters",
+        "-1",
+        str(out_mp4),
+    ]
+
+    failed_cmd = None
+    if subtitles_status == "ready_to_burn":
+        try:
+            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(True)] + output_args
+            executed_cmd = run_ffmpeg(cmd, out_mp4)
+            subtitles_status = "burned"
+        except subprocess.CalledProcessError:
+            failed_cmd = cmd
+            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(False)] + output_args
+            executed_cmd = run_ffmpeg(cmd, out_mp4)
+            subtitles_status = "failed_ffmpeg_subtitles"
+    else:
+        cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(False)] + output_args
+        executed_cmd = run_ffmpeg(cmd, out_mp4)
+
+    return {
+        "job_id": job_id,
+        "outputs": {
+            "final_mp4": str(out_mp4),
+            "final_srt": str(srt_path),
+        },
+        "hashes": {
+            "final_mp4_sha256": sha256_file(out_mp4),
+            "final_srt_sha256": sha256_file(srt_path),
+        },
+        "watermark": {
+            "bg_path": str(bg),
+            "wm_path": str(wm_path),
+            "video_width": video_w,
+            "wm_width": wm_width,
+            "padding": PADDING_PX,
+            "opacity": OPACITY,
+        },
+        "audio_source": audio_source,
+        "audio_asset_path": str(audio_asset) if audio_asset else None,
+        "has_bg_audio": has_bg_audio,
+        "subtitles_status": subtitles_status,
+        "ffmpeg_cmd": cmd,
+        "ffmpeg_cmd_executed": executed_cmd,
+        "failed_ffmpeg_cmd": failed_cmd,
+    }
+
+
+def render_dance_loop_replace_dino_with_mochi(
+    job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path
+) -> dict:
+    """Lane C slot replacement:
+    Replace the dino-cat slot in demo dance-loop style background using a keyed Mochi foreground clip.
+    """
+    job_id = job["job_id"]
+    bg_rel = job["render"]["background_asset"]
+    params = job.get("template", {}).get("params", {})
+    fg_rel = params.get("foreground_asset")
+    if not isinstance(fg_rel, str) or not fg_rel.strip():
+        raise SystemExit("dance_loop_replace_dino_with_mochi requires template.params.foreground_asset")
+
+    try:
+        bg = normalize_sandbox_path(bg_rel, sandbox_root)
+        fg = normalize_sandbox_path(fg_rel, sandbox_root)
+        validate_safe_path(bg, sandbox_root)
+        validate_safe_path(fg, sandbox_root)
+    except ValueError as e:
+        raise SystemExit(str(e))
+
+    if not bg.exists():
+        raise SystemExit(f"Missing replacement background asset: {bg}")
+    if not fg.exists():
+        raise SystemExit(f"Missing replacement foreground asset: {fg}")
+
+    out_mp4 = out_dir / "final.mp4"
+    srt_path = out_dir / "final.srt"
+    if "captions" in job and job["captions"]:
+        make_srt(job["captions"], srt_path)
+    else:
+        atomic_write_text(srt_path, "")
+
+    duration = str(job["video"]["length_seconds"])
+    fps = str(job["video"]["fps"])
+    video_w = 1080
+
+    inputs = [
+        "-stream_loop",
+        "-1",
+        "-i",
+        str(bg),
+        "-stream_loop",
+        "-1",
+        "-i",
+        str(fg),
+    ]
+    next_input_idx = 2
+
+    audio_asset = resolve_audio_asset(job, sandbox_root)
+    has_bg_audio = has_audio_stream(bg)
+    if audio_asset:
+        audio_source = "job_asset"
+        inputs.extend(["-stream_loop", "-1", "-i", str(audio_asset)])
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+    elif has_bg_audio:
+        audio_source = "bg_audio"
+        audio_input_idx = 0
+    else:
+        audio_source = "silence"
+        inputs.extend(
+            [
+                "-f",
+                "lavfi",
+                "-t",
+                duration,
+                "-i",
+                "anullsrc=channel_layout=stereo:sample_rate=48000",
+            ]
+        )
+        audio_input_idx = next_input_idx
+        next_input_idx += 1
+
+    wm_input_idx = next_input_idx
+    inputs.extend(["-i", str(wm_path)])
+
+    wm_width = max(MIN_WM_WIDTH, min(math.floor(video_w * SCALE_FACTOR), MAX_WM_WIDTH))
+    key_color = os.environ.get("CAF_DUET_KEY_COLOR", "0x66DDEE")
+    key_sim = float(os.environ.get("CAF_DUET_KEY_SIMILARITY", "0.26"))
+    key_blend = float(os.environ.get("CAF_DUET_KEY_BLEND", "0.08"))
+
+    # Tuned defaults for the dino slot position in the demo dance-loop composition.
+    # Defaults tuned from iterative fitting (v3 baseline).
+    slot_w = int(os.environ.get("CAF_REPLACE_DINO_W", "280"))
+    slot_h = int(os.environ.get("CAF_REPLACE_DINO_H", "530"))
+    slot_x = int(os.environ.get("CAF_REPLACE_DINO_X", "105"))
+    slot_y = int(os.environ.get("CAF_REPLACE_DINO_Y", "800"))
+    slot_mask_alpha = float(os.environ.get("CAF_REPLACE_DINO_MASK_ALPHA", "0.30"))
+
+    # Deterministic slot tracking motion to better follow the original dino dancer.
+    slot_dx = float(os.environ.get("CAF_REPLACE_SLOT_DX", "16"))
+    slot_dy = float(os.environ.get("CAF_REPLACE_SLOT_DY", "10"))
+    slot_hz = float(os.environ.get("CAF_REPLACE_SLOT_HZ", "1.6"))
+    slot_phase = float(os.environ.get("CAF_REPLACE_SLOT_PHASE", "0.0"))
+    slot_x_expr = f"{slot_x}+({slot_dx})*sin(2*PI*t*{slot_hz}+{slot_phase})"
+    slot_y_expr = f"{slot_y}+({slot_dy})*cos(2*PI*t*{slot_hz}+{slot_phase})"
+    fg_is_image = fg.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
+    face_only_mode = os.environ.get("CAF_REPLACE_DINO_FACE_ONLY", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if face_only_mode:
+        # Preserve the original dino dancer body/motion from the template video and
+        # swap only the head region with a Mochi face crop.
+        head_w = int(os.environ.get("CAF_REPLACE_HEAD_W", "132"))
+        head_h = int(os.environ.get("CAF_REPLACE_HEAD_H", "132"))
+        head_x = int(os.environ.get("CAF_REPLACE_HEAD_X", "152"))
+        head_y = int(os.environ.get("CAF_REPLACE_HEAD_Y", "768"))
+        head_alpha = float(os.environ.get("CAF_REPLACE_HEAD_ALPHA", "0.95"))
+        head_dx = float(os.environ.get("CAF_REPLACE_HEAD_DX", "6"))
+        head_dy = float(os.environ.get("CAF_REPLACE_HEAD_DY", "5"))
+        head_hz = float(os.environ.get("CAF_REPLACE_HEAD_HZ", "1.6"))
+        head_phase = float(os.environ.get("CAF_REPLACE_HEAD_PHASE", "0.0"))
+        head_x_expr = f"{head_x}+({head_dx})*sin(2*PI*t*{head_hz}+{head_phase})"
+        head_y_expr = f"{head_y}+({head_dy})*cos(2*PI*t*{head_hz}+{head_phase})"
+        head_radius = int(min(head_w, head_h) * 0.48)
+        head_feather = float(os.environ.get("CAF_REPLACE_HEAD_FEATHER", "4.0"))
+        base_chain = (
+            f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[v_bg];"
+            f"[1:v]scale={head_w}:{head_h}:force_original_aspect_ratio=increase,crop={head_w}:{head_h},"
+            f"setsar=1,format=rgba,eq=saturation=0.92:contrast=1.04:brightness=-0.015,colorchannelmixer=aa={head_alpha}[v_face_src];"
+            f"color=black:s={head_w}x{head_h},format=gray,"
+            f"geq=lum='if(lte((X-{head_w}/2)^2+(Y-{head_h}/2)^2,({head_radius})^2),255,0)',"
+            f"gblur=sigma={head_feather}[v_mask];"
+            f"[v_face_src][v_mask]alphamerge[v_face];"
+            f"[v_bg][v_face]overlay=x='{head_x_expr}':y='{head_y_expr}':format=auto:eval=frame[v_mix];"
+            f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
+        )
+    elif fg_is_image:
+        # Lightweight puppet motion for still-image replacement (deterministic).
+        # Adds rhythmic sway/rotation so static replacements feel dance-like.
+        sway_hz = float(os.environ.get("CAF_REPLACE_PUPPET_HZ", "1.8"))
+        sway_amp = float(os.environ.get("CAF_REPLACE_PUPPET_AMP_DEG", "2.2"))
+        scale_pulse = float(os.environ.get("CAF_REPLACE_PUPPET_SCALE_PULSE", "0.015"))
+        image_key_color = os.environ.get("CAF_REPLACE_IMAGE_KEY_COLOR", "0x66DDEE").strip()
+        image_key_sim = float(os.environ.get("CAF_REPLACE_IMAGE_KEY_SIMILARITY", "0.24"))
+        image_key_blend = float(os.environ.get("CAF_REPLACE_IMAGE_KEY_BLEND", "0.06"))
+        if image_key_color:
+            fg_src_tail = f",colorkey={image_key_color}:{image_key_sim}:{image_key_blend}[v_fg_src]"
+        else:
+            fg_src_tail = "[v_fg_src]"
+        base_chain = (
+            f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[v_bg];"
+            f"[v_bg]drawbox=x='{slot_x_expr}':y='{slot_y_expr}':w={slot_w}:h={slot_h}:color=black@{slot_mask_alpha}:t=fill[v_bg_mask];"
+            f"[1:v]scale={slot_w}:{slot_h}:force_original_aspect_ratio=increase,"
+            f"crop={slot_w}:{slot_h},setsar=1,format=rgba{fg_src_tail};"
+            f"[v_fg_src]rotate='({sway_amp}*PI/180)*sin(2*PI*t*{sway_hz})':c=none:ow=rotw(iw):oh=roth(ih),"
+            f"scale='trunc({slot_w}*(1+{scale_pulse}*sin(2*PI*t*{sway_hz}))/2)*2':'trunc({slot_h}*(1+{scale_pulse}*sin(2*PI*t*{sway_hz}))/2)*2':eval=frame,"
+            f"pad={slot_w}:{slot_h}:(ow-iw)/2:(oh-ih)/2:color=black@0.0[v_fg];"
+            f"[v_bg_mask][v_fg]overlay=x='{slot_x_expr}':y='{slot_y_expr}':format=auto:eval=frame[v_mix];"
+            f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
+        )
+    else:
+        # Foreground is expected to be a cyan-keyed generated clip.
+        base_chain = (
+            f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[v_bg];"
+            f"[v_bg]drawbox=x='{slot_x_expr}':y='{slot_y_expr}':w={slot_w}:h={slot_h}:color=black@{slot_mask_alpha}:t=fill[v_bg_mask];"
+            f"[1:v]scale={slot_w}:{slot_h}:force_original_aspect_ratio=increase,"
+            f"crop={slot_w}:{slot_h},setsar=1,format=rgba,"
+            f"colorkey={key_color}:{key_sim}:{key_blend}[v_fg];"
+            f"[v_bg_mask][v_fg]overlay=x='{slot_x_expr}':y='{slot_y_expr}':format=auto:eval=frame[v_mix];"
+            f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
+        )
+
+    if "captions" not in job or not job["captions"]:
+        subtitles_status = "skipped_no_captions"
+    elif srt_path.exists() and srt_path.stat().st_size == 0:
+        subtitles_status = "skipped_empty"
+    else:
+        subtitles_status = "ready_to_burn"
+
+    if subtitles_status == "ready_to_burn" and not ffmpeg_has_subtitles_filter():
+        subtitles_status = "skipped_missing_subtitles_filter"
+
+    if subtitles_status == "ready_to_burn":
+        try:
+            validate_safe_path(srt_path, sandbox_root)
+        except ValueError:
+            subtitles_status = "skipped_unsafe_path"
+
+    def build_filter(with_subtitles: bool) -> str:
+        parts = [base_chain]
+        ref = "[v_mix]"
+        if with_subtitles:
+            safe_srt = escape_ffmpeg_path(srt_path)
+            parts.append(f"{ref}subtitles=filename='{safe_srt}'[v_sub]")
+            ref = "[v_sub]"
+        parts.append(f"{ref}[wm]overlay=W-w-{PADDING_PX}:H-h-{PADDING_PX}[out]")
+        return ";".join(parts)
+
+    audio_filter = (
+        f"apad=pad_dur={duration},"
+        f"atrim=0:{duration},"
+        "loudnorm=I=-16:TP=-1.5:LRA=11,"
+        "alimiter=limit=0.95"
+    )
+    output_args = [
+        "-map",
+        "[out]",
+        "-map",
+        f"{audio_input_idx}:a:0",
+        "-t",
+        duration,
+        "-r",
+        fps,
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-af",
+        audio_filter,
+        "-movflags",
+        "+faststart",
+        "-map_metadata",
+        "-1",
+        "-map_chapters",
+        "-1",
+        str(out_mp4),
+    ]
+
+    failed_cmd = None
+    if subtitles_status == "ready_to_burn":
+        try:
+            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(True)] + output_args
+            executed_cmd = run_ffmpeg(cmd, out_mp4)
+            subtitles_status = "burned"
+        except subprocess.CalledProcessError:
+            failed_cmd = cmd
+            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(False)] + output_args
+            executed_cmd = run_ffmpeg(cmd, out_mp4)
+            subtitles_status = "failed_ffmpeg_subtitles"
+    else:
+        cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", build_filter(False)] + output_args
+        executed_cmd = run_ffmpeg(cmd, out_mp4)
+
+    return {
+        "job_id": job_id,
+        "outputs": {
+            "final_mp4": str(out_mp4),
+            "final_srt": str(srt_path),
+        },
+        "hashes": {
+            "final_mp4_sha256": sha256_file(out_mp4),
+            "final_srt_sha256": sha256_file(srt_path),
+        },
+        "watermark": {
+            "bg_path": str(bg),
+            "wm_path": str(wm_path),
+            "video_width": video_w,
+            "wm_width": wm_width,
+            "padding": PADDING_PX,
+            "opacity": OPACITY,
+        },
+        "audio_source": audio_source,
+        "audio_asset_path": str(audio_asset) if audio_asset else None,
+        "foreground_mode": (
+            "face_only" if face_only_mode else ("image_puppet" if fg_is_image else "video_keyed")
+        ),
+        "has_bg_audio": has_bg_audio,
+        "subtitles_status": subtitles_status,
+        "ffmpeg_cmd": cmd,
+        "ffmpeg_cmd_executed": executed_cmd,
+        "failed_ffmpeg_cmd": failed_cmd,
+    }
 
 
 def main():
@@ -717,9 +1494,18 @@ def main():
             if req_input == "render.background_asset":
                 if "background_asset" not in job.get("render", {}):
                     raise SystemExit(f"Template '{template_id}' requires 'render.background_asset' in job")
+            elif req_input == "template.params.foreground_asset":
+                params = job.get("template", {}).get("params", {})
+                if not isinstance(params, dict) or "foreground_asset" not in params:
+                    raise SystemExit(
+                        f"Template '{template_id}' requires 'template.params.foreground_asset' in job"
+                    )
             else:
                 # Strict enforcement: no aliases, no other inputs supported yet
-                raise SystemExit(f"Template '{template_id}' requires unknown input '{req_input}'. Only 'render.background_asset' is supported.")
+                raise SystemExit(
+                    f"Template '{template_id}' requires unknown input '{req_input}'. "
+                    "Only 'render.background_asset' and 'template.params.foreground_asset' are supported."
+                )
 
 
         # 4. Validate Params (Worker-side enforcement)
@@ -738,6 +1524,12 @@ def main():
         if recipe_id == "standard_render":
             # Use refactored standard logic
             render_result = render_standard(job, sandbox_root, out_dir, wm_path)
+        elif recipe_id == "duet_overlay_mochi":
+            render_result = render_duet_overlay_mochi(job, sandbox_root, out_dir, wm_path)
+        elif recipe_id == "motion_source_overlay_mochi":
+            render_result = render_motion_source_overlay_mochi(job, sandbox_root, out_dir, wm_path)
+        elif recipe_id == "dance_loop_replace_dino_with_mochi":
+            render_result = render_dance_loop_replace_dino_with_mochi(job, sandbox_root, out_dir, wm_path)
         else:
             raise SystemExit(f"Unsupported recipe_id: {recipe_id}")
 
@@ -766,6 +1558,7 @@ def main():
         "subtitles_status": render_result["subtitles_status"],
         "audio_source": render_result.get("audio_source"),
         "audio_asset_path": render_result.get("audio_asset_path"),
+        "foreground_mode": render_result.get("foreground_mode"),
         "has_bg_audio": render_result.get("has_bg_audio"),
         "ffmpeg_cmd": render_result["ffmpeg_cmd"],
         "ffmpeg_cmd_executed": render_result["ffmpeg_cmd_executed"],
