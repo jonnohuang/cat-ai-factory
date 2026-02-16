@@ -318,6 +318,31 @@ The system MUST support planner-side reference analysis artifacts for reusable p
   - metadata/patterns only; no copyrighted source media in repo canon.
   - Worker MUST NOT depend on analyzer artifacts at runtime.
 
+### FR-26.1 — Video Analyzer implementation path (planner-side/offline tooling)
+The system MUST support an implementation path that generates `video_analysis.v1`
+artifacts from video inputs for planner enrichment.
+
+- Implementation posture:
+  - analyzer execution is planner-side/offline tooling (not Worker runtime authority)
+  - outputs are metadata artifacts only and must conform to `video_analysis.v1`
+  - generated metadata is validated deterministically before use
+  - deterministic CV tooling (e.g., OpenCV) MAY be used for extraction/normalization
+- Hard constraints:
+  - no change to runtime write boundaries for Planner/Control/Worker
+  - no copyrighted source media committed into repo canon
+  - Worker MUST remain independent from analyzer artifacts at runtime authority level
+
+### FR-26.2 — Voice/Style registries (planner metadata inputs)
+The system MUST support versioned, provider-agnostic metadata registries for voice/style references.
+
+- Canonical posture:
+  - `voice_registry.v1` (hero_id -> voice adapter id/placeholder)
+  - `style_registry.v1` (style_id -> workflow/prompt fragments/keys)
+- Hard constraints:
+  - registries are planner/control-plane metadata only (not Worker authority by themselves)
+  - no secrets or identity-tied credentials in registry artifacts
+  - deterministic validation is required for registry shape and references
+
 ### FR-27 — Dance Swap v1 deterministic lane
 The system MUST support a choreography-preserving recast lane using explicit deterministic artifacts.
 
@@ -329,6 +354,19 @@ The system MUST support a choreography-preserving recast lane using explicit det
 - Hard constraints:
   - lane remains non-binding at schema level (consistent with lane policy).
   - Worker performs deterministic compositing/replacement only from explicit artifacts.
+  - deterministic CV tooling (e.g., OpenCV) MAY be used if behavior remains contract-bound.
+
+### FR-27.1 — Optional Mode B planning contracts
+The system MAY support optional, versioned planner-side contracts for Mode B planning:
+
+- `script_plan.v1`
+- `identity_anchor.v1`
+- `storyboard.v1`
+
+Hard constraints:
+- these contracts MUST NOT replace `job.json` execution authority
+- Planner/Control MAY consume them as intermediate planning/state artifacts
+- Worker behavior remains deterministic and contract-bound
 
 ### FR-28 — External HITL recast boundary (Ops/Distribution only)
 The system MUST model external recast tools (Viggle-class) as explicit Ops/Distribution steps.
@@ -341,6 +379,19 @@ The system MUST model external recast tools (Viggle-class) as explicit Ops/Distr
   - no hidden manual authority
   - Worker MUST NOT call external recast services
   - Worker performs deterministic finishing only
+
+### FR-28.1 — HITL lifecycle + pack/pointer validation contracts
+The system MUST support deterministic contract surfaces for external HITL recast lifecycle and handoff integrity.
+
+- Required contract classes:
+  - lifecycle/state artifacts for external recast steps
+  - inbox metadata pointer contract for re-ingest under `/sandbox/inbox/*.json`
+  - `viggle_pack.v1` (or equivalent) completeness/consistency schema
+- Hard constraints:
+  - canonical pack root remains `/sandbox/dist_artifacts/<job_id>/viggle_pack/**`
+  - no direct external-tool invocation inside factory components
+  - re-ingest remains explicit, auditable, and idempotent
+  - deterministic CV tooling (e.g., OpenCV) MAY be used for offline validation/preflight checks
 
 
 ------------------------------------------------------------

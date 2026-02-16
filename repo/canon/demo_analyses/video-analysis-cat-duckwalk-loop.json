@@ -1,0 +1,61 @@
+{
+  "version": "video_analysis.v1",
+  "analysis_id": "cat-duckwalk-loop",
+  "analyzed_at": "2026-02-16T10:35:00Z",
+  "source": {
+    "source_type": "demo_reference",
+    "reference_label": "cat duckwalk groove reference",
+    "content_fingerprint": "b1c2d3e4f5a6b7c8",
+    "copyright_safe_metadata_only": true
+  },
+  "pattern": {
+    "lane_hints": [
+      "image_motion",
+      "dance_swap"
+    ],
+    "duration_bucket": "short_0_15",
+    "tags": [
+      "duckwalk",
+      "groove",
+      "side-step",
+      "medium-energy"
+    ],
+    "choreography": {
+      "beats": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 2.0,
+          "label": "left-duckwalk"
+        },
+        {
+          "start_sec": 2.0,
+          "end_sec": 4.0,
+          "label": "right-duckwalk"
+        },
+        {
+          "start_sec": 4.0,
+          "end_sec": 6.0,
+          "label": "bounce-hold"
+        }
+      ],
+      "energy_curve": "wave"
+    },
+    "camera": {
+      "shot_pattern": [
+        "medium",
+        "static"
+      ],
+      "motion_notes": "Static framing works well; preserve floor visibility for leg readability."
+    },
+    "looping": {
+      "loop_start_sec": 0.0,
+      "loop_end_sec": 6.0,
+      "seamless_confidence": 0.93
+    }
+  },
+  "summary": "Compact duckwalk groove pattern suitable for short-loop assets and repeatable recast.",
+  "safety": {
+    "no_embedded_copyright_media": true,
+    "notes": "Metadata only; no source media stored in repo canon."
+  }
+}

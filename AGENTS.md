@@ -163,6 +163,11 @@ Video Analyzer (planner-only metadata canon):
 * `repo/canon/demo_analyses/**` (metadata only)
 * `repo/shared/video_analysis*.schema.json` (when present)
 
+Voice/style registries (planner/control metadata inputs):
+
+* `repo/shared/voice_registry.v1.json` (when present)
+* `repo/shared/style_registry.v1.json` (when present)
+
 PlanRequest (UI-agnostic plan input contract):
 
 * `repo/shared/plan_request.v1.schema.json` (PR21.5)
@@ -447,6 +452,8 @@ External recast/HITL rule (ADR-0044):
 * re-ingest to factory MUST be explicit inbox metadata under:
   - `sandbox/inbox/*.json`
 * no hidden manual file drops become authoritative state
+* optional validation schema for pack completeness/consistency:
+  - `viggle_pack.v1` (when present)
 
 Ops workflow automation (e.g., n8n) is allowed only in this layer:
 

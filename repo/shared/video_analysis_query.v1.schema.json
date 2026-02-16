@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/video_analysis_query.v1.schema.json",
+  "title": "Video Analysis Query v1",
+  "description": "Planner-only deterministic retrieval query over video analysis metadata canon.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "query_id",
+    "requested_at",
+    "retrieval"
+  ],
+  "properties": {
+    "version": {
+      "const": "video_analysis_query.v1"
+    },
+    "query_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "retrieval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_results",
+        "must_have_tags",
+        "sort"
+      ],
+      "properties": {
+        "max_results": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "must_have_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "nice_to_have_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "lane_hint": {
+          "type": "string",
+          "enum": [
+            "ai_video",
+            "image_motion",
+            "template_remix",
+            "dance_swap",
+            "mixed"
+          ]
+        },
+        "duration_bucket": {
+          "type": "string",
+          "enum": [
+            "short_0_15",
+            "short_16_30",
+            "short_31_60"
+          ]
+        },
+        "sort": {
+          "const": "priority_desc_analysis_id_asc"
+        }
+      }
+    }
+  }
+}

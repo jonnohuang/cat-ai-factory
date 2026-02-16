@@ -1,0 +1,18 @@
+{
+  "version": "video_analysis_query.v1",
+  "query_id": "query-kick-spin-danceswap",
+  "requested_at": "2026-02-16T11:05:00Z",
+  "retrieval": {
+    "max_results": 2,
+    "must_have_tags": [
+      "loopable"
+    ],
+    "nice_to_have_tags": [
+      "kick",
+      "spin"
+    ],
+    "lane_hint": "dance_swap",
+    "duration_bucket": "short_16_30",
+    "sort": "priority_desc_analysis_id_asc"
+  }
+}

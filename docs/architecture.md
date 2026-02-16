@@ -25,6 +25,10 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
 
 - RAG is planner-only.
 - Video Analyzer canon is planner-only metadata (no Worker runtime authority).
+- Video Analyzer generation is planner-side/offline tooling that produces metadata artifacts only.
+- Analyzer generation must not change runtime write boundaries; Worker remains independent of analyzer authority.
+- Voice/style registries are planner/control metadata inputs (provider-agnostic; validated; no secrets).
+- Deterministic CV utilities (e.g., OpenCV) are implementation tools, not authority layers.
 - Planner-side asset generation (e.g., AI-generated templates or seed frames) is permitted,
   but generated assets are treated as explicit inputs and must not change Worker determinism.
 
@@ -118,6 +122,18 @@ These are inputs only. The Planner MUST NOT modify them.
   - `repo/examples/plan_request.v1.example.json`
   - (schema) `repo/shared/plan_request.v1.schema.json`
   - Adapters (Telegram, Coze, future UIs) emit PlanRequest v1; Planner remains the authority.
+
+- Video Analyzer metadata canon (planner enrichment; metadata-only):
+  - schemas: `repo/shared/video_analysis*.schema.json`
+  - metadata instances/index: `repo/canon/demo_analyses/**`
+  - query/result examples: `repo/examples/video_analysis_*.example.json`
+  - generation posture: planner-side/offline tooling, not Worker runtime authority
+
+- Optional Mode B planning contracts (intermediate; planner/control-facing):
+  - `script_plan.v1`
+  - `identity_anchor.v1`
+  - `storyboard.v1`
+  - authority rule: these never replace `job.json` execution authority
 
 Note:
 - CrewAI (PR-22.2) is a planner-only implementation detail and must be contained inside a LangGraph node/subgraph.
@@ -250,6 +266,10 @@ Notes:
 - Idempotency authority for publishing is:
   - `/sandbox/dist_artifacts/<job_id>/<platform>.state.json`
   - keyed by `{job_id, platform}`
+- External HITL recast lifecycle/pointer contracts are explicit:
+  - pack root: `sandbox/dist_artifacts/<job_id>/viggle_pack/**`
+  - re-ingest pointer: `sandbox/inbox/*.json`
+  - optional pack schema: `viggle_pack.v1` (for completeness/consistency checks)
 
 ------------------------------------------------------------
 

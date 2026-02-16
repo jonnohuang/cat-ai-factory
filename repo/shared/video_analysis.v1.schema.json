@@ -1,0 +1,229 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/video_analysis.v1.schema.json",
+  "title": "Video Analysis v1",
+  "description": "Planner-only metadata analysis artifact for reusable pacing/choreography/camera patterns.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "analysis_id",
+    "analyzed_at",
+    "source",
+    "pattern",
+    "safety"
+  ],
+  "properties": {
+    "version": {
+      "const": "video_analysis.v1"
+    },
+    "analysis_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "analyzed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_type",
+        "reference_label",
+        "copyright_safe_metadata_only"
+      ],
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "enum": [
+            "demo_reference",
+            "public_reference",
+            "internal_output"
+          ]
+        },
+        "reference_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "content_fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8,64}$"
+        },
+        "copyright_safe_metadata_only": {
+          "const": true
+        }
+      }
+    },
+    "pattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lane_hints",
+        "duration_bucket",
+        "tags",
+        "choreography",
+        "camera",
+        "looping"
+      ],
+      "properties": {
+        "lane_hints": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "ai_video",
+              "image_motion",
+              "template_remix",
+              "dance_swap",
+              "mixed"
+            ]
+          }
+        },
+        "duration_bucket": {
+          "type": "string",
+          "enum": [
+            "short_0_15",
+            "short_16_30",
+            "short_31_60"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "choreography": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "beats"
+          ],
+          "properties": {
+            "beats": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/beat"
+              }
+            },
+            "energy_curve": {
+              "type": "string",
+              "enum": [
+                "flat",
+                "build",
+                "spike",
+                "wave"
+              ]
+            }
+          }
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shot_pattern"
+          ],
+          "properties": {
+            "shot_pattern": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "wide",
+                  "medium",
+                  "close",
+                  "tracking",
+                  "topdown",
+                  "static"
+                ]
+              }
+            },
+            "motion_notes": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "looping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "loop_start_sec",
+            "loop_end_sec",
+            "seamless_confidence"
+          ],
+          "properties": {
+            "loop_start_sec": {
+              "type": "number",
+              "minimum": 0
+            },
+            "loop_end_sec": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "seamless_confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 280
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "no_embedded_copyright_media"
+      ],
+      "properties": {
+        "no_embedded_copyright_media": {
+          "const": true
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    }
+  },
+  "definitions": {
+    "beat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_sec",
+        "end_sec",
+        "label"
+      ],
+      "properties": {
+        "start_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end_sec": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      }
+    }
+  }
+}

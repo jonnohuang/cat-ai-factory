@@ -14,72 +14,91 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-31 — Media contracts + analyzer + dance-swap architecture lock (docs/ADRs)**
+PR: **PR-32.1 — Analyzer implementation (planner-side runtime; metadata-only output)**
 Last Updated: 2026-02-16
 
 ### Status by Role
 - ARCH: In Progress
 - CODEX: Pending
-- CLOUD-REVIEW: Not Required (PR-31 is non-cloud scope)
+- CLOUD-REVIEW: Not Required (PR-32.1 is non-cloud scope)
 
 ### Decisions / ADRs Touched
-- ADR-0040 (Media Stack v1 contracts)
 - ADR-0041 (Video Analyzer planner-side canon contracts)
-- ADR-0042 (Dance Swap v1 deterministic lane)
-- ADR-0043 (Mode B default stack strategy)
-- ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
-- `docs/decisions.md`: appended ADR-0040..ADR-0044 to lock media-quality architecture decisions (PR-31 track).
-- `docs/PR_PROJECT_PLAN.md`: Phase 7 cloud PRs (PR-26..PR-30) explicitly deferred; Phase 8 media-quality track (PR-31..PR-34) set active.
-- `docs/now.md`: switched active ledger to PR-31 for media/contracts architecture lock.
+- `docs/PR_PROJECT_PLAN.md`:
+  - PR-31 status updated to COMPLETED
+  - PR-32 status updated to COMPLETED
+  - PR-32.1 status updated to ACTIVE
+  - added implementation sub-PRs:
+    - PR-32.1 (analyzer runtime implementation)
+    - PR-33.1 (Dance Swap deterministic recipe implementation)
+    - PR-34.1 (external HITL recast flow implementation)
+  - added additional sub-PR planning scopes:
+    - PR-32.2 (voice/style registries contracts + validation)
+    - PR-33.2 (Media Stack v1 staged implementation)
+    - PR-33.3 (optional Mode B contract expansion)
+    - PR-34.2 (HITL lifecycle + inbox pointer contracts)
+    - PR-34.3 (`viggle_pack.v1` schema + validation)
+- Docs alignment updates for new sub-PR scope:
+  - `docs/system-requirements.md`:
+    - FR-26.2 (voice/style registries)
+    - FR-27.1 (optional Mode B planning contracts)
+    - FR-28.1 (HITL lifecycle + pack/pointer validation contracts)
+  - `docs/architecture.md`:
+    - added voice/style registry posture + optional Mode B contract note
+    - added explicit HITL lifecycle/pointer/pack-schema notes
+  - `AGENTS.md`:
+    - added planner/control voice/style registry references
+    - added optional `viggle_pack.v1` validation schema note
+- Added PR-32 planner-only Video Analyzer contracts:
+  - `repo/shared/video_analysis.v1.schema.json`
+  - `repo/shared/video_analysis_index.v1.schema.json`
+  - `repo/shared/video_analysis_query.v1.schema.json`
+  - `repo/shared/video_analysis_query_result.v1.schema.json`
+- Added PR-32 canon metadata samples and index:
+  - `repo/canon/demo_analyses/video-analysis-cat-kick-spin.json`
+  - `repo/canon/demo_analyses/video-analysis-cat-duckwalk-loop.json`
+  - `repo/canon/demo_analyses/video_analysis_index.v1.json`
+  - `repo/canon/demo_analyses/README.md`
+- Added PR-32 examples:
+  - `repo/examples/video_analysis.v1.example.json`
+  - `repo/examples/video_analysis_query.v1.example.json`
+  - `repo/examples/video_analysis_query_result.v1.example.json`
+- Added PR-32 deterministic validation glue:
+  - `repo/tools/validate_video_analysis.py`
+  - enforces cross-field timing semantics (`end_sec > start_sec`, `loop_end_sec > loop_start_sec`)
+- Smoke validation (Conda `cat-ai-factory`):
+  - `jsonschema` available (`4.26.0`)
+  - all PR-32 schema/example/canon validations passed
+  - `validate_video_analysis.py` passed for canon samples + example
+- PR-32 closeout:
+  - contracts/examples/canon samples + deterministic validation glue completed and verified
+  - roadmap + docs alignment updated for implementation handoff
 
 ### Open Findings / Conditions
 - Roadmap policy:
   - Cloud migration PRs are postponed until quality-video track (PR-31..PR-34) is complete and accepted.
   - Execution order override: Phase 8 runs first; Phase 7 resumes after Phase 8 closeout.
-- Boundary lock:
-  - Planner authority remains `job.json`; stage manifests cannot bypass contract authority.
-  - Worker stays deterministic and output-bound.
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
-- External-tool lock:
-  - Viggle-class steps are explicit Ops/Distribution HITL flow, not internal Worker logic.
-  - Re-ingest is via inbox metadata contract, not ad-hoc hidden manual file drops.
+- PR-32.1 scope lock:
+  - planner-side/offline analyzer implementation only
+  - metadata-only outputs (`video_analysis.v1`) with deterministic validation
+  - no Worker runtime authority change
 
 ### Next Action (Owner + Task)
-- CODEX: open PR-31 implementation branch for docs/contracts-only changes (schemas + canon placement + lifecycle wording).
-- ARCH: prepare PR-32 CODEX handoff prompt (analyzer contract implementation scope only).
+- CODEX: implement PR-32.1 analyzer runtime and smoke validation path in the active Conda environment.
+- ARCH: review PR-32.1 implementation for boundary compliance and then hand off PR-32.2.
 
-### ARCH Decision Queue Snapshot (PR-31 Baseline)
-1) Media Stack v1:
-- Approved with modification: planner authority (`job.json`) is preserved.
-- ADR required and now locked (ADR-0040).
-
-2) Video Analyzer contracts:
+### ARCH Decision Queue Snapshot (PR-32.1 Focus)
+1) Video Analyzer contracts:
 - Approved as planner enrichment layer.
 - Metadata-only canon and index/query contracts.
 - ADR required and now locked (ADR-0041).
-
-3) Dance Swap v1 lane:
-- Approved as deterministic choreography-preserving replacement lane.
-- Explicit tracks/masks/loop artifacts.
-- ADR required and now locked (ADR-0042).
-
-4) External stack strategy (Mode B):
-- Approved as default: deterministic daily path + optional premium hosted generation.
-- ADR required and now locked (ADR-0043).
-
-5) 3-plane wording clarification:
-- Approved wording: "3-plane orchestration with a multi-stage deterministic Worker production pipeline."
-- Reflected in architecture narrative updates for PR-31 docs scope.
-
-6) Viggle-class integration:
-- Approved with boundary correction:
-  - external Ops/Distribution HITL only
-  - explicit pack export and re-ingest contracts
-  - no hidden manual authority.
-- ADR required and now locked (ADR-0044).
+2) Video Analyzer runtime implementation:
+- Approved as planner-side/offline tooling with deterministic validation gates.
+- Must preserve runtime write boundaries and Worker authority separation.
 
 ------------------------------------------------------------
