@@ -1,0 +1,18 @@
+{
+  "version": "voice_registry.v1",
+  "generated_at": "2026-02-16T18:00:00Z",
+  "voices": [
+    {
+      "hero_id": "tiger-black",
+      "provider": "placeholder",
+      "voice_id": "voice-tiger-black",
+      "display_name": "Tiger Black Default Voice",
+      "safe_placeholder": true,
+      "tts_defaults": {
+        "stability": 0.62,
+        "style": 0.55,
+        "speed": 1.0
+      }
+    }
+  ]
+}

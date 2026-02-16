@@ -14,13 +14,13 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-32.2 — Voice/Style registries (contracts + validation)**
+PR: **PR-33 — Dance Swap v1 deterministic lane (tracks/masks/loop artifacts)**
 Last Updated: 2026-02-16
 
 ### Status by Role
 - ARCH: In Progress
 - CODEX: Pending
-- CLOUD-REVIEW: Not Required (PR-32.2 is non-cloud scope)
+- CLOUD-REVIEW: Not Required (PR-33 is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
@@ -30,7 +30,8 @@ Last Updated: 2026-02-16
   - PR-31 status updated to COMPLETED
   - PR-32 status updated to COMPLETED
   - PR-32.1 status updated to COMPLETED
-  - PR-32.2 status updated to ACTIVE
+  - PR-32.2 status updated to COMPLETED
+  - PR-33 status updated to ACTIVE
   - added implementation sub-PRs:
     - PR-32.1 (analyzer runtime implementation)
     - PR-33.1 (Dance Swap deterministic recipe implementation)
@@ -91,6 +92,19 @@ Last Updated: 2026-02-16
 - PR-32.1 closeout:
   - analyzer runtime implementation completed with OpenCV-aware deterministic fallback
   - requirements/ledger alignment updated for CV dependency visibility
+- Added PR-32.2 voice/style registry contracts + examples + validators:
+  - `repo/shared/voice_registry.v1.schema.json`
+  - `repo/shared/style_registry.v1.schema.json`
+  - `repo/shared/voice_registry.v1.json`
+  - `repo/shared/style_registry.v1.json`
+  - `repo/examples/voice_registry.v1.example.json`
+  - `repo/examples/style_registry.v1.example.json`
+  - `repo/tools/validate_voice_registry.py`
+  - `repo/tools/validate_style_registry.py`
+- PR-32.2 smoke validation (Conda `cat-ai-factory`):
+  - registry schemas/examples JSON parse checks passed
+  - `validate_voice_registry.py` passed
+  - `validate_style_registry.py` passed
 
 ### Open Findings / Conditions
 - Roadmap policy:
@@ -99,16 +113,16 @@ Last Updated: 2026-02-16
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
-- PR-32.2 scope lock:
-  - contracts/validators/examples only for voice/style registries
-  - provider-agnostic metadata posture (no secrets/PII)
-  - no Worker runtime behavior changes
+- PR-33 scope lock:
+  - lane contracts/artifacts only (loop bounds/tracks/masks/optional beat-flow)
+  - preserve non-binding lane policy (ADR-0024)
+  - no Worker runtime behavior change in PR-33 (implementation is PR-33.1)
 
 ### Next Action (Owner + Task)
-- CODEX: implement PR-32.2 voice/style registry schemas, examples, and deterministic validators.
-- ARCH: review PR-32.2 for boundary compliance and prepare PR-33 handoff.
+- ARCH: review PR-32.2 closeout and confirm PR-33 contract scope boundaries.
+- CODEX: implement PR-33 contract artifacts/schemas/examples for Dance Swap v1 lane.
 
-### ARCH Decision Queue Snapshot (PR-32.2 Focus)
+### ARCH Decision Queue Snapshot (PR-33 Focus)
 1) Video Analyzer contracts:
 - Approved as planner enrichment layer.
 - Metadata-only canon and index/query contracts.
@@ -116,5 +130,8 @@ Last Updated: 2026-02-16
 2) Voice/style registry contracts:
 - Approved as provider-agnostic planner/control metadata inputs.
 - Must include deterministic validation and no secrets/PII in committed artifacts.
+3) Dance Swap v1 contracts:
+- Approved as deterministic choreography-preserving lane artifact layer.
+- Contract set must remain lane-permissive and preserve `job.json` authority.
 
 ------------------------------------------------------------

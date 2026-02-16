@@ -1,0 +1,23 @@
+{
+  "version": "style_registry.v1",
+  "generated_at": "2026-02-16T18:00:00Z",
+  "styles": [
+    {
+      "style_id": "dance-loop-demo",
+      "display_name": "Dance Loop Demo",
+      "provider": "placeholder",
+      "workflow_ref": "workflow-dance-loop-demo",
+      "prompt_fragments": [
+        "single locked full-body framing",
+        "clear beat-level choreography changes"
+      ],
+      "lane_hints": [
+        "template_remix",
+        "dance_swap"
+      ],
+      "costume_profile_ids": [
+        "dance_loop_group_set"
+      ]
+    }
+  ]
+}

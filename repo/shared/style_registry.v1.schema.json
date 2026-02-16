@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/style_registry.v1.schema.json",
+  "title": "Style Registry v1",
+  "description": "Provider-agnostic style registry for planner/control metadata references.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "generated_at",
+    "styles"
+  ],
+  "properties": {
+    "version": {
+      "const": "style_registry.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "styles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/style_entry"
+      }
+    }
+  },
+  "definitions": {
+    "kebab_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "caf_profile_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "style_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "style_id",
+        "display_name",
+        "provider",
+        "workflow_ref",
+        "lane_hints"
+      ],
+      "properties": {
+        "style_id": {
+          "$ref": "#/definitions/kebab_id"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "provider": {
+          "type": "string",
+          "enum": [
+            "comfyui",
+            "vertex",
+            "placeholder"
+          ]
+        },
+        "workflow_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "prompt_fragments": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 64
+        },
+        "lane_hints": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "ai_video",
+              "image_motion",
+              "template_remix",
+              "dance_swap",
+              "mixed"
+            ]
+          }
+        },
+        "costume_profile_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/definitions/caf_profile_id"
+          }
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    }
+  }
+}
