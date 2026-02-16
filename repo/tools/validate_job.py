@@ -111,6 +111,23 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
                 if fidelity not in ("high", "medium"):
                     errors.append(f"creativity.canon_fidelity must be one of ['high', 'medium'] (got {fidelity!r})")
 
+    lane = job.get("lane")
+    if lane == "dance_swap":
+        ds = job.get("dance_swap")
+        if not isinstance(ds, dict):
+            errors.append("lane='dance_swap' requires dance_swap object")
+        else:
+            for key in ("loop_artifact", "tracks_artifact", "foreground_asset"):
+                val = ds.get(key)
+                if not isinstance(val, str) or not val.strip():
+                    errors.append(f"dance_swap.{key} must be a non-empty string")
+            beatflow = ds.get("beatflow_artifact")
+            if beatflow is not None and (not isinstance(beatflow, str) or not beatflow.strip()):
+                errors.append("dance_swap.beatflow_artifact must be a non-empty string when present")
+            subject_id = ds.get("subject_id")
+            if subject_id is not None and (not isinstance(subject_id, str) or not subject_id.strip()):
+                errors.append("dance_swap.subject_id must be a non-empty string when present")
+
     return errors
 
 
