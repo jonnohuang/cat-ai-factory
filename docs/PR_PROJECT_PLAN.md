@@ -886,7 +886,7 @@ Outcome:
 ---
 
 ### PR-32.2 — Voice/Style registries (contracts + validation)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Add versioned registry contracts and examples:
@@ -901,7 +901,7 @@ Outcome:
 ---
 
 ### PR-33 — Dance Swap v1 deterministic lane (tracks/masks/loop artifacts)
-Status: **PLANNED**
+Status: **ACTIVE**
 
 Scope:
 - Introduce lane-specific contracts for:

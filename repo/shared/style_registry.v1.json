@@ -1,0 +1,42 @@
+{
+  "version": "style_registry.v1",
+  "generated_at": "2026-02-16T18:00:00Z",
+  "styles": [
+    {
+      "style_id": "dance-loop-demo",
+      "display_name": "Dance Loop Demo",
+      "provider": "placeholder",
+      "workflow_ref": "workflow-dance-loop-demo",
+      "prompt_fragments": [
+        "single locked full-body framing",
+        "clear beat-level choreography changes",
+        "loop-friendly ending pose"
+      ],
+      "lane_hints": [
+        "template_remix",
+        "dance_swap"
+      ],
+      "costume_profile_ids": [
+        "dance_loop_group_set"
+      ],
+      "notes": "Maps to demo dance-loop profile while remaining provider-agnostic."
+    },
+    {
+      "style_id": "mochi-kitten-loop",
+      "display_name": "Mochi Kitten Demo Loop",
+      "provider": "placeholder",
+      "workflow_ref": "workflow-mochi-kitten-loop",
+      "prompt_fragments": [
+        "kitten-like proportions with preserved mochi tabby identity",
+        "cute expressive face with loop reset"
+      ],
+      "lane_hints": [
+        "image_motion",
+        "template_remix"
+      ],
+      "costume_profile_ids": [
+        "mochi_kitten_demo_loop"
+      ]
+    }
+  ]
+}

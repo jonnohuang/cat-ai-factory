@@ -1,0 +1,43 @@
+{
+  "version": "voice_registry.v1",
+  "generated_at": "2026-02-16T18:00:00Z",
+  "voices": [
+    {
+      "hero_id": "tiger-black",
+      "provider": "placeholder",
+      "voice_id": "voice-tiger-black",
+      "display_name": "Tiger Black Default Voice",
+      "safe_placeholder": true,
+      "notes": "Placeholder id for local deterministic planning; provider mapping occurs externally.",
+      "tts_defaults": {
+        "stability": 0.62,
+        "style": 0.55,
+        "speed": 1.0
+      }
+    },
+    {
+      "hero_id": "dino-tabby",
+      "provider": "placeholder",
+      "voice_id": "voice-dino-tabby",
+      "display_name": "Dino Tabby Default Voice",
+      "safe_placeholder": true,
+      "tts_defaults": {
+        "stability": 0.58,
+        "style": 0.6,
+        "speed": 1.0
+      }
+    },
+    {
+      "hero_id": "mochi-grey-tabby",
+      "provider": "placeholder",
+      "voice_id": "voice-mochi-grey-tabby",
+      "display_name": "Mochi Grey Tabby Default Voice",
+      "safe_placeholder": true,
+      "tts_defaults": {
+        "stability": 0.64,
+        "style": 0.53,
+        "speed": 1.0
+      }
+    }
+  ]
+}
