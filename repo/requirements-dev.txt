@@ -28,5 +28,8 @@ langgraph>=0.1.0
 # --- Optional: CrewAI demo (planner-only) ---
 crewai>=0.35.0
 
+# --- Optional: deterministic CV tooling (planner/offline + worker utilities) ---
+opencv-python-headless>=4.10.0
+
 # --- Optional: static typing (keep lightweight) ---
 mypy>=1.8.0

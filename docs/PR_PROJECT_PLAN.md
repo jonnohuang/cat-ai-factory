@@ -865,7 +865,7 @@ Outcome:
 ---
 
 ### PR-32.1 — Analyzer implementation (planner-side runtime; metadata-only output)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Implement planner-side analyzer runtime that ingests video input and emits `video_analysis.v1` artifacts.
@@ -886,7 +886,7 @@ Outcome:
 ---
 
 ### PR-32.2 — Voice/Style registries (contracts + validation)
-Status: **PLANNED**
+Status: **ACTIVE**
 
 Scope:
 - Add versioned registry contracts and examples:
