@@ -95,6 +95,11 @@ Planned (ADR-0034):
   - `sandbox/output/<job_id>/**`
 - Must NOT call external APIs.
 
+Clarification (ADR-0040/ADR-0042):
+- CAF uses **3-plane orchestration with a multi-stage deterministic Worker production pipeline**.
+- Worker staging artifacts (e.g., frame/audio/timeline/render manifests) are execution artifacts, not planning authority.
+- `job.json` remains the execution authority contract.
+
 Frameworks (LangGraph, CrewAI, etc.), RAG, and auxiliary “agents” must be treated as
 **adapters**, not foundations, and must not violate these plane boundaries.
 CrewAI (when used) MUST be contained inside the Planner workflow (LangGraph) and must not become a control plane.
@@ -201,6 +206,11 @@ Lane policy stance:
 - `job.lane` may be omitted.
 - Schema must remain permissive.
 - Runtime recipes decide what inputs are required.
+
+Quality-oriented extensions (ADR-0041/ADR-0042/ADR-0044):
+- Video Analyzer artifacts are planner-only metadata canon (no Worker runtime authority).
+- Dance Swap v1 is a deterministic choreography-preserving recast lane.
+- External recast tools (Viggle-class) are explicit Ops/Distribution HITL steps, never internal Worker engines.
 
 Creativity controls:
 - `job.creativity` is an OPTIONAL planner-only input that influences tone/canon strictness.

@@ -712,11 +712,15 @@ Outcome:
 
 ------------------------------------------------------------
 
-## Phase 7 — Cloud v0.5 Migration (PLANNED)
+## Phase 7 — Cloud v0.5 Migration (DEFERRED)
 
 Purpose: demonstrate cloud literacy while preserving LOCAL guarantees.
 Phase 7 is staged: early PRs define mappings and local stubs; live GCP provisioning
 is deferred to a dedicated infra PR.
+Execution policy:
+- Phase 7 implementation PRs (PR-26..PR-30) are explicitly postponed until quality-video track
+  PR-31..PR-34 reaches accepted output quality and deterministic handoff readiness.
+- Execution order override: Phase 8 is intentionally executed before returning to Phase 7.
 
 ### PR-23 — Cloud artifact layout (GCS + Firestore mapping)
 Status: **COMPLETED**
@@ -757,7 +761,7 @@ Outcome:
 ---
 
 ### PR-26 — Budget guardrails + enforcement (local + cloud)
-Status: **PLANNED**
+Status: **DEFERRED**
 
 Scope:
 - Cost estimation and caps (hard stop) before spending
@@ -769,7 +773,7 @@ Outcome:
 ---
 
 ### PR-27 — CI/CD skeleton
-Status: **PLANNED**
+Status: **DEFERRED**
 
 Scope:
 - Lint + harness execution
@@ -778,8 +782,10 @@ Scope:
 Outcome:
 - Portfolio-grade hygiene
 
+---
+
 ### PR-28 — Coze wiring (Cloud Run ingress client; PlanRequest.v1 → Firestore/GCS)
-Status: **PLANNED**
+Status: **DEFERRED**
 
 Scope:
 - Wire Coze to call CAF Cloud Run ingress endpoint (e.g., `/ingress/plan`).
@@ -793,7 +799,7 @@ Outcome:
 ---
 
 ### PR-29 — n8n workflows (post-cloud ops layer; human approval + manual publish)
-Status: **PLANNED**
+Status: **DEFERRED**
 
 Scope:
 - Introduce n8n as an ops/workflow client layer after cloud state exists (Firestore/GCS).
@@ -809,8 +815,8 @@ Outcome:
 
 ---
 
-### PR-30 — Terraform infra (live GCP provisioning; required)
-Status: **PLANNED**
+### PR-30 — Terraform infra (live GCP provisioning; required, Phase 7 infra track)
+Status: **DEFERRED**
 
 Scope:
 - Terraform for Cloud Run + Cloud Tasks + Firestore + GCS (placeholders only in repo)
@@ -819,6 +825,73 @@ Scope:
 
 Outcome:
 - Reproducible, reviewable infra provisioning without polluting core docs or contracts
+
+---
+
+## Phase 8 — Media Quality & Recast Contracts (ACTIVE)
+
+Purpose: lock deterministic media contracts and quality/recast pathways without breaking
+three-plane authority or cloud sequencing.
+Execution order:
+- Active now; complete PR-31..PR-34 before resuming deferred Phase 7 PRs.
+
+### PR-31 — Media contracts + analyzer + lane docs/ADRs (no runtime code)
+Status: **PLANNED**
+
+Scope:
+- Lock ADR-backed contract posture for:
+  - Media Stack v1 stage artifacts
+  - Video Analyzer planner-side metadata canon
+  - Dance Swap v1 deterministic lane
+  - External HITL recast boundary
+- Docs/contracts only; no runtime code changes required.
+
+Outcome:
+- Canonical boundaries are explicit before deeper implementation PRs.
+
+---
+
+### PR-32 — Analyzer contracts + query path (planner enrichment only)
+Status: **PLANNED**
+
+Scope:
+- Add versioned analyzer schemas and metadata index artifacts.
+- Add deterministic planner-side lookup contract(s) for pattern retrieval.
+- No Worker dependency on analyzer artifacts.
+
+Outcome:
+- Planner can reuse structured pacing/choreography/camera patterns safely.
+
+---
+
+### PR-33 — Dance Swap v1 deterministic lane (tracks/masks/loop artifacts)
+Status: **PLANNED**
+
+Scope:
+- Introduce lane-specific contracts for:
+  - loop bounds
+  - subject tracks
+  - mask references
+  - optional beat/flow metadata
+- Deterministic Worker recipe consumes explicit artifacts only.
+- Preserve non-binding lane semantics (ADR-0024).
+
+Outcome:
+- Recast-quality path for choreography-preserving hero replacement is available.
+
+---
+
+### PR-34 — External HITL recast flow (Viggle pack export + re-ingest contract)
+Status: **PLANNED**
+
+Scope:
+- Model external recast as Ops/Distribution flow with explicit states/artifacts.
+- Export deterministic recast packs to `sandbox/dist_artifacts/<job_id>/viggle_pack/**`.
+- Define ingress metadata contract for re-ingested external result.
+- Worker performs deterministic finishing only.
+
+Outcome:
+- Fast quality iteration with explicit manual boundary and auditability.
 
 
 ------------------------------------------------------------

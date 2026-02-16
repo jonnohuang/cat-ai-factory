@@ -1252,3 +1252,147 @@ References:
 - docs/PR_PROJECT_PLAN.md
 - docs/decisions.md (ADR-0006, ADR-0007, ADR-0014, ADR-0017, ADR-0024)
 
+------------------------------------------------------------
+
+## ADR-0040 — Media Stack v1 contracts (planner authority preserved; Worker executes stages)
+Date: 2026-02-16
+Status: Accepted
+
+Context:
+- CAF needs clearer media-stage contracts for frame/audio/edit/render while preserving three-plane authority.
+- Planner remains the only author of execution intent (`job.json` authority).
+- Worker can be multi-stage internally, but must remain deterministic and output-bound.
+
+Decision:
+- Adopt Media Stack v1 contract families:
+  - `frame_manifest.v1`
+  - `audio_manifest.v1`
+  - `timeline.v1`
+  - `render_manifest.v1`
+- These manifests are Worker-stage artifacts and MUST NOT bypass `job.json` as execution authority.
+- Planner may define stage intent and options in contract form; Control Plane schedules deterministically; Worker executes deterministically.
+- Worker write boundary remains unchanged:
+  - `sandbox/output/<job_id>/**` only.
+
+Consequences:
+- Improves inspectability and testability of media pipeline stages.
+- Preserves deterministic execution and current filesystem boundaries.
+- Enables future engine upgrades (Comfy/ElevenLabs/etc.) without authority drift.
+
+References:
+- docs/master.md
+- docs/architecture.md
+- AGENTS.md
+- docs/system-requirements.md
+
+------------------------------------------------------------
+
+## ADR-0041 — Video Analyzer v1 is planner-side metadata canon (no media authority)
+Date: 2026-02-16
+Status: Accepted
+
+Context:
+- CAF needs reusable pattern extraction from reference videos (timing, pacing, camera language, loop cues).
+- This should enrich planning without introducing nondeterminism into Worker runtime.
+
+Decision:
+- Introduce planner-side Video Analyzer v1 contracts:
+  - `video_analysis.v1`
+  - `video_analysis_index.v1`
+  - optional planner query/result contracts for deterministic retrieval.
+- Canon storage:
+  - schemas under `repo/shared/*.schema.json`
+  - metadata instances under `repo/canon/demo_analyses/**`.
+- Hard rule:
+  - store metadata/patterns only; no copyrighted source media in repo canon.
+- Worker MUST NOT read analyzer artifacts for runtime authority.
+
+Consequences:
+- Enables repeatable planning patterns and future RAG/index lookup.
+- Keeps Worker deterministic and independent from analyzer state.
+
+References:
+- docs/master.md
+- docs/architecture.md
+- AGENTS.md
+
+------------------------------------------------------------
+
+## ADR-0042 — Dance Swap v1 lane for deterministic choreography-preserving recast
+Date: 2026-02-16
+Status: Accepted
+
+Context:
+- Prompt/video-reference generation alone cannot reliably deliver exact choreography plus stable hero identity.
+- Recast quality requires explicit deterministic edit artifacts (tracking/masks/loop bounds).
+
+Decision:
+- Add Dance Swap v1 as a deterministic lane focused on choreography-preserving replacement.
+- Standardize planner/control-visible artifacts (schema names finalised in contracts PR):
+  - loop bounds
+  - tracked subject IDs
+  - per-frame mask references
+  - optional flow/beat metadata.
+- Worker performs deterministic replacement/compositing only from explicit artifacts.
+- Lane policy remains permissive/non-binding per ADR-0024.
+
+Consequences:
+- Aligns implementation with real VFX-style constraints instead of prompt-only retries.
+- Increases quality ceiling for hero recast while preserving invariants.
+
+References:
+- docs/master.md
+- docs/decisions.md (ADR-0014, ADR-0024)
+- docs/architecture.md
+
+------------------------------------------------------------
+
+## ADR-0043 — External model/tool strategy Mode B default (deterministic daily + optional premium generation)
+Date: 2026-02-16
+Status: Accepted
+
+Context:
+- CAF needs quality output with cost control and reproducibility.
+- Fully hosted video generation for all daily output is expensive and less deterministic.
+
+Decision:
+- Adopt Mode B as default strategy:
+  - daily output path prioritizes deterministic Worker assembly/editing from explicit assets/contracts
+  - optional premium hosted generation is adapter-gated and non-mandatory.
+- Hosted providers remain optional per ADR-0018.
+- Contract surfaces must stay stable; adapters are swappable.
+
+Consequences:
+- Preserves production cadence and budget predictability.
+- Keeps portfolio architecture reproducible and contract-first.
+
+References:
+- docs/decisions.md (ADR-0018, ADR-0026)
+- docs/system-requirements.md
+
+------------------------------------------------------------
+
+## ADR-0044 — External HITL recast boundary (Viggle-class tools are Ops/Distribution, not internal Worker)
+Date: 2026-02-16
+Status: Accepted
+
+Context:
+- External recast tools can accelerate quality, but must not blur factory boundaries or hide manual steps.
+- CAF requires explicit, auditable HITL state transitions.
+
+Decision:
+- Model Viggle-class recast as external Ops/Distribution HITL flow, not as an internal Worker engine.
+- Export packs are written only to:
+  - `sandbox/dist_artifacts/<job_id>/viggle_pack/**`
+- Re-ingest of externally produced media must happen via explicit ingress artifacts under:
+  - `sandbox/inbox/*.json` (metadata pointer contract), then deterministic fetch/copy step by approved adapter.
+- Worker remains deterministic finishing only and never invokes external recast services.
+
+Consequences:
+- Preserves three-plane and files-as-bus invariants.
+- Makes manual/external steps visible, auditable, and retry-manageable.
+
+References:
+- docs/master.md
+- AGENTS.md
+- docs/decisions.md (ADR-0015, ADR-0026, ADR-0030)

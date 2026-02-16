@@ -63,6 +63,12 @@ ARCH should NOT touch:
 - runtime sandbox artifacts
 - implementation logic (repo/services/**, repo/worker/**, etc.)
 
+PR-26+ binding focus:
+- lock and preserve ADR-0040..ADR-0044 contract boundaries
+- keep `job.json` as execution authority even with Worker stage manifests
+- keep analyzer metadata planner-only (no Worker authority)
+- keep external recast tools as Ops/Distribution HITL flow (not internal Worker)
+
 ------------------------------------------------------------
 
 ## CAF Binding Invariants (Must Preserve Unless Superseded by ADR)
