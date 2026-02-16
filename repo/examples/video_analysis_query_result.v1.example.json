@@ -1,0 +1,19 @@
+{
+  "version": "video_analysis_query_result.v1",
+  "query_id": "query-kick-spin-danceswap",
+  "generated_at": "2026-02-16T11:05:02Z",
+  "selected": [
+    {
+      "analysis_id": "cat-kick-spin-loop",
+      "relpath": "repo/canon/demo_analyses/video-analysis-cat-kick-spin.json",
+      "priority": 90,
+      "quality_score": 0.91,
+      "matched_tags": [
+        "loopable",
+        "kick",
+        "spin"
+      ],
+      "selection_reason": "Highest-priority danceswap candidate with kick-spin coverage."
+    }
+  ]
+}

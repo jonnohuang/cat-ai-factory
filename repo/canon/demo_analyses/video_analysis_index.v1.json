@@ -1,0 +1,42 @@
+{
+  "version": "video_analysis_index.v1",
+  "generated_at": "2026-02-16T10:45:00Z",
+  "analyses": [
+    {
+      "analysis_id": "cat-kick-spin-loop",
+      "relpath": "repo/canon/demo_analyses/video-analysis-cat-kick-spin.json",
+      "priority": 90,
+      "quality_score": 0.91,
+      "tags": [
+        "kick",
+        "spin",
+        "loopable",
+        "high-energy"
+      ],
+      "lane_hints": [
+        "dance_swap",
+        "template_remix"
+      ],
+      "duration_bucket": "short_16_30",
+      "summary": "High-energy kick-spin sequence with reliable reset for loop closure."
+    },
+    {
+      "analysis_id": "cat-duckwalk-loop",
+      "relpath": "repo/canon/demo_analyses/video-analysis-cat-duckwalk-loop.json",
+      "priority": 82,
+      "quality_score": 0.88,
+      "tags": [
+        "duckwalk",
+        "groove",
+        "side-step",
+        "medium-energy"
+      ],
+      "lane_hints": [
+        "image_motion",
+        "dance_swap"
+      ],
+      "duration_bucket": "short_0_15",
+      "summary": "Compact duckwalk pattern with stable lateral motion and strong loop repeatability."
+    }
+  ]
+}

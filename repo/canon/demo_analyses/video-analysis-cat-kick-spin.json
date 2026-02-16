@@ -1,0 +1,61 @@
+{
+  "version": "video_analysis.v1",
+  "analysis_id": "cat-kick-spin-loop",
+  "analyzed_at": "2026-02-16T10:30:00Z",
+  "source": {
+    "source_type": "demo_reference",
+    "reference_label": "cat dance kick-spin reference",
+    "content_fingerprint": "a1b2c3d4e5f6a7b8",
+    "copyright_safe_metadata_only": true
+  },
+  "pattern": {
+    "lane_hints": [
+      "dance_swap",
+      "template_remix"
+    ],
+    "duration_bucket": "short_16_30",
+    "tags": [
+      "kick",
+      "spin",
+      "loopable",
+      "high-energy"
+    ],
+    "choreography": {
+      "beats": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 3.2,
+          "label": "setup-bounce"
+        },
+        {
+          "start_sec": 3.2,
+          "end_sec": 8.6,
+          "label": "kick-spin-burst"
+        },
+        {
+          "start_sec": 8.6,
+          "end_sec": 12.0,
+          "label": "return-to-start-pose"
+        }
+      ],
+      "energy_curve": "spike"
+    },
+    "camera": {
+      "shot_pattern": [
+        "wide",
+        "tracking"
+      ],
+      "motion_notes": "Keep subject centered during spin phase; avoid tight crop on kick extension."
+    },
+    "looping": {
+      "loop_start_sec": 0.2,
+      "loop_end_sec": 11.8,
+      "seamless_confidence": 0.89
+    }
+  },
+  "summary": "Kick-spin dance loop with clean reset pose for seamless recast finishing.",
+  "safety": {
+    "no_embedded_copyright_media": true,
+    "notes": "Metadata only; no source media stored in repo canon."
+  }
+}

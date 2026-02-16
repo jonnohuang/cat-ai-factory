@@ -836,7 +836,7 @@ Execution order:
 - Active now; complete PR-31..PR-34 before resuming deferred Phase 7 PRs.
 
 ### PR-31 — Media contracts + analyzer + lane docs/ADRs (no runtime code)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Lock ADR-backed contract posture for:
@@ -852,7 +852,7 @@ Outcome:
 ---
 
 ### PR-32 — Analyzer contracts + query path (planner enrichment only)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add versioned analyzer schemas and metadata index artifacts.
@@ -861,6 +861,42 @@ Scope:
 
 Outcome:
 - Planner can reuse structured pacing/choreography/camera patterns safely.
+
+---
+
+### PR-32.1 — Analyzer implementation (planner-side runtime; metadata-only output)
+Status: **ACTIVE**
+
+Scope:
+- Implement planner-side analyzer runtime that ingests video input and emits `video_analysis.v1` artifacts.
+- Add deterministic extraction/normalization path for:
+  - beat boundaries
+  - loop window candidates
+  - camera/choreography metadata fields required by `video_analysis.v1`
+- OpenCV (or equivalent deterministic CV library) MAY be used for deterministic analysis utilities.
+- Persist analyzer outputs as planner-side/canon metadata artifacts only.
+- Provide deterministic validation + smoke command path for generated artifacts.
+- No Worker dependency on analyzer artifacts.
+- No copyrighted source media committed to repo canon.
+- CV tooling usage MUST NOT change plane boundaries or Worker determinism constraints.
+
+Outcome:
+- CAF can generate analyzer metadata artifacts from real video inputs while preserving planner-only authority and Worker determinism.
+
+---
+
+### PR-32.2 — Voice/Style registries (contracts + validation)
+Status: **PLANNED**
+
+Scope:
+- Add versioned registry contracts and examples:
+  - `voice_registry.v1` (hero_id -> voice adapter id/placeholder)
+  - `style_registry.v1` (style_id -> workflow/prompt fragments)
+- Add deterministic validators and smoke checks for both registries.
+- Keep registries provider-agnostic and repo-safe (no secrets/PII).
+
+Outcome:
+- Media stack and planning lanes can reference stable voice/style metadata without provider lock-in.
 
 ---
 
@@ -881,6 +917,61 @@ Outcome:
 
 ---
 
+### PR-33.1 — Dance Swap implementation (deterministic recipe wiring)
+Status: **PLANNED**
+
+Scope:
+- Implement deterministic Dance Swap recipe wiring from explicit artifacts:
+  - loop bounds
+  - subject tracks
+  - mask references
+  - optional beat/flow metadata
+- OpenCV (or equivalent deterministic CV library) MAY be used for deterministic compositing/flow/loop utilities.
+- Add validation/smoke tooling for Dance Swap artifact integrity and required-field checks.
+- Preserve lane non-binding policy (ADR-0024) and fail-loud behavior for unsafe/missing required artifacts.
+- No LLM usage in Worker and no cross-plane authority changes.
+- CV tooling usage MUST NOT introduce nondeterministic or network side effects in Worker.
+
+Outcome:
+- Dance Swap lane is executable with deterministic, artifact-driven behavior and reviewable validation surfaces.
+
+---
+
+### PR-33.2 — Media Stack v1 staged implementation (frame/audio/edit/render)
+Status: **PLANNED**
+
+Scope:
+- Implement deterministic staged pipeline wiring for:
+  - frame outputs + frame manifest
+  - audio outputs + audio manifest
+  - edit/timeline outputs
+  - render manifest + final assembly
+- OpenCV (or equivalent deterministic CV library) MAY be used for deterministic preprocessing and quality utilities.
+- Keep stage artifacts under `sandbox/output/<job_id>/**`.
+- Preserve `job.json` as execution authority and Worker determinism constraints.
+- CV tooling usage MUST NOT change authority boundaries or runtime write boundaries.
+
+Outcome:
+- Multi-stage Worker production pipeline is executable with inspectable stage artifacts.
+
+---
+
+### PR-33.3 — Optional Mode B contract expansion (script/identity/storyboard)
+Status: **PLANNED**
+
+Scope:
+- Introduce optional, versioned planner-side contracts:
+  - `script_plan.v1`
+  - `identity_anchor.v1`
+  - `storyboard.v1`
+- Keep these contracts planner/control-plane facing; they must not replace `job.json` execution authority.
+- Add minimal examples and deterministic validators.
+
+Outcome:
+- Mode B planning surfaces become explicit and reusable without changing core authority boundaries.
+
+---
+
 ### PR-34 — External HITL recast flow (Viggle pack export + re-ingest contract)
 Status: **PLANNED**
 
@@ -892,6 +983,51 @@ Scope:
 
 Outcome:
 - Fast quality iteration with explicit manual boundary and auditability.
+
+---
+
+### PR-34.1 — External HITL recast implementation (ops flow + re-ingest path)
+Status: **PLANNED**
+
+Scope:
+- Implement deterministic export-pack builder for:
+  - `sandbox/dist_artifacts/<job_id>/viggle_pack/**`
+- Implement explicit re-ingest adapter path via `sandbox/inbox/*.json` metadata pointer contract.
+- Add idempotent ops-state handling for recast export/re-ingest lifecycle.
+- Keep external tool execution outside factory authority boundaries.
+- Worker remains deterministic finishing only; no direct external recast service calls.
+
+Outcome:
+- External HITL recast loop is operational, auditable, and boundary-safe end-to-end.
+
+---
+
+### PR-34.2 — HITL lifecycle + inbox pointer contracts
+Status: **PLANNED**
+
+Scope:
+- Define lifecycle/state contracts for external recast steps (e.g., ready/exported/re-ingested/finished).
+- Define deterministic inbox pointer schema for re-ingest metadata under `sandbox/inbox/*.json`.
+- Preserve canonical dist artifact path:
+  - `sandbox/dist_artifacts/<job_id>/viggle_pack/**`
+
+Outcome:
+- External manual steps become explicit, auditable, and idempotent in contract/state form.
+
+---
+
+### PR-34.3 — `viggle_pack.v1` schema + export/re-ingest validation
+Status: **PLANNED**
+
+Scope:
+- Add `viggle_pack.v1` schema for pack completeness/consistency checks.
+- Add deterministic validators for:
+  - pack export contents
+  - re-ingest metadata pointer integrity
+- No direct external-tool invocation inside factory components.
+
+Outcome:
+- Viggle-class HITL handoff is standardized and validation-backed for future automation.
 
 
 ------------------------------------------------------------

@@ -1,0 +1,54 @@
+{
+  "version": "video_analysis.v1",
+  "analysis_id": "cat-wave-step-demo",
+  "analyzed_at": "2026-02-16T11:00:00Z",
+  "source": {
+    "source_type": "demo_reference",
+    "reference_label": "cat wave-step reference",
+    "content_fingerprint": "c1d2e3f4a5b6c7d8",
+    "copyright_safe_metadata_only": true
+  },
+  "pattern": {
+    "lane_hints": [
+      "template_remix"
+    ],
+    "duration_bucket": "short_0_15",
+    "tags": [
+      "wave",
+      "side-step",
+      "loopable"
+    ],
+    "choreography": {
+      "beats": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 1.8,
+          "label": "arm-wave-left"
+        },
+        {
+          "start_sec": 1.8,
+          "end_sec": 3.6,
+          "label": "arm-wave-right"
+        }
+      ],
+      "energy_curve": "build"
+    },
+    "camera": {
+      "shot_pattern": [
+        "medium",
+        "static"
+      ],
+      "motion_notes": "Use static center framing for easier deterministic remix."
+    },
+    "looping": {
+      "loop_start_sec": 0.0,
+      "loop_end_sec": 3.6,
+      "seamless_confidence": 0.84
+    }
+  },
+  "summary": "Simple left-right wave step pattern for short remixes.",
+  "safety": {
+    "no_embedded_copyright_media": true,
+    "notes": "Example metadata only."
+  }
+}
