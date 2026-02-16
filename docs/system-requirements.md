@@ -293,7 +293,54 @@ The system MUST support a planner-only intermediate artifact (EpisodePlan v1) to
   - EpisodePlan v1 is schema-validated and committed as an explicit artifact (no hidden memory).
 - Determinism gates:
   - EpisodePlan outputs MUST be normalized and validated deterministically before becoming canonical.
-  - EpisodePlan MUST NOT bypass job.json validation/commit steps.
+- EpisodePlan MUST NOT bypass job.json validation/commit steps.
+
+### FR-25 — Media Stack v1 stage contracts (deterministic Worker artifacts)
+The system MUST support deterministic, versioned media-stage artifacts for inspectability without changing execution authority.
+
+- Canonical stage contract families (v1):
+  - frame manifest
+  - audio manifest
+  - timeline
+  - render manifest
+- Hard constraints:
+  - `job.json` remains execution authority.
+  - Stage manifests are execution artifacts only.
+  - Worker writes stage artifacts only under `/sandbox/output/<job_id>/**`.
+
+### FR-26 — Video Analyzer contracts (planner-side metadata canon)
+The system MUST support planner-side reference analysis artifacts for reusable pacing/choreography/camera patterns.
+
+- Canonical posture:
+  - schemas under `repo/shared/*.schema.json`
+  - metadata instances/index under `repo/canon/demo_analyses/**`
+- Hard constraints:
+  - metadata/patterns only; no copyrighted source media in repo canon.
+  - Worker MUST NOT depend on analyzer artifacts at runtime.
+
+### FR-27 — Dance Swap v1 deterministic lane
+The system MUST support a choreography-preserving recast lane using explicit deterministic artifacts.
+
+- Expected artifact classes:
+  - loop bounds
+  - tracked subject IDs
+  - per-frame mask references
+  - optional beat/flow metadata
+- Hard constraints:
+  - lane remains non-binding at schema level (consistent with lane policy).
+  - Worker performs deterministic compositing/replacement only from explicit artifacts.
+
+### FR-28 — External HITL recast boundary (Ops/Distribution only)
+The system MUST model external recast tools (Viggle-class) as explicit Ops/Distribution steps.
+
+- Export pack path:
+  - `/sandbox/dist_artifacts/<job_id>/viggle_pack/**`
+- Re-ingest posture:
+  - via explicit inbox metadata artifact under `/sandbox/inbox/*.json`
+- Hard constraints:
+  - no hidden manual authority
+  - Worker MUST NOT call external recast services
+  - Worker performs deterministic finishing only
 
 
 ------------------------------------------------------------

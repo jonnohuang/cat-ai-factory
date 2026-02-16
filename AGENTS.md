@@ -70,6 +70,10 @@ The Worker must never:
 * scrape trends
 * make decisions based on nondeterministic inputs
 
+Clarification (ADR-0040 / ADR-0042):
+* Worker may execute multiple deterministic stages internally (frame/audio/edit/render).
+* Stage manifests are Worker execution artifacts only and MUST NOT replace `job.json` authority.
+
 ### 4) Ops/Distribution is outside the factory
 
 Publishing is nondeterministic (external platforms). It must remain outside the factory.
@@ -154,6 +158,11 @@ RAG (planner-only; deterministic, file-based):
 * `repo/shared/rag_manifest.v1.json` (PR22.1)
 * `repo/shared/rag/**` (PR22.1)
 
+Video Analyzer (planner-only metadata canon):
+
+* `repo/canon/demo_analyses/**` (metadata only)
+* `repo/shared/video_analysis*.schema.json` (when present)
+
 PlanRequest (UI-agnostic plan input contract):
 
 * `repo/shared/plan_request.v1.schema.json` (PR21.5)
@@ -169,6 +178,7 @@ Important:
 * Only committed files become canon.
 * RAG must never become an authority source outside committed artifacts.
 * CrewAI (PR-22.2) is planner-only and MUST be contained inside a LangGraph node/subgraph.
+* Video Analyzer artifacts are planner-only and MUST NOT be runtime authority for Worker.
 
 
 ---
@@ -289,6 +299,7 @@ Deterministic, CPU-bound execution that produces publish-ready artifacts.
 * render deterministic video + captions from job contract + assets
 * apply deterministic watermark overlay
 * guarantee `final.mp4` always has an audio stream (no silent MP4)
+* may emit deterministic stage artifacts/manifests under `sandbox/output/<job_id>/**`
 
 **Reads**
 
@@ -417,6 +428,7 @@ Ops/Distribution performs nondeterministic external work.
 * optionally upload using official APIs (opt-in)
 * enforce human approval gates by default
 * maintain idempotency keyed by `{job_id, platform}`
+* host explicit external HITL recast steps (Viggle-class), when configured
 
 **Writes (ONLY)**
 
@@ -428,6 +440,13 @@ Ops/Distribution performs nondeterministic external work.
 * MUST NOT modify `sandbox/output/<job_id>/**`
 * MUST NOT bypass file-bus semantics
 * MUST NOT commit or write secrets
+
+External recast/HITL rule (ADR-0044):
+* export pack path:
+  - `sandbox/dist_artifacts/<job_id>/viggle_pack/**`
+* re-ingest to factory MUST be explicit inbox metadata under:
+  - `sandbox/inbox/*.json`
+* no hidden manual file drops become authoritative state
 
 Ops workflow automation (e.g., n8n) is allowed only in this layer:
 

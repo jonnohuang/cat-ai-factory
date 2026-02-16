@@ -16,6 +16,7 @@ sandbox/output/
 sandbox/logs/
 sandbox/inbox/
 sandbox/outbox/
+sandbox/archive/
 
 # Clawdbot runtime workspace
 sandbox/home/

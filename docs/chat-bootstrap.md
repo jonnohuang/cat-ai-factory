@@ -35,6 +35,7 @@ Role bootstraps:
 
 Live status ledger:
 - `docs/now.md` (current PR status + role sync + handoff diff summary)
+- Check `docs/now.md` for any `PR-XX Quality Handoff` section before starting implementation/review work.
 
 ------------------------------------------------------------
 
@@ -74,6 +75,11 @@ CAF has exactly three planes:
 Hard rule:
 > All coordination happens via deterministic artifacts (“files-as-bus”).
 No agent-to-agent RPC. No implicit shared state.
+
+PR-26+ clarifications:
+- Worker may be multi-stage internally, but remains deterministic and output-bound.
+- Planner-only analyzer metadata is allowed; Worker must not depend on analyzer artifacts.
+- External recast tools (Viggle-class) are Ops/Distribution HITL steps, not internal Worker actions.
 
 ------------------------------------------------------------
 

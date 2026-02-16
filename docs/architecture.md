@@ -13,6 +13,7 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
   - Planner → produces job.json only (no side effects; EpisodePlan v1 planned)
   - Control Plane → deterministic orchestrator (reconciler/state machine)
   - Worker → deterministic renderer (no LLM usage)
+  - Clarification: 3-plane orchestration may use a multi-stage deterministic Worker pipeline; `job.json` remains authority.
 
 - Files are the bus:
   - No shared memory
@@ -23,6 +24,7 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
   - Orchestration frameworks (e.g., LangGraph) may wrap planner logic, but must not change plane responsibilities.
 
 - RAG is planner-only.
+- Video Analyzer canon is planner-only metadata (no Worker runtime authority).
 - Planner-side asset generation (e.g., AI-generated templates or seed frames) is permitted,
   but generated assets are treated as explicit inputs and must not change Worker determinism.
 
@@ -34,6 +36,7 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
   - External, nondeterministic workflows (approval, notifications, publishing)
   - Must not mutate worker outputs
   - Must emit derived distribution artifacts only
+  - External recast/HITL tools (Viggle-class) belong here, not inside Worker runtime
 
 ------------------------------------------------------------
 
@@ -91,6 +94,7 @@ Notes:
 - Canonical output/log directories are keyed by job_id derived from the job filename stem (<job-file>). This is the filesystem bus identity.
 - If job.json also contains job_id and it differs, Ralph Loop emits a warning event and proceeds using the filename-derived job_id.
  - Planned (ADR-0034): EpisodePlan v1 is a planner-only intermediate artifact that precedes job.json and is not required by Control Plane or Worker.
+ - ADR-0040: Worker may emit stage manifests (frame/audio/timeline/render) under `sandbox/output/<job_id>/**` for deterministic inspectability.
 
 ### Planner reference inputs (optional; read-only)
 
