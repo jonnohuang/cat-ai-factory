@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/dance_swap_loop.v1.schema.json",
+  "title": "Dance Swap Loop v1",
+  "description": "Deterministic loop bounds artifact for Dance Swap v1 lane.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "source_video_relpath",
+    "fps",
+    "loop_start_frame",
+    "loop_end_frame",
+    "blend_strategy"
+  ],
+  "properties": {
+    "version": {
+      "const": "dance_swap_loop.v1"
+    },
+    "source_video_relpath": {
+      "type": "string",
+      "pattern": "^sandbox/.+"
+    },
+    "fps": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "loop_start_frame": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "loop_end_frame": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "blend_strategy": {
+      "type": "string",
+      "enum": [
+        "none",
+        "crossfade",
+        "optical_flow_blend"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  }
+}

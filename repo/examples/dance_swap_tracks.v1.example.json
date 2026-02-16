@@ -1,0 +1,58 @@
+{
+  "version": "dance_swap_tracks.v1",
+  "source_video_relpath": "sandbox/assets/demo/dance_loop_03.mp4",
+  "subjects": [
+    {
+      "subject_id": "cat-1",
+      "hero_id": "tiger-black",
+      "frames": [
+        {
+          "frame": 12,
+          "bbox": {
+            "x": 380,
+            "y": 220,
+            "w": 320,
+            "h": 410
+          },
+          "mask_relpath": "sandbox/output/demo-job/masks/cat-1/000012.png"
+        },
+        {
+          "frame": 36,
+          "bbox": {
+            "x": 388,
+            "y": 218,
+            "w": 322,
+            "h": 411
+          },
+          "mask_relpath": "sandbox/output/demo-job/masks/cat-1/000036.png"
+        }
+      ]
+    },
+    {
+      "subject_id": "cat-2",
+      "hero_id": "mochi-grey-tabby",
+      "frames": [
+        {
+          "frame": 12,
+          "bbox": {
+            "x": 760,
+            "y": 230,
+            "w": 300,
+            "h": 395
+          },
+          "mask_relpath": "sandbox/output/demo-job/masks/cat-2/000012.png"
+        },
+        {
+          "frame": 36,
+          "bbox": {
+            "x": 752,
+            "y": 232,
+            "w": 304,
+            "h": 396
+          },
+          "mask_relpath": "sandbox/output/demo-job/masks/cat-2/000036.png"
+        }
+      ]
+    }
+  ]
+}

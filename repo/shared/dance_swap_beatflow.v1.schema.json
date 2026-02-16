@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/dance_swap_beatflow.v1.schema.json",
+  "title": "Dance Swap BeatFlow v1",
+  "description": "Optional beat/flow metadata artifact for Dance Swap v1 lane.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "source_video_relpath"
+  ],
+  "properties": {
+    "version": {
+      "const": "dance_swap_beatflow.v1"
+    },
+    "source_video_relpath": {
+      "type": "string",
+      "pattern": "^sandbox/.+"
+    },
+    "beats": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/beat"
+      }
+    },
+    "flow_windows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/flow_window"
+      }
+    }
+  },
+  "definitions": {
+    "beat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frame",
+        "strength"
+      ],
+      "properties": {
+        "frame": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "flow_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_frame",
+        "end_frame",
+        "mean_magnitude"
+      ],
+      "properties": {
+        "start_frame": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_frame": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mean_magnitude": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
