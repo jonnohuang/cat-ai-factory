@@ -5,11 +5,14 @@ from typing import Dict, List, Type
 from .base import BaseProvider
 from .gemini_ai_studio import GeminiAIStudioProvider
 from .langgraph_demo import LangGraphDemoProvider
+from .vertex_ai import VertexImagenProvider, VertexVeoProvider
 
 
 PROVIDERS: Dict[str, Type[BaseProvider]] = {
     "ai_studio": GeminiAIStudioProvider,
     "langgraph_demo": LangGraphDemoProvider,
+    "vertex_veo": VertexVeoProvider,
+    "vertex_imagen": VertexImagenProvider,
 }
 
 

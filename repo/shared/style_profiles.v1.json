@@ -1,0 +1,101 @@
+{
+  "version": "style_profiles.v1",
+  "profiles": [
+    {
+      "id": "dance_loop_demo",
+      "aliases": [
+        "dance loop demo style",
+        "demo dance loop style",
+        "dance-loop demo style",
+        "dance loop demo"
+      ],
+      "positive_cues": [
+        "single locked full-body framing with subject centered for the whole clip",
+        "continuous dance choreography with clear beat-level changes every 0.5 to 1.0 seconds",
+        "energetic comedic moves: paw pops, side steps, hip sways, quick turns",
+        "strong rhythmic timing and loop-friendly ending pose that reconnects to the first beat",
+        "stable costume and character identity across all frames"
+      ],
+      "negative_cues": [
+        "avoid static standing poses",
+        "avoid long idle intervals longer than one beat",
+        "avoid heavy camera drift or dramatic cinematic cuts"
+      ],
+      "costume_profile_ids": [
+        "dance_loop_group_set"
+      ]
+    },
+    {
+      "id": "bee_costume_party",
+      "aliases": [
+        "bee costume party style",
+        "bee dance style",
+        "bee costume cat style"
+      ],
+      "positive_cues": [
+        "front-facing full-body dance with playful bounce and paw pops",
+        "snappy rhythmic arm motions timed to upbeat electronic groove",
+        "clean center framing with stable camera and bright cozy interior lighting"
+      ],
+      "negative_cues": [
+        "avoid static idol pose",
+        "avoid aggressive camera zoom sweeps"
+      ],
+      "costume_profile_ids": [
+        "dance_loop_bee_onesie"
+      ]
+    },
+    {
+      "id": "office_groove",
+      "aliases": [
+        "office groove style",
+        "ops cat dance style"
+      ],
+      "positive_cues": [
+        "professional office setting with comedic dance escalation",
+        "short repeatable choreography loop with clear beginning and end match",
+        "character remains in frame with stable identity and outfit continuity"
+      ],
+      "negative_cues": [
+        "avoid chaotic background changes",
+        "avoid scene cuts that break loop continuity"
+      ]
+    },
+    {
+      "id": "street_pop",
+      "aliases": [
+        "street pop dance style",
+        "street dance short style"
+      ],
+      "positive_cues": [
+        "sharp pop-and-lock inspired choreography with clear beat accents",
+        "energetic but readable body silhouettes and full-body framing",
+        "strong loop endpoint that reconnects to first motion beat"
+      ],
+      "negative_cues": [
+        "avoid blurry motion streaks",
+        "avoid handheld jitter"
+      ]
+    },
+    {
+      "id": "mochi_kitten_demo_loop_style",
+      "aliases": [
+        "mochi kitten demo loop style",
+        "mochi kitten dance loop style",
+        "kitten dance loop mochi style"
+      ],
+      "positive_cues": [
+        "Mochi rendered with kitten-like proportions while preserving mochi tabby identity",
+        "cute expressive kitten face with large bright eyes and soft rounded cheeks",
+        "dance-loop pacing with clear rhythmic beat accents and loop-friendly reset"
+      ],
+      "negative_cues": [
+        "avoid adult-cat facial proportions",
+        "avoid identity drift away from mochi grey-tabby markings"
+      ],
+      "costume_profile_ids": [
+        "mochi_kitten_demo_loop"
+      ]
+    }
+  ]
+}

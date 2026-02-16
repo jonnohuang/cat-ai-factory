@@ -731,7 +731,7 @@ Outcome:
 ---
 
 ### PR-24 — Cloud Run execution stubs (orchestrator + worker)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Minimal Cloud Run stubs (no live deploy required)
@@ -743,7 +743,7 @@ Outcome:
 ---
 
 ### PR-25 — Vertex AI providers (mandatory portfolio requirement)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Vertex AI provider adapters (planner-side)
