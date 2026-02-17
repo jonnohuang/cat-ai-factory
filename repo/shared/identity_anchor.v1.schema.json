@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/identity_anchor.v1.schema.json",
+  "title": "Identity Anchor v1",
+  "description": "Optional Mode B planner-side identity/style anchor contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "anchors"
+  ],
+  "properties": {
+    "version": {
+      "const": "identity_anchor.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "anchors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "anchor_id",
+          "hero_id",
+          "style_id",
+          "reference_asset",
+          "seed"
+        ],
+        "properties": {
+          "anchor_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "hero_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "style_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "reference_asset": {
+            "type": "string",
+            "pattern": "^(assets|sandbox/assets)/.+"
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      }
+    }
+  }
+}
+

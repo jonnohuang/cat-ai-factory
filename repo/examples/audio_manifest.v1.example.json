@@ -1,0 +1,12 @@
+{
+  "version": "audio_manifest.v1",
+  "job_id": "example-job",
+  "stage": "audio",
+  "audio_source": "job_asset",
+  "audio_asset_path": "sandbox/assets/audio/beds/caf_bed_dance_loop_01.wav",
+  "mix_wav": "sandbox/output/example-job/audio/mix.wav",
+  "mix_wav_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "sample_rate_hz": 48000,
+  "channels": 2
+}
+

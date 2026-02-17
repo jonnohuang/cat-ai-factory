@@ -944,7 +944,7 @@ Outcome:
 ---
 
 ### PR-33.2 — Media Stack v1 staged implementation (frame/audio/edit/render)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Implement deterministic staged pipeline wiring for:
@@ -963,7 +963,7 @@ Outcome:
 ---
 
 ### PR-33.3 — Optional Mode B contract expansion (script/identity/storyboard)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Introduce optional, versioned planner-side contracts:

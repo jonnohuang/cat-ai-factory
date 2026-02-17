@@ -1,0 +1,25 @@
+{
+  "version": "render_manifest.v1",
+  "job_id": "example-job",
+  "stage": "render",
+  "final_mp4": "sandbox/output/example-job/final.mp4",
+  "final_srt": "sandbox/output/example-job/final.srt",
+  "result_json": "sandbox/output/example-job/result.json",
+  "hashes": {
+    "final_mp4_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "final_srt_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "ffmpeg_cmd": [
+    "ffmpeg",
+    "-y",
+    "...",
+    "final.mp4"
+  ],
+  "ffmpeg_cmd_executed": [
+    "ffmpeg",
+    "-y",
+    "...",
+    "final.mp4.tmp.mp4"
+  ]
+}
+

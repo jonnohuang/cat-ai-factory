@@ -1,0 +1,26 @@
+{
+  "version": "timeline.v1",
+  "job_id": "example-job",
+  "stage": "edit",
+  "duration_sec": 12,
+  "segments": [
+    {
+      "index": 0,
+      "start_sec": 0.0,
+      "end_sec": 2.0,
+      "visual": "group",
+      "action": "start",
+      "caption": "Start"
+    },
+    {
+      "index": 1,
+      "start_sec": 2.0,
+      "end_sec": 12.0,
+      "visual": "group",
+      "action": "dance",
+      "caption": "Dance"
+    }
+  ],
+  "captions_count": 4
+}
+

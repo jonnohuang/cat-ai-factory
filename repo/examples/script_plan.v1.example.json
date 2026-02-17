@@ -1,0 +1,26 @@
+{
+  "version": "script_plan.v1",
+  "job_id": "modeb-demo-20260217",
+  "language": "en",
+  "hook": "Mochi starts the dance challenge in 2 seconds.",
+  "voiceover": "Mochi and friends perform a playful synchronized dance loop with clear beats and punch-ins.",
+  "ending": "Freeze on the final pose and loop clean.",
+  "shots": [
+    {
+      "shot_id": "shot_001",
+      "duration_sec": 2.0,
+      "intent": "Hook pose close-up"
+    },
+    {
+      "shot_id": "shot_002",
+      "duration_sec": 4.0,
+      "intent": "Group dance wide shot"
+    },
+    {
+      "shot_id": "shot_003",
+      "duration_sec": 3.0,
+      "intent": "Beat punch-in and expression"
+    }
+  ]
+}
+

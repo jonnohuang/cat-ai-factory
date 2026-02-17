@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/timeline.v1.schema.json",
+  "title": "Timeline v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "stage",
+    "duration_sec",
+    "segments",
+    "captions_count"
+  ],
+  "properties": {
+    "version": {
+      "const": "timeline.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage": {
+      "const": "edit"
+    },
+    "duration_sec": {
+      "type": "number",
+      "minimum": 0
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "start_sec",
+          "end_sec",
+          "visual",
+          "action",
+          "caption"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "start_sec": {
+            "type": "number",
+            "minimum": 0
+          },
+          "end_sec": {
+            "type": "number",
+            "minimum": 0
+          },
+          "visual": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "captions_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
+

@@ -6,6 +6,7 @@ import os
 import pathlib
 import statistics
 import subprocess
+from typing import Any
 
 
 PADDING_PX = 24
@@ -33,6 +34,10 @@ def atomic_write_text(path: pathlib.Path, content: str) -> None:
     tmp_path = path.with_suffix(path.suffix + ".tmp")
     tmp_path.write_text(content, encoding="utf-8")
     tmp_path.replace(path)
+
+
+def atomic_write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
+    atomic_write_text(path, json.dumps(payload, indent=2, sort_keys=True))
 
 
 def make_srt(captions, out_path: pathlib.Path) -> None:
@@ -97,6 +102,12 @@ def run_ffmpeg(cmd, out_path: pathlib.Path) -> list[str]:
     subprocess.check_call(cmd_with_tmp)
     tmp_out.replace(out_path)
     return cmd_with_tmp
+
+
+def run_subprocess(cmd: list[str]) -> list[str]:
+    print("Running:", " ".join(cmd))
+    subprocess.check_call(cmd)
+    return cmd
 
 
 def get_video_dims(path: pathlib.Path) -> tuple[int, int]:
@@ -379,6 +390,149 @@ def resolve_dance_swap_contracts(job: dict, sandbox_root: pathlib.Path) -> dict:
             "dy": round(slot_dy, 3),
             "hz": round(slot_hz, 6),
         },
+    }
+
+
+def emit_media_stack_artifacts(
+    job: dict,
+    out_dir: pathlib.Path,
+    sandbox_root: pathlib.Path,
+    render_result: dict[str, Any],
+    result_path: pathlib.Path,
+) -> dict[str, Any]:
+    job_id = str(job["job_id"])
+    final_mp4 = pathlib.Path(render_result["outputs"]["final_mp4"])
+    final_srt = pathlib.Path(render_result["outputs"]["final_srt"])
+
+    frames_dir = out_dir / "frames"
+    audio_dir = out_dir / "audio"
+    edit_dir = out_dir / "edit"
+    render_dir = out_dir / "render"
+    for d in [frames_dir, audio_dir, edit_dir, render_dir]:
+        d.mkdir(parents=True, exist_ok=True)
+
+    duration = int(job["video"]["length_seconds"])
+    fps = int(job["video"]["fps"])
+    frame_times = sorted(set([0.0, max(0.0, duration / 2.0), max(0.0, duration - 0.2)]))
+    frame_files: list[str] = []
+    for idx, t in enumerate(frame_times, start=1):
+        out_png = frames_dir / f"frame_{idx:04d}.png"
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            f"{t:.3f}",
+            "-i",
+            str(final_mp4),
+            "-frames:v",
+            "1",
+            "-update",
+            "1",
+            "-vf",
+            "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black",
+            str(out_png),
+        ]
+        run_subprocess(cmd)
+        frame_files.append(str(out_png))
+
+    frame_manifest = {
+        "version": "frame_manifest.v1",
+        "job_id": job_id,
+        "stage": "frame",
+        "source_video": str(final_mp4),
+        "fps": fps,
+        "sample_times_sec": [round(x, 3) for x in frame_times],
+        "frames": frame_files,
+        "frame_count": len(frame_files),
+        "hashes": {pathlib.Path(p).name: sha256_file(pathlib.Path(p)) for p in frame_files},
+    }
+    frame_manifest_path = frames_dir / "frame_manifest.v1.json"
+    atomic_write_json(frame_manifest_path, frame_manifest)
+
+    mix_wav = audio_dir / "mix.wav"
+    audio_extract_cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(final_mp4),
+        "-vn",
+        "-acodec",
+        "pcm_s16le",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        str(mix_wav),
+    ]
+    run_subprocess(audio_extract_cmd)
+
+    audio_manifest = {
+        "version": "audio_manifest.v1",
+        "job_id": job_id,
+        "stage": "audio",
+        "audio_source": render_result.get("audio_source"),
+        "audio_asset_path": render_result.get("audio_asset_path"),
+        "mix_wav": str(mix_wav),
+        "mix_wav_sha256": sha256_file(mix_wav),
+        "sample_rate_hz": 48000,
+        "channels": 2,
+    }
+    audio_manifest_path = audio_dir / "audio_manifest.v1.json"
+    atomic_write_json(audio_manifest_path, audio_manifest)
+
+    shots = job.get("shots", [])
+    timeline_segments = []
+    for idx, shot in enumerate(shots):
+        start_sec = float(shot.get("t", 0))
+        if idx + 1 < len(shots):
+            end_sec = float(shots[idx + 1].get("t", duration))
+        else:
+            end_sec = float(duration)
+        if end_sec < start_sec:
+            end_sec = start_sec
+        timeline_segments.append(
+            {
+                "index": idx,
+                "start_sec": round(start_sec, 3),
+                "end_sec": round(end_sec, 3),
+                "visual": str(shot.get("visual", "")),
+                "action": str(shot.get("action", "")),
+                "caption": str(shot.get("caption", "")),
+            }
+        )
+    timeline = {
+        "version": "timeline.v1",
+        "job_id": job_id,
+        "stage": "edit",
+        "duration_sec": duration,
+        "segments": timeline_segments,
+        "captions_count": len(job.get("captions", [])),
+    }
+    timeline_path = edit_dir / "timeline.v1.json"
+    atomic_write_json(timeline_path, timeline)
+
+    render_manifest = {
+        "version": "render_manifest.v1",
+        "job_id": job_id,
+        "stage": "render",
+        "final_mp4": str(final_mp4),
+        "final_srt": str(final_srt),
+        "result_json": str(result_path),
+        "hashes": {
+            "final_mp4_sha256": sha256_file(final_mp4),
+            "final_srt_sha256": sha256_file(final_srt),
+        },
+        "ffmpeg_cmd": render_result.get("ffmpeg_cmd"),
+        "ffmpeg_cmd_executed": render_result.get("ffmpeg_cmd_executed"),
+    }
+    render_manifest_path = render_dir / "render_manifest.v1.json"
+    atomic_write_json(render_manifest_path, render_manifest)
+
+    return {
+        "frame_manifest": str(frame_manifest_path),
+        "audio_manifest": str(audio_manifest_path),
+        "timeline": str(timeline_path),
+        "render_manifest": str(render_manifest_path),
     }
 
 
@@ -1779,6 +1933,15 @@ def main():
     
     if render_result.get("failed_ffmpeg_cmd"):
         final_result["failed_ffmpeg_cmd"] = render_result["failed_ffmpeg_cmd"]
+
+    media_stack_paths = emit_media_stack_artifacts(
+        job=job,
+        out_dir=out_dir,
+        sandbox_root=sandbox_root,
+        render_result=render_result,
+        result_path=result_path,
+    )
+    final_result["media_stack"] = media_stack_paths
 
     atomic_write_text(result_path, json.dumps(final_result, indent=2, sort_keys=True))
 

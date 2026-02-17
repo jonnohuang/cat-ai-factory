@@ -14,17 +14,19 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-33.1 — Dance Swap implementation (deterministic recipe wiring)**
+PR: **PR-33.3 — Optional Mode B contract expansion (script/identity/storyboard)**
 Last Updated: 2026-02-16
 
 ### Status by Role
 - ARCH: In Progress (review/closeout)
 - CODEX: Completed
-- CLOUD-REVIEW: Not Required (PR-33.1 is non-cloud scope)
+- CLOUD-REVIEW: Not Required (PR-33.3 is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
 - ADR-0042 (Dance Swap v1 deterministic lane)
+- ADR-0040 (Media Stack v1 stage contracts)
+- ADR-0043 (Mode B default strategy)
 
 ### What Changed (Diff Summary)
 - `docs/PR_PROJECT_PLAN.md`:
@@ -33,7 +35,9 @@ Last Updated: 2026-02-16
   - PR-32.1 status updated to COMPLETED
   - PR-32.2 status updated to COMPLETED
   - PR-33 status updated to COMPLETED
-  - PR-33.1 status updated to ACTIVE
+  - PR-33.1 status updated to COMPLETED
+  - PR-33.2 status updated to COMPLETED
+  - PR-33.3 status updated to COMPLETED
   - added implementation sub-PRs:
     - PR-32.1 (analyzer runtime implementation)
     - PR-33.1 (Dance Swap deterministic recipe implementation)
@@ -154,6 +158,47 @@ Last Updated: 2026-02-16
   - `python repo/tools/smoke_dance_swap.py` passed and produced:
     - `sandbox/output/smoke-dance-swap-v1/final.mp4`
     - `sandbox/output/smoke-dance-swap-v1/result.json`
+- Added PR-33.2 Media Stack v1 staged implementation:
+  - `repo/worker/render_ffmpeg.py`:
+    - emits deterministic stage outputs under `sandbox/output/<job_id>/**`:
+      - `frames/frame_*.png` + `frames/frame_manifest.v1.json`
+      - `audio/mix.wav` + `audio/audio_manifest.v1.json`
+      - `edit/timeline.v1.json`
+      - `render/render_manifest.v1.json`
+    - adds `media_stack` pointers in `result.json`
+  - Added Media Stack v1 schemas:
+    - `repo/shared/frame_manifest.v1.schema.json`
+    - `repo/shared/audio_manifest.v1.schema.json`
+    - `repo/shared/timeline.v1.schema.json`
+    - `repo/shared/render_manifest.v1.schema.json`
+  - Added Media Stack v1 examples:
+    - `repo/examples/frame_manifest.v1.example.json`
+    - `repo/examples/audio_manifest.v1.example.json`
+    - `repo/examples/timeline.v1.example.json`
+    - `repo/examples/render_manifest.v1.example.json`
+  - Added validators/smoke tooling:
+    - `repo/tools/validate_media_stack_manifests.py`
+    - `repo/tools/smoke_media_stack.py`
+- PR-33.2 smoke validation (Conda `cat-ai-factory`):
+  - `python -m py_compile repo/worker/render_ffmpeg.py repo/tools/validate_media_stack_manifests.py repo/tools/smoke_media_stack.py` passed
+  - `python -m repo.tools.smoke_media_stack` passed
+  - generated and validated:
+    - `sandbox/output/mochi-dino-replace-smoke-20240515/frames/frame_manifest.v1.json`
+    - `sandbox/output/mochi-dino-replace-smoke-20240515/audio/audio_manifest.v1.json`
+    - `sandbox/output/mochi-dino-replace-smoke-20240515/edit/timeline.v1.json`
+    - `sandbox/output/mochi-dino-replace-smoke-20240515/render/render_manifest.v1.json`
+- Added PR-33.3 Mode B optional contracts:
+  - `repo/shared/script_plan.v1.schema.json`
+  - `repo/shared/identity_anchor.v1.schema.json`
+  - `repo/shared/storyboard.v1.schema.json`
+  - `repo/examples/script_plan.v1.example.json`
+  - `repo/examples/identity_anchor.v1.example.json`
+  - `repo/examples/storyboard.v1.example.json`
+  - `repo/tools/validate_mode_b_contracts.py`
+  - `repo/tools/smoke_mode_b_contracts.py`
+- PR-33.3 smoke validation (Conda `cat-ai-factory`):
+  - `python -m py_compile repo/tools/validate_mode_b_contracts.py repo/tools/smoke_mode_b_contracts.py` passed
+  - `python -m repo.tools.smoke_mode_b_contracts` passed
 
 ### Open Findings / Conditions
 - Roadmap policy:
@@ -164,19 +209,19 @@ Last Updated: 2026-02-16
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
-- PR-33.1 scope lock:
-  - implementation wiring only from explicit Dance Swap artifacts
-  - preserve non-binding lane policy (ADR-0024)
-  - no LLM/network side effects in Worker
-- PR-33.1 completion notes:
-  - implementation uses explicit artifact inputs only for Dance Swap lane behavior
+- PR-33.3 scope lock:
+  - Mode B contracts remain optional planner/control artifacts
+  - `job.json` remains execution authority
+  - no Worker authority change and no LLM/network side effects in Worker
+- PR-33.3 completion notes:
+  - optional Mode B contracts are now explicit, validated, and reusable
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: review PR-33.1 implementation closeout against ADR-0042 boundaries.
-- CODEX: prepare PR-33.1 branch/PR metadata and proceed only with quality-path scoped PRs (next: PR-33.2 / PR-34.x, including PR-34.4/PR-34.5 quality gating).
+- ARCH: review PR-33.3 implementation closeout against ADR-0043 boundaries.
+- CODEX: prepare PR-33.3 branch/PR metadata and proceed only with quality-path scoped PRs (next: PR-34.x, including PR-34.4/PR-34.5 quality gating).
 
-### ARCH Decision Queue Snapshot (PR-33.1 Focus)
+### ARCH Decision Queue Snapshot (PR-33.3 Focus)
 1) Video Analyzer contracts:
 - Approved as planner enrichment layer.
 - Metadata-only canon and index/query contracts.
@@ -187,8 +232,8 @@ Last Updated: 2026-02-16
 3) Dance Swap v1 contracts:
 - Approved as deterministic choreography-preserving lane artifact layer.
 - Contract set must remain lane-permissive and preserve `job.json` authority.
-4) Dance Swap v1 implementation:
-- Must consume explicit loop/tracks/mask/beatflow artifacts only.
-- Preserve Worker determinism and output boundary constraints.
+4) Optional Mode B contracts:
+- Must remain planner/control-plane optional artifacts (`script_plan.v1`, `identity_anchor.v1`, `storyboard.v1`).
+- Must preserve `job.json` as execution authority and avoid Worker authority drift.
 
 ------------------------------------------------------------

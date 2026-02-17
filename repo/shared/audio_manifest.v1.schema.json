@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/audio_manifest.v1.schema.json",
+  "title": "Audio Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "stage",
+    "audio_source",
+    "mix_wav",
+    "mix_wav_sha256",
+    "sample_rate_hz",
+    "channels"
+  ],
+  "properties": {
+    "version": {
+      "const": "audio_manifest.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage": {
+      "const": "audio"
+    },
+    "audio_source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "audio_asset_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "mix_wav": {
+      "type": "string",
+      "pattern": ".+\\.wav$"
+    },
+    "mix_wav_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sample_rate_hz": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "channels": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}
+

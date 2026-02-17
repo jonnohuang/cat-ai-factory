@@ -1,0 +1,28 @@
+{
+  "version": "storyboard.v1",
+  "job_id": "modeb-demo-20260217",
+  "frames": [
+    {
+      "shot_id": "shot_001",
+      "anchor_id": "anchor-mochi-main",
+      "image_asset": "assets/demo/dance_loop_ref_01.png",
+      "prompt": "Mochi hook pose, bright studio, front camera",
+      "duration_sec": 2.0
+    },
+    {
+      "shot_id": "shot_002",
+      "anchor_id": "anchor-mochi-main",
+      "image_asset": "assets/demo/dance_loop_ref_02.png",
+      "prompt": "Mochi and group wide dance frame, dynamic lights",
+      "duration_sec": 4.0
+    },
+    {
+      "shot_id": "shot_003",
+      "anchor_id": "anchor-mochi-main",
+      "image_asset": "assets/demo/dance_loop_ref_03.png",
+      "prompt": "Mochi punch-in expression on beat",
+      "duration_sec": 3.0
+    }
+  ]
+}
+
