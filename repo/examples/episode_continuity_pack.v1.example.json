@@ -1,0 +1,18 @@
+{
+  "version": "episode_continuity_pack.v1",
+  "pack_id": "mochi_dance_loop_v1",
+  "hero": {
+    "hero_id": "mochi"
+  },
+  "style": {
+    "style_id": "dance_loop_realistic_v1",
+    "palette_hint": "#66DDEE"
+  },
+  "costume": {
+    "costume_profile_id": "dino_green_v1"
+  },
+  "rules": {
+    "require_costume_fidelity": true,
+    "require_identity_consistency": true
+  }
+}

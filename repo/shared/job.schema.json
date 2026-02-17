@@ -278,6 +278,48 @@
         }
       }
     },
+    "segment_stitch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_relpath"
+      ],
+      "properties": {
+        "plan_relpath": {
+          "type": "string",
+          "pattern": "^repo/(canon|examples)/[a-zA-Z0-9._/-]+\\.json$"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "quality_target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relpath"
+      ],
+      "properties": {
+        "relpath": {
+          "type": "string",
+          "pattern": "^repo/(canon|examples)/[a-zA-Z0-9._/-]+\\.json$"
+        }
+      }
+    },
+    "continuity_pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relpath"
+      ],
+      "properties": {
+        "relpath": {
+          "type": "string",
+          "pattern": "^repo/(canon|examples)/[a-zA-Z0-9._/-]+\\.json$"
+        }
+      }
+    },
     "creativity": {
       "type": "object",
       "additionalProperties": false,

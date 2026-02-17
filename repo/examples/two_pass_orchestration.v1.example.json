@@ -1,0 +1,25 @@
+{
+  "version": "two_pass_orchestration.v1",
+  "job_id": "mochi-dino-replace-smoke-20240515",
+  "generated_at": "2026-02-17T00:00:00Z",
+  "inputs": {
+    "segment_stitch_report_relpath": "sandbox/output/mochi-dino-replace-smoke-20240515/segments/segment_stitch_report.v1.json",
+    "quality_report_relpath": "sandbox/logs/mochi-dino-replace-smoke-20240515/qc/recast_quality_report.v1.json",
+    "costume_report_relpath": "sandbox/logs/mochi-dino-replace-smoke-20240515/qc/costume_fidelity.v1.json",
+    "external_recast_lifecycle_relpath": "sandbox/dist_artifacts/mochi-dino-replace-smoke-20240515/viggle_pack/external_recast_lifecycle.v1.json"
+  },
+  "passes": {
+    "motion": {
+      "status": "pass",
+      "reason": "Segment runtime report present with generated clips."
+    },
+    "identity": {
+      "status": "fail",
+      "reason": "Identity consistency below threshold in quality report."
+    }
+  },
+  "orchestration": {
+    "identity_boundary": "external_hitl_required",
+    "next_preferred_action": "retry_recast"
+  }
+}

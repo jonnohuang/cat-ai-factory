@@ -48,8 +48,17 @@ def main(argv: list[str]) -> int:
     max_retries = int(data.get("policy", {}).get("max_retries", 0))
     retry_attempt = int(data.get("policy", {}).get("retry_attempt", 0))
     action = str(data.get("decision", {}).get("action", ""))
-    if action == "retry_recast" and retry_attempt > max_retries:
-        eprint("SEMANTIC_ERROR: retry_recast requires retry_attempt <= max_retries")
+    seg_retry = data.get("segment_retry", {}) if isinstance(data, dict) else {}
+    seg_mode = str(seg_retry.get("mode", "none")) if isinstance(seg_retry, dict) else "none"
+    seg_targets = seg_retry.get("target_segments", []) if isinstance(seg_retry, dict) else []
+    if action in {"retry_recast", "retry_motion"} and retry_attempt > max_retries:
+        eprint("SEMANTIC_ERROR: retry action requires retry_attempt <= max_retries")
+        return 1
+    if action == "retry_motion" and seg_mode == "none":
+        eprint("SEMANTIC_ERROR: retry_motion requires segment_retry mode != none")
+        return 1
+    if seg_mode == "retry_selected" and (not isinstance(seg_targets, list) or len(seg_targets) == 0):
+        eprint("SEMANTIC_ERROR: retry_selected requires target_segments")
         return 1
 
     print(f"OK: {target}")

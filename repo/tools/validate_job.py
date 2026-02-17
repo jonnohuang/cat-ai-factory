@@ -128,6 +128,42 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             if subject_id is not None and (not isinstance(subject_id, str) or not subject_id.strip()):
                 errors.append("dance_swap.subject_id must be a non-empty string when present")
 
+    segment_stitch = job.get("segment_stitch")
+    if segment_stitch is not None:
+        if not isinstance(segment_stitch, dict):
+            errors.append("segment_stitch must be an object when present")
+        else:
+            plan_relpath = segment_stitch.get("plan_relpath")
+            if not isinstance(plan_relpath, str) or not plan_relpath.strip():
+                errors.append("segment_stitch.plan_relpath must be a non-empty string")
+            elif not plan_relpath.startswith("repo/"):
+                errors.append("segment_stitch.plan_relpath must be repo-relative (repo/...)")
+            enabled = segment_stitch.get("enabled")
+            if enabled is not None and not isinstance(enabled, bool):
+                errors.append("segment_stitch.enabled must be boolean when present")
+
+    quality_target = job.get("quality_target")
+    if quality_target is not None:
+        if not isinstance(quality_target, dict):
+            errors.append("quality_target must be an object when present")
+        else:
+            relpath = quality_target.get("relpath")
+            if not isinstance(relpath, str) or not relpath.strip():
+                errors.append("quality_target.relpath must be a non-empty string")
+            elif not relpath.startswith("repo/"):
+                errors.append("quality_target.relpath must be repo-relative (repo/...)")
+
+    continuity_pack = job.get("continuity_pack")
+    if continuity_pack is not None:
+        if not isinstance(continuity_pack, dict):
+            errors.append("continuity_pack must be an object when present")
+        else:
+            relpath = continuity_pack.get("relpath")
+            if not isinstance(relpath, str) or not relpath.strip():
+                errors.append("continuity_pack.relpath must be a non-empty string")
+            elif not relpath.startswith("repo/"):
+                errors.append("continuity_pack.relpath must be repo-relative (repo/...)")
+
     return errors
 
 

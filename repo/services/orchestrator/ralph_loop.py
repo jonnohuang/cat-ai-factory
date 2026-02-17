@@ -220,6 +220,16 @@ def main(argv: List[str]) -> int:
         qc_dir = logs_dir / "qc"
         qc_dir.mkdir(parents=True, exist_ok=True)
         decision_log = qc_dir / "quality_decision.log"
+        pass_log = qc_dir / "two_pass_orchestration.log"
+        pass_cmd = [
+            "python3",
+            "repo/tools/derive_two_pass_orchestration.py",
+            "--job-id",
+            canonical_job_id,
+        ]
+        pass_rc = run_cmd(pass_cmd, pass_log)
+        if pass_rc != 0:
+            warn("TWO_PASS_ORCHESTRATION_FAILED", {"exit_code": pass_rc})
         decision_cmd = [
             "python3",
             "repo/tools/decide_quality_action.py",
@@ -297,7 +307,7 @@ def main(argv: List[str]) -> int:
             if rc == 0:
                 transition("VERIFIED", "LINEAGE_OK")
                 action, reason = quality_decision()
-                if action == "retry_recast":
+                if action in ("retry_recast", "retry_motion"):
                     transition(
                         "FAIL_QUALITY",
                         "QUALITY_RETRY",
@@ -383,7 +393,7 @@ def main(argv: List[str]) -> int:
             if rc == 0:
                 transition("VERIFIED", "LINEAGE_OK", attempt_id=attempt_id)
                 action, reason = quality_decision(attempt_id=attempt_id)
-                if action == "retry_recast":
+                if action in ("retry_recast", "retry_motion"):
                     transition(
                         "FAIL_QUALITY",
                         "QUALITY_RETRY",

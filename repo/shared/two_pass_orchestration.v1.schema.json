@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/two_pass_orchestration.v1.schema.json",
+  "title": "Two Pass Orchestration v1",
+  "description": "Deterministic pass-level quality artifact for motion/identity orchestration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "generated_at",
+    "inputs",
+    "passes",
+    "orchestration"
+  ],
+  "properties": {
+    "version": {
+      "const": "two_pass_orchestration.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "segment_stitch_report_relpath",
+        "quality_report_relpath",
+        "costume_report_relpath",
+        "external_recast_lifecycle_relpath"
+      ],
+      "properties": {
+        "segment_stitch_report_relpath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "quality_report_relpath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "costume_report_relpath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "external_recast_lifecycle_relpath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        }
+      }
+    },
+    "passes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "motion",
+        "identity"
+      ],
+      "properties": {
+        "motion": {
+          "$ref": "#/definitions/pass_state"
+        },
+        "identity": {
+          "$ref": "#/definitions/pass_state"
+        }
+      }
+    },
+    "orchestration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_boundary",
+        "next_preferred_action"
+      ],
+      "properties": {
+        "identity_boundary": {
+          "type": "string",
+          "enum": [
+            "external_hitl_required",
+            "internal_available",
+            "unknown"
+          ]
+        },
+        "next_preferred_action": {
+          "type": "string",
+          "enum": [
+            "proceed_finalize",
+            "retry_motion",
+            "retry_recast",
+            "block_for_costume",
+            "escalate_hitl"
+          ]
+        }
+      }
+    }
+  },
+  "definitions": {
+    "pass_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
+    }
+  }
+}

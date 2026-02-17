@@ -424,6 +424,14 @@ def _select_segment_stitch_plan(project_root: str, analysis_id: Optional[str]) -
     return {"relpath": _safe_rel(path, project_root), "data": doc}
 
 
+def _select_continuity_pack(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    rows = _find_contract_docs(project_root, "episode_continuity_pack.v1", analysis_id)
+    if not rows:
+        return None
+    path, doc = rows[0]
+    return {"relpath": _safe_rel(path, project_root), "data": doc}
+
+
 def _facts_only_enabled() -> bool:
     raw = os.environ.get("CAF_PLANNER_FACTS_ONLY", "1").strip().lower()
     return raw not in ("0", "false", "off", "no")
@@ -500,6 +508,35 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "stitch_order_count": len(stitch_order) if isinstance(stitch_order, list) else 0,
             "total_retry_budget": retries,
             "constraints": segment_doc.get("constraints", {}) if isinstance(segment_doc, dict) else {},
+        }
+    continuity_pack = _select_continuity_pack(project_root, reverse_contracts.get("analysis_id"))
+    if isinstance(continuity_pack, dict):
+        cp_doc = continuity_pack.get("data", {})
+        hero_id = None
+        style_id = None
+        costume_id = None
+        if isinstance(cp_doc, dict):
+            hero = cp_doc.get("hero", {})
+            style = cp_doc.get("style", {})
+            costume = cp_doc.get("costume", {})
+            rules = cp_doc.get("rules", {})
+            if isinstance(hero, dict):
+                hero_id = hero.get("hero_id")
+            if isinstance(style, dict):
+                style_id = style.get("style_id")
+            if isinstance(costume, dict):
+                costume_id = costume.get("costume_profile_id")
+            if not isinstance(rules, dict):
+                rules = {}
+        else:
+            rules = {}
+        ctx["continuity_pack"] = {
+            "relpath": continuity_pack.get("relpath"),
+            "pack_id": cp_doc.get("pack_id") if isinstance(cp_doc, dict) else None,
+            "hero_id": hero_id,
+            "style_id": style_id,
+            "costume_profile_id": costume_id,
+            "rules": rules,
         }
 
     bench_report_path = os.path.join(
@@ -771,6 +808,14 @@ def _apply_segment_stitch_hints(job: Dict[str, Any], quality_context: Dict[str, 
     plan = _load_json_if_exists(abs_path)
     if not isinstance(plan, dict):
         return job
+    enabled = True
+    existing = job.get("segment_stitch")
+    if isinstance(existing, dict) and isinstance(existing.get("enabled"), bool):
+        enabled = existing["enabled"]
+    job["segment_stitch"] = {
+        "plan_relpath": relpath,
+        "enabled": enabled,
+    }
 
     segments = plan.get("segments", [])
     if not isinstance(segments, list) or not segments:
@@ -812,6 +857,22 @@ def _apply_segment_stitch_hints(job: Dict[str, Any], quality_context: Dict[str, 
             t = prev_t
         shot["t"] = min(max(0, t), 60)
         prev_t = shot["t"]
+    return job
+
+
+def _apply_continuity_pack_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(job, dict) or not isinstance(quality_context, dict):
+        return job
+    continuity = quality_context.get("continuity_pack")
+    if not isinstance(continuity, dict):
+        return job
+    relpath = continuity.get("relpath")
+    if not isinstance(relpath, str) or not relpath:
+        return job
+    existing = job.get("continuity_pack")
+    if isinstance(existing, dict) and isinstance(existing.get("relpath"), str) and existing.get("relpath"):
+        return job
+    job["continuity_pack"] = {"relpath": relpath}
     return job
 
 
@@ -901,6 +962,7 @@ def main(argv: List[str]) -> int:
                 print(f"INFO planner video_analysis_applied={selected_id}", file=sys.stderr)
         job = _apply_reverse_analysis_hints(job, quality_context)
         job = _apply_segment_stitch_hints(job, quality_context, project_root)
+        job = _apply_continuity_pack_hints(job, quality_context)
         job = _apply_quality_policy_hints(job, quality_context)
         job = _apply_facts_only_guard(job, quality_context)
         facts_errors = _validate_facts_only_guard(job, quality_context)

@@ -46,6 +46,26 @@
           "type": ["string", "null"],
           "pattern": "^(repo/.+\\.json)?$"
         },
+        "two_pass_orchestration_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "quality_target_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(repo/.+\\.json)?$"
+        },
+        "quality_target_contract_error": {
+          "type": ["string", "null"],
+          "maxLength": 240
+        },
+        "continuity_pack_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(repo/.+\\.json)?$"
+        },
+        "continuity_pack_error": {
+          "type": ["string", "null"],
+          "maxLength": 240
+        },
         "failed_metrics": {
           "type": "array",
           "items": {
@@ -71,6 +91,82 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 50
+        },
+        "quality_targets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identity_consistency",
+            "mask_edge_bleed",
+            "temporal_stability",
+            "loop_seam",
+            "audio_video"
+          ],
+          "properties": {
+            "identity_consistency": {"type": "number", "minimum": 0, "maximum": 1},
+            "mask_edge_bleed": {"type": "number", "minimum": 0, "maximum": 1},
+            "temporal_stability": {"type": "number", "minimum": 0, "maximum": 1},
+            "loop_seam": {"type": "number", "minimum": 0, "maximum": 1},
+            "audio_video": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        }
+      }
+    },
+    "segment_retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "target_segments",
+        "trigger_metrics"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "retry_all",
+            "retry_selected"
+          ]
+        },
+        "target_segments": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^seg_[0-9]{3}$"
+          }
+        },
+        "trigger_metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "passes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "motion_status",
+        "identity_status"
+      ],
+      "properties": {
+        "motion_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        },
+        "identity_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
         }
       }
     },
@@ -86,6 +182,7 @@
           "type": "string",
           "enum": [
             "proceed_finalize",
+            "retry_motion",
             "retry_recast",
             "block_for_costume",
             "escalate_hitl"
