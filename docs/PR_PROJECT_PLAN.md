@@ -1091,7 +1091,7 @@ Outcome:
 ---
 
 ### PR-34.7 — Deterministic quality-controller loop (artifact-driven retries + escalation)
-Status: **PLANNED**
+Status: **ACTIVE**
 
 Scope:
 - Add deterministic quality decision contract artifact under:
@@ -1119,7 +1119,7 @@ Outcome:
 Sub-PR plan:
 
 ### PR-34.7a — Reverse-analysis contracts (truth vs suggestions split)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add CAF-owned canonical reverse-analysis schema:
@@ -1142,21 +1142,26 @@ Outcome:
 ---
 
 ### PR-34.7b — Planner enrichment adapter (optional vendor plugins)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add planner-side optional plugin adapter for vendor suggestion ingestion.
 - Merge vendor suggestions into planner context as optional hints only.
+- Wire deterministic reverse-analysis artifacts into planner quality constraints:
+  - `beat_grid.v1`
+  - `pose_checkpoints.v1`
+  - `keyframe_checkpoints.v1`
+  - `caf.video_reverse_prompt.v1`
 - Keep all vendor integrations non-blocking and optional for daily pipeline.
 - No Worker dependency on vendor artifacts.
 
 Outcome:
-- Planner can consume reverse-engineering suggestions without introducing hard vendor dependencies.
+- Planner consumes measured quality constraints plus optional suggestions without introducing hard vendor dependencies.
 
 ---
 
 ### PR-34.7c — Deterministic segment-generate-stitch planning contracts
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add planner/control contracts for short segment generation plans:
@@ -1167,6 +1172,7 @@ Scope:
   - `constraints.camera_lock = true`
   - `constraints.background_lock = true`
   - `constraints.max_shot_length_sec = 3`
+- Drive per-segment retry slot assignment from beat/pose/keyframe checkpoints.
 
 Outcome:
 - Motion/identity drift risk is reduced via deterministic short-segment orchestration.
@@ -1174,17 +1180,138 @@ Outcome:
 ---
 
 ### PR-34.7d — Quality-loop policy engine + escalation states
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add deterministic quality decision artifact:
   - `sandbox/logs/<job_id>/qc/quality_decision.v1.json`
 - Add bounded action policy map from failed metrics to next actions.
 - Add explicit capped retry + escalation states (fail-loud HITL handoff).
+- Require policy decisions to consume:
+  - deterministic quality report artifacts
+  - segment checkpoint coverage signals
 - Keep loop artifact-driven and auditable; no hidden autonomous agent execution.
 
 Outcome:
 - Quality optimization loop is deterministic, reproducible, and operationally safe.
+
+---
+
+### PR-34.7e — Analyzer Core Pack implementation (deterministic signals for quality loop)
+Status: **COMPLETED**
+
+Scope:
+- Implement deterministic analyzer signal extraction and emit canonical artifacts:
+  - FFprobe metadata truth fields (fps, resolution, duration, codec)
+  - PySceneDetect shot boundaries -> shot timestamps
+  - pose checkpoints (MoveNet/MediaPipe class implementation)
+  - OpenCV optical-flow motion curves
+  - librosa BPM/beat/onset grid
+- Ensure generated outputs map directly into PR-34.7a schemas.
+- Keep analyzer outputs planner-side metadata only; no Worker runtime authority dependency.
+
+Outcome:
+- Quality-controller inputs are generated deterministically from analyzer core signals and are actually usable by planner/control retries.
+
+---
+
+### PR-34.7f — Facts-only planner guard + analyzer facts completeness
+Status: **COMPLETED**
+
+Scope:
+- Extend analyzer-core outputs with deterministic visual facts needed for planner grounding:
+  - brightness stats
+  - palette stats
+  - basic camera movement classification confidence
+- Add planner-side facts-only guard policy:
+  - planner may use analyzer facts only
+  - when a fact is unavailable, planner must emit `unknown` instead of inferring unsupported details
+- Add deterministic validation/smoke checks to fail when planner outputs claims that are not analyzer-backed.
+
+Outcome:
+- Reverse planning becomes consistent, versionable, repo-safe, and automatable with explicit unknown handling.
+
+---
+
+### PR-34.7g — Segment generate+stitch runtime execution path
+Status: **PLANNED**
+
+Scope:
+- Implement deterministic segment render execution from `segment_stitch_plan.v1` (not contracts-only).
+- Emit per-segment runtime artifacts and stitch report under canonical output paths.
+- Enforce seam strategy execution (hard cut/crossfade/motion blend) from segment plan contract.
+
+Outcome:
+- Segment-first quality path is executable end-to-end and auditable.
+
+---
+
+### PR-34.7h — Two-pass motion→identity orchestration
+Status: **PLANNED**
+
+Scope:
+- Add explicit pass-level orchestration artifacts for:
+  - motion pass (dance fidelity first)
+  - identity pass (hero consistency second)
+- Enable pass-level retry decisions in controller policy artifacts.
+- Preserve explicit external HITL boundary for identity recast where required.
+
+Outcome:
+- Motion-vs-identity tradeoff becomes explicit, controllable, and measurable.
+
+---
+
+### PR-34.7i — Quality target tuning + segment-level auto-retry policy
+Status: **PLANNED**
+
+Scope:
+- Extend quality decision mapping to segment-level retry actions.
+- Tune and codify quality thresholds for dance fidelity dimensions.
+- Keep retries bounded and deterministic with fail-loud escalation.
+
+Outcome:
+- Quality loop improves outputs with targeted retries instead of coarse reruns.
+
+---
+
+### PR-34.7k — Quality target contract artifact
+Status: **PLANNED**
+
+Scope:
+- Add a versioned quality-target contract artifact for per-job acceptance thresholds.
+- Wire controller decisions to explicit target contract values instead of implicit defaults.
+- Add deterministic validation and smoke checks for quality-target contract parsing/enforcement.
+
+Outcome:
+- Quality acceptance criteria become explicit, auditable, and portable across jobs.
+
+---
+
+### PR-34.7l — Segment/shot debug exports for quality tuning
+Status: **PLANNED**
+
+Scope:
+- Emit deterministic debug artifacts per segment/shot:
+  - seam preview assets
+  - motion curve snapshots
+  - selected checkpoint overlays/strips
+- Keep exports output-bound and non-authoritative.
+
+Outcome:
+- Quality failures become diagnosable quickly with concrete artifact evidence.
+
+---
+
+### PR-34.7m — Episode continuity pack (planner + quality shared input)
+Status: **PLANNED**
+
+Scope:
+- Introduce a versioned episode continuity pack contract (hero/style/costume refs + drift rules).
+- Make planner and quality checks consume the same continuity pack inputs.
+- Add deterministic validation and smoke coverage.
+
+Outcome:
+- Cross-episode consistency improves with shared continuity authority inputs.
 
 
 ------------------------------------------------------------

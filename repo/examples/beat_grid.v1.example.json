@@ -1,0 +1,12 @@
+{
+  "version": "beat_grid.v1",
+  "analysis_id": "demo-dance-loop-mochi-01",
+  "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
+  "bpm_estimate": 124.0,
+  "beats": [
+    {"t_sec": 0.00, "strength": 0.93},
+    {"t_sec": 0.48, "strength": 0.88},
+    {"t_sec": 0.97, "strength": 0.90},
+    {"t_sec": 1.45, "strength": 0.86}
+  ]
+}

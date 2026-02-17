@@ -30,6 +30,10 @@ crewai>=0.35.0
 
 # --- Optional: deterministic CV tooling (planner/offline + worker utilities) ---
 opencv-python-headless>=4.10.0
+scenedetect>=0.6.3
+librosa>=0.10.2
+# MediaPipe may not ship wheels for all Python versions/platforms.
+mediapipe>=0.10.14; python_version < "3.12"
 
 # --- Optional: static typing (keep lightweight) ---
 mypy>=1.8.0

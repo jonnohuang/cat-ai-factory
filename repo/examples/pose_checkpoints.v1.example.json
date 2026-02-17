@@ -1,0 +1,23 @@
+{
+  "version": "pose_checkpoints.v1",
+  "analysis_id": "demo-dance-loop-mochi-01",
+  "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
+  "model": "movenet-lightning",
+  "checkpoints": [
+    {
+      "t_sec": 0.20,
+      "pose_signature": [0.11, 0.35, 0.76, 0.42, 0.58, 0.21],
+      "confidence": 0.87
+    },
+    {
+      "t_sec": 0.92,
+      "pose_signature": [0.14, 0.44, 0.80, 0.38, 0.52, 0.19],
+      "confidence": 0.84
+    },
+    {
+      "t_sec": 1.63,
+      "pose_signature": [0.09, 0.31, 0.72, 0.46, 0.61, 0.27],
+      "confidence": 0.88
+    }
+  ]
+}

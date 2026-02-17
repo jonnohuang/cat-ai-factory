@@ -1,0 +1,22 @@
+{
+  "version": "quality_decision.v1",
+  "job_id": "mochi-dino-replace-smoke-20240515",
+  "generated_at": "2026-02-17T00:00:00Z",
+  "inputs": {
+    "quality_report_relpath": "sandbox/logs/mochi-dino-replace-smoke-20240515/qc/recast_quality_report.v1.json",
+    "costume_report_relpath": null,
+    "segment_stitch_plan_relpath": "repo/examples/segment_stitch_plan.v1.example.json",
+    "failed_metrics": [
+      "mask_edge_bleed",
+      "loop_seam"
+    ]
+  },
+  "policy": {
+    "max_retries": 2,
+    "retry_attempt": 1
+  },
+  "decision": {
+    "action": "retry_recast",
+    "reason": "Quality metrics failed within retry budget; request deterministic retry."
+  }
+}

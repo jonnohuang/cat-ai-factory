@@ -1,0 +1,49 @@
+{
+  "version": "segment_stitch_plan.v1",
+  "plan_id": "mochi-demo-loop-segplan-01",
+  "analysis_id": "demo-dance-loop-mochi-01",
+  "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
+  "constraints": {
+    "camera_lock": true,
+    "background_lock": true,
+    "max_shot_length_sec": 3.0
+  },
+  "segments": [
+    {
+      "segment_id": "seg_001",
+      "order": 1,
+      "start_sec": 0.0,
+      "end_sec": 2.0,
+      "retry_budget": 2
+    },
+    {
+      "segment_id": "seg_002",
+      "order": 2,
+      "start_sec": 2.0,
+      "end_sec": 4.0,
+      "retry_budget": 2,
+      "seam": {
+        "prev_segment_id": "seg_001",
+        "blend_frames": 6,
+        "method": "crossfade"
+      }
+    },
+    {
+      "segment_id": "seg_003",
+      "order": 3,
+      "start_sec": 4.0,
+      "end_sec": 6.0,
+      "retry_budget": 1,
+      "seam": {
+        "prev_segment_id": "seg_002",
+        "blend_frames": 4,
+        "method": "motion_blend"
+      }
+    }
+  ],
+  "stitch_order": [
+    "seg_001",
+    "seg_002",
+    "seg_003"
+  ]
+}

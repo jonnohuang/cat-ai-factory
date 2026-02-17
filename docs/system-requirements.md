@@ -450,6 +450,85 @@ The system MUST support an artifact-driven quality-controller loop that determin
   - external recast remains explicit HITL outside Worker runtime
   - quality policy artifacts are deterministic guidance, not authority overrides of `job.json`
 
+### FR-28.6 — Reverse-analysis truth/suggestions contracts (planner-side)
+The system MUST support a planner-side reverse-analysis contract that separates deterministic measured truth from optional vendor suggestions.
+
+- Required behavior:
+  - canonical reverse-analysis artifact schema (`caf.video_reverse_prompt.v1`)
+  - deterministic checkpoint schemas for beat grid, pose checkpoints, and keyframe checkpoints
+  - optional vendor suggestion envelopes stored under `repo/analysis/vendor/**`
+  - deterministic validation that enforces cross-artifact analysis/source consistency
+- Hard constraints:
+  - deterministic analyzer fields remain authoritative; vendor fields are suggestions only
+  - vendor integrations remain optional and non-blocking for daily pipeline operation
+  - Worker MUST NOT depend on reverse-analysis/vendor artifacts as runtime authority
+
+### FR-28.7 — Analyzer core implementation and quality-loop consumption
+The system MUST implement deterministic analyzer core signals and ensure planner/control quality flows consume them.
+
+- Required behavior:
+  - deterministic extraction for metadata truth, shot boundaries, pose checkpoints, optical-flow motion curves, and beat/onset timing
+  - planner quality constraints consume reverse-analysis artifacts as first-class inputs
+  - control-plane quality decisions consume report artifacts plus checkpoint/segment coverage signals
+- Hard constraints:
+  - analyzer outputs remain planner-side metadata artifacts
+  - no Worker authority dependency on analyzer artifacts
+  - no changes to runtime write boundaries
+
+### FR-28.8 — Facts-only planner guard with explicit unknown semantics
+The system MUST enforce planner outputs to be grounded in analyzer facts for reverse-analysis workflows.
+
+- Required behavior:
+  - analyzer facts include brightness/palette stats and basic camera movement classification output
+  - planner must only emit claims supported by available analyzer facts
+  - unsupported fields must be emitted as `unknown`
+  - deterministic validation fails when planner output contains non-fact-backed claims
+- Hard constraints:
+  - no hidden fallback to unconstrained semantic guessing in facts-only mode
+  - Worker authority remains unchanged and deterministic
+
+### FR-28.9 — Segment runtime execution and seam enforcement
+The system MUST support deterministic segment generation and stitch execution from versioned segment plan contracts.
+
+- Required behavior:
+  - execute segment render runtime from `segment_stitch_plan.v1`
+  - enforce seam methods from contract
+  - emit per-segment and stitch report artifacts for auditability
+- Hard constraints:
+  - output artifacts remain under `/sandbox/output/<job_id>/**`
+  - no nondeterministic runtime behavior introduced in Worker
+
+### FR-28.10 — Two-pass motion/identity orchestration
+The system MUST support explicit two-pass orchestration for dance-quality jobs.
+
+- Required behavior:
+  - motion pass and identity pass artifacts/log states are explicit and deterministic
+  - controller policy can route retries by pass-level failures
+- Hard constraints:
+  - external identity recast remains explicit HITL when used
+  - write boundaries and authority invariants remain unchanged
+
+### FR-28.11 — Quality target contract and segment-level retry tuning
+The system MUST support explicit quality-target contracts and segment-level retry policy mapping.
+
+- Required behavior:
+  - versioned quality-target artifact with per-dimension thresholds
+  - deterministic decision mapping from failed dimensions to segment-level retries
+  - bounded retries with fail-loud escalation
+- Hard constraints:
+  - no hidden automatic loops beyond declared retry budgets
+  - policy artifacts remain auditable and deterministic
+
+### FR-28.12 — Continuity pack and debug export posture
+The system MUST support continuity-pack inputs and deterministic debug exports for quality tuning.
+
+- Required behavior:
+  - versioned continuity pack consumed by planner and quality checks
+  - deterministic segment/shot debug export artifacts for diagnostics
+- Hard constraints:
+  - debug exports are non-authoritative artifacts
+  - continuity inputs remain planner/quality-side references and must not alter Worker determinism rules
+
 
 ------------------------------------------------------------
 

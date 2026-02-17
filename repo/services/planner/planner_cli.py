@@ -295,6 +295,144 @@ def _load_json_if_exists(path: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _find_contract_docs(
+    project_root: str,
+    version_name: str,
+    analysis_id: Optional[str],
+) -> List[Tuple[str, Dict[str, Any]]]:
+    candidates: List[Tuple[str, Dict[str, Any]]] = []
+    search_dirs = [
+        os.path.join(project_root, "repo", "canon", "demo_analyses"),
+        os.path.join(project_root, "repo", "examples"),
+    ]
+    for base in search_dirs:
+        if not os.path.isdir(base):
+            continue
+        for root, _dirs, files in os.walk(base):
+            for name in sorted(files):
+                if not name.endswith(".json"):
+                    continue
+                p = os.path.join(root, name)
+                doc = _load_json_if_exists(p)
+                if not isinstance(doc, dict):
+                    continue
+                if doc.get("version") != version_name:
+                    continue
+                if analysis_id and doc.get("analysis_id") == analysis_id:
+                    candidates.append((p, doc))
+                elif not analysis_id:
+                    candidates.append((p, doc))
+    candidates.sort(key=lambda row: _safe_rel(row[0], project_root))
+    return candidates
+
+
+def _select_reverse_contracts(project_root: str, selected_analysis: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    analysis_id = None
+    if isinstance(selected_analysis, dict):
+        aid = selected_analysis.get("analysis_id")
+        if isinstance(aid, str) and aid:
+            analysis_id = aid
+
+    result: Dict[str, Any] = {
+        "analysis_id": analysis_id,
+        "reverse_prompt": None,
+        "beat_grid": None,
+        "pose_checkpoints": None,
+        "keyframe_checkpoints": None,
+    }
+
+    reverse_rows = _find_contract_docs(project_root, "caf.video_reverse_prompt.v1", analysis_id)
+    beat_rows = _find_contract_docs(project_root, "beat_grid.v1", analysis_id)
+    pose_rows = _find_contract_docs(project_root, "pose_checkpoints.v1", analysis_id)
+    keyframe_rows = _find_contract_docs(project_root, "keyframe_checkpoints.v1", analysis_id)
+
+    if reverse_rows:
+        path, doc = reverse_rows[0]
+        result["reverse_prompt"] = {"relpath": _safe_rel(path, project_root), "data": doc}
+    if beat_rows:
+        path, doc = beat_rows[0]
+        result["beat_grid"] = {"relpath": _safe_rel(path, project_root), "data": doc}
+    if pose_rows:
+        path, doc = pose_rows[0]
+        result["pose_checkpoints"] = {"relpath": _safe_rel(path, project_root), "data": doc}
+    if keyframe_rows:
+        path, doc = keyframe_rows[0]
+        result["keyframe_checkpoints"] = {"relpath": _safe_rel(path, project_root), "data": doc}
+    return result
+
+
+def _extract_reverse_timestamps(reverse_contracts: Dict[str, Any]) -> List[float]:
+    times: List[float] = []
+
+    reverse_prompt = reverse_contracts.get("reverse_prompt", {})
+    if isinstance(reverse_prompt, dict):
+        data = reverse_prompt.get("data", {})
+        if isinstance(data, dict):
+            truth = data.get("truth", {})
+            if isinstance(truth, dict):
+                for shot in truth.get("shots", []):
+                    if not isinstance(shot, dict):
+                        continue
+                    for key in ("start_sec", "end_sec"):
+                        v = shot.get(key)
+                        if isinstance(v, (int, float)) and v >= 0:
+                            times.append(float(v))
+
+    beat_grid = reverse_contracts.get("beat_grid", {})
+    if isinstance(beat_grid, dict):
+        data = beat_grid.get("data", {})
+        if isinstance(data, dict):
+            for beat in data.get("beats", []):
+                if not isinstance(beat, dict):
+                    continue
+                t = beat.get("t_sec")
+                if isinstance(t, (int, float)) and t >= 0:
+                    times.append(float(t))
+
+    pose_doc = reverse_contracts.get("pose_checkpoints", {})
+    if isinstance(pose_doc, dict):
+        data = pose_doc.get("data", {})
+        if isinstance(data, dict):
+            for cp in data.get("checkpoints", []):
+                if not isinstance(cp, dict):
+                    continue
+                t = cp.get("t_sec")
+                if isinstance(t, (int, float)) and t >= 0:
+                    times.append(float(t))
+
+    keyframe_doc = reverse_contracts.get("keyframe_checkpoints", {})
+    if isinstance(keyframe_doc, dict):
+        data = keyframe_doc.get("data", {})
+        if isinstance(data, dict):
+            for cp in data.get("keyframes", []):
+                if not isinstance(cp, dict):
+                    continue
+                t = cp.get("t_sec")
+                if isinstance(t, (int, float)) and t >= 0:
+                    times.append(float(t))
+
+    # Deterministic dedupe with rounded precision.
+    unique = sorted({round(t, 3) for t in times})
+    return [float(v) for v in unique]
+
+
+def _select_segment_stitch_plan(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    rows = _find_contract_docs(project_root, "segment_stitch_plan.v1", analysis_id)
+    if not rows:
+        return None
+    path, doc = rows[0]
+    return {"relpath": _safe_rel(path, project_root), "data": doc}
+
+
+def _facts_only_enabled() -> bool:
+    raw = os.environ.get("CAF_PLANNER_FACTS_ONLY", "1").strip().lower()
+    return raw not in ("0", "false", "off", "no")
+
+
+def _replace_word_insensitive(text: str, pattern: str, repl: str) -> str:
+    return re.sub(pattern, repl, text, flags=re.IGNORECASE)
+
+
 def _latest_matching_file(base_dir: str, filename: str) -> Optional[str]:
     matches: List[str] = []
     if not os.path.isdir(base_dir):
@@ -319,6 +457,49 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "tags": selected_analysis.get("pattern", {}).get("tags", []),
             "looping": selected_analysis.get("pattern", {}).get("looping", {}),
             "beat_count": len(selected_analysis.get("pattern", {}).get("choreography", {}).get("beats", []) or []),
+        }
+
+    reverse_contracts = _select_reverse_contracts(project_root, selected_analysis)
+    reverse_prompt = reverse_contracts.get("reverse_prompt", {})
+    beat_grid = reverse_contracts.get("beat_grid", {})
+    pose_doc = reverse_contracts.get("pose_checkpoints", {})
+    keyframe_doc = reverse_contracts.get("keyframe_checkpoints", {})
+    reverse_timestamps = _extract_reverse_timestamps(reverse_contracts)
+    if any(isinstance(x, dict) and x.get("data") for x in (reverse_prompt, beat_grid, pose_doc, keyframe_doc)):
+        reverse_data = reverse_prompt.get("data", {}) if isinstance(reverse_prompt, dict) else {}
+        truth = reverse_data.get("truth", {}) if isinstance(reverse_data, dict) else {}
+        visual_facts = truth.get("visual_facts", {}) if isinstance(truth, dict) else {}
+        ctx["reverse_analysis"] = {
+            "analysis_id": reverse_contracts.get("analysis_id"),
+            "reverse_prompt_relpath": (reverse_prompt or {}).get("relpath"),
+            "beat_grid_relpath": (beat_grid or {}).get("relpath"),
+            "pose_checkpoints_relpath": (pose_doc or {}).get("relpath"),
+            "keyframe_checkpoints_relpath": (keyframe_doc or {}).get("relpath"),
+            "timestamp_count": len(reverse_timestamps),
+            "timestamps_preview": reverse_timestamps[:10],
+            "visual_facts": visual_facts if isinstance(visual_facts, dict) else {},
+            "facts_only_mode": _facts_only_enabled(),
+        }
+    segment_plan = _select_segment_stitch_plan(project_root, reverse_contracts.get("analysis_id"))
+    if isinstance(segment_plan, dict):
+        segment_doc = segment_plan.get("data", {})
+        segments = segment_doc.get("segments", []) if isinstance(segment_doc, dict) else []
+        stitch_order = segment_doc.get("stitch_order", []) if isinstance(segment_doc, dict) else []
+        retries = 0
+        if isinstance(segments, list):
+            retries = sum(
+                int(seg.get("retry_budget", 0))
+                for seg in segments
+                if isinstance(seg, dict) and isinstance(seg.get("retry_budget"), int)
+            )
+        ctx["segment_stitch_plan"] = {
+            "relpath": segment_plan.get("relpath"),
+            "plan_id": segment_doc.get("plan_id") if isinstance(segment_doc, dict) else None,
+            "analysis_id": segment_doc.get("analysis_id") if isinstance(segment_doc, dict) else None,
+            "segment_count": len(segments) if isinstance(segments, list) else 0,
+            "stitch_order_count": len(stitch_order) if isinstance(stitch_order, list) else 0,
+            "total_retry_budget": retries,
+            "constraints": segment_doc.get("constraints", {}) if isinstance(segment_doc, dict) else {},
         }
 
     bench_report_path = os.path.join(
@@ -408,6 +589,232 @@ def _apply_quality_policy_hints(job: Dict[str, Any], quality_context: Dict[str, 
     return job
 
 
+def _apply_reverse_analysis_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(job, dict):
+        return job
+    if not isinstance(quality_context, dict):
+        return job
+    reverse = quality_context.get("reverse_analysis")
+    if not isinstance(reverse, dict):
+        return job
+    preview = reverse.get("timestamps_preview", [])
+    if not isinstance(preview, list) or not preview:
+        return job
+    shots = job.get("shots", [])
+    video = job.get("video", {})
+    if not isinstance(shots, list) or not shots:
+        return job
+    if not isinstance(video, dict):
+        return job
+    length_seconds = int(video.get("length_seconds", 15))
+    max_t = max(0, length_seconds - 1)
+    if max_t <= 0:
+        return job
+
+    src_max = max(float(x) for x in preview if isinstance(x, (int, float)))
+    if src_max <= 0:
+        return job
+    anchor_norms = sorted(
+        {
+            min(1.0, max(0.0, float(x) / src_max))
+            for x in preview
+            if isinstance(x, (int, float)) and float(x) >= 0
+        }
+    )
+    if not anchor_norms:
+        return job
+    if 1.0 not in anchor_norms:
+        anchor_norms.append(1.0)
+
+    prev_t = -1
+    count = len(shots)
+    for i, shot in enumerate(shots):
+        if not isinstance(shot, dict):
+            continue
+        target = float(i) / float(max(1, count - 1))
+        snap = min(anchor_norms, key=lambda n: abs(n - target))
+        t = int(round(snap * max_t))
+        if t < prev_t:
+            t = prev_t
+        shot["t"] = min(max(0, t), 60)
+        prev_t = shot["t"]
+    return job
+
+
+def _apply_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(job, dict) or not isinstance(quality_context, dict):
+        return job
+    reverse = quality_context.get("reverse_analysis")
+    if not isinstance(reverse, dict):
+        return job
+    if not bool(reverse.get("facts_only_mode")):
+        return job
+
+    visual_facts = reverse.get("visual_facts", {})
+    if not isinstance(visual_facts, dict):
+        visual_facts = {}
+    camera_mode = str(visual_facts.get("camera_movement_mode") or "unknown").lower()
+    if camera_mode not in {"locked", "pan", "tilt", "push", "pull", "mixed", "unknown"}:
+        camera_mode = "unknown"
+    brightness_bucket = str(visual_facts.get("brightness_bucket") or "unknown").lower()
+    if brightness_bucket not in {"dark", "mid", "bright", "unknown"}:
+        brightness_bucket = "unknown"
+    palette = visual_facts.get("palette_top_hex", [])
+    palette_hint = "unknown"
+    if isinstance(palette, list) and palette and isinstance(palette[0], str):
+        palette_hint = palette[0]
+
+    shots = job.get("shots", [])
+    if isinstance(shots, list):
+        for shot in shots:
+            if not isinstance(shot, dict):
+                continue
+            for key in ("visual", "action", "caption"):
+                val = shot.get(key)
+                if not isinstance(val, str):
+                    continue
+                txt = val
+                if camera_mode == "unknown":
+                    txt = _replace_word_insensitive(txt, r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b", "unknown")
+                elif camera_mode == "locked":
+                    txt = _replace_word_insensitive(txt, r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld)\\b", "unknown")
+                elif camera_mode == "pan":
+                    txt = _replace_word_insensitive(txt, r"\\b(tilt|zoom|dolly|push|pull|handheld)\\b", "unknown")
+                elif camera_mode == "tilt":
+                    txt = _replace_word_insensitive(txt, r"\\b(pan|zoom|dolly|push|pull|tracking|handheld)\\b", "unknown")
+
+                if brightness_bucket == "unknown":
+                    txt = _replace_word_insensitive(txt, r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", "unknown")
+                shot[key] = txt
+
+            # Deterministic fact stamp for downstream audit in existing schema fields.
+            action = shot.get("action")
+            if isinstance(action, str) and "| facts:" not in action:
+                facts = f"camera={camera_mode},brightness={brightness_bucket},palette={palette_hint}"
+                shot["action"] = f"{action} | facts:{facts}"[:240]
+
+    script = job.get("script")
+    if isinstance(script, dict):
+        voice = script.get("voiceover")
+        if isinstance(voice, str):
+            txt = voice
+            if camera_mode == "unknown":
+                txt = _replace_word_insensitive(txt, r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b", "unknown")
+            if brightness_bucket == "unknown":
+                txt = _replace_word_insensitive(txt, r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", "unknown")
+            script["voiceover"] = txt
+
+    return job
+
+
+def _validate_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, Any]) -> List[str]:
+    errors: List[str] = []
+    reverse = quality_context.get("reverse_analysis", {}) if isinstance(quality_context, dict) else {}
+    if not isinstance(reverse, dict) or not bool(reverse.get("facts_only_mode")):
+        return errors
+    visual_facts = reverse.get("visual_facts", {}) if isinstance(reverse, dict) else {}
+    if not isinstance(visual_facts, dict):
+        visual_facts = {}
+    camera_mode = str(visual_facts.get("camera_movement_mode") or "unknown").lower()
+    brightness_bucket = str(visual_facts.get("brightness_bucket") or "unknown").lower()
+
+    camera_terms = re.compile(r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b", re.IGNORECASE)
+    brightness_terms = re.compile(r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", re.IGNORECASE)
+    allowed_camera: Dict[str, set[str]] = {
+        "unknown": set(),
+        "locked": {"locked", "static"},
+        "pan": {"pan", "tracking"},
+        "tilt": {"tilt"},
+        "push": {"push"},
+        "pull": {"pull"},
+        "mixed": {"pan", "tilt", "zoom", "dolly", "push", "pull", "tracking", "handheld", "static", "locked"},
+    }
+
+    texts: List[Tuple[str, str]] = []
+    script = job.get("script", {})
+    if isinstance(script, dict):
+        for k in ("hook", "voiceover", "ending"):
+            v = script.get(k)
+            if isinstance(v, str):
+                texts.append((f"script.{k}", v))
+    shots = job.get("shots", [])
+    if isinstance(shots, list):
+        for i, shot in enumerate(shots):
+            if not isinstance(shot, dict):
+                continue
+            for k in ("visual", "action", "caption"):
+                v = shot.get(k)
+                if isinstance(v, str):
+                    texts.append((f"shots[{i}].{k}", v))
+
+    for label, text in texts:
+        for m in camera_terms.finditer(text):
+            token = m.group(1).lower()
+            if token not in allowed_camera.get(camera_mode, set()):
+                errors.append(f"{label}: camera claim '{token}' not supported by camera_movement_mode={camera_mode}")
+                break
+        if brightness_bucket == "unknown" and brightness_terms.search(text):
+            errors.append(f"{label}: brightness claim not allowed when brightness_bucket=unknown")
+    return errors
+
+
+def _apply_segment_stitch_hints(job: Dict[str, Any], quality_context: Dict[str, Any], project_root: str) -> Dict[str, Any]:
+    if not isinstance(job, dict) or not isinstance(quality_context, dict):
+        return job
+    plan_ctx = quality_context.get("segment_stitch_plan")
+    if not isinstance(plan_ctx, dict):
+        return job
+    relpath = plan_ctx.get("relpath")
+    if not isinstance(relpath, str) or not relpath:
+        return job
+    abs_path = os.path.join(project_root, relpath)
+    plan = _load_json_if_exists(abs_path)
+    if not isinstance(plan, dict):
+        return job
+
+    segments = plan.get("segments", [])
+    if not isinstance(segments, list) or not segments:
+        return job
+    shots = job.get("shots", [])
+    video = job.get("video", {})
+    if not isinstance(shots, list) or not shots or not isinstance(video, dict):
+        return job
+
+    segment_bounds: List[float] = []
+    for seg in segments:
+        if not isinstance(seg, dict):
+            continue
+        for k in ("start_sec", "end_sec"):
+            v = seg.get(k)
+            if isinstance(v, (int, float)) and v >= 0:
+                segment_bounds.append(float(v))
+    if not segment_bounds:
+        return job
+
+    src_max = max(segment_bounds)
+    if src_max <= 0:
+        return job
+    anchor_norms = sorted({min(1.0, max(0.0, t / src_max)) for t in segment_bounds})
+    if 1.0 not in anchor_norms:
+        anchor_norms.append(1.0)
+
+    length_seconds = int(video.get("length_seconds", 15))
+    max_t = max(0, length_seconds - 1)
+    prev_t = -1
+    count = len(shots)
+    for i, shot in enumerate(shots):
+        if not isinstance(shot, dict):
+            continue
+        target = float(i) / float(max(1, count - 1))
+        snap = min(anchor_norms, key=lambda n: abs(n - target))
+        t = int(round(snap * max_t))
+        if t < prev_t:
+            t = prev_t
+        shot["t"] = min(max(0, t), 60)
+        prev_t = shot["t"]
+    return job
+
+
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Cat AI Factory planner CLI")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -492,7 +899,13 @@ def main(argv: List[str]) -> int:
             selected_id = video_analysis.get("analysis_id")
             if isinstance(selected_id, str) and selected_id:
                 print(f"INFO planner video_analysis_applied={selected_id}", file=sys.stderr)
+        job = _apply_reverse_analysis_hints(job, quality_context)
+        job = _apply_segment_stitch_hints(job, quality_context, project_root)
         job = _apply_quality_policy_hints(job, quality_context)
+        job = _apply_facts_only_guard(job, quality_context)
+        facts_errors = _validate_facts_only_guard(job, quality_context)
+        if facts_errors:
+            raise RuntimeError("facts-only guard failed: " + "; ".join(facts_errors[:3]))
 
         base_job_id = _choose_job_id(args.job_id, job.get("job_id"), prd, inbox_with_names)
         final_path = _final_job_path(args.out, base_job_id)

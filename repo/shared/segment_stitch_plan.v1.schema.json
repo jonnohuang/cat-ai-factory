@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/segment_stitch_plan.v1.schema.json",
+  "title": "Segment Stitch Plan v1",
+  "description": "Deterministic planner/control contract for short segment generation and stitch order.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "plan_id",
+    "constraints",
+    "segments",
+    "stitch_order"
+  ],
+  "properties": {
+    "version": {
+      "const": "segment_stitch_plan.v1"
+    },
+    "plan_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "analysis_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "source_video_relpath": {
+      "type": "string",
+      "pattern": "^sandbox/.+\\.(mp4|mov|mkv|webm)$"
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "camera_lock",
+        "background_lock",
+        "max_shot_length_sec"
+      ],
+      "properties": {
+        "camera_lock": {
+          "type": "boolean"
+        },
+        "background_lock": {
+          "type": "boolean"
+        },
+        "max_shot_length_sec": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 3
+        }
+      }
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/segment"
+      }
+    },
+    "stitch_order": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^seg_[0-9]{3}$"
+      }
+    }
+  },
+  "definitions": {
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "segment_id",
+        "order",
+        "start_sec",
+        "end_sec",
+        "retry_budget"
+      ],
+      "properties": {
+        "segment_id": {
+          "type": "string",
+          "pattern": "^seg_[0-9]{3}$"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "start_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "retry_budget": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "seam": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "prev_segment_id": {
+              "type": "string",
+              "pattern": "^seg_[0-9]{3}$"
+            },
+            "blend_frames": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "hard_cut",
+                "crossfade",
+                "motion_blend"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/pose_checkpoints.v1.schema.json",
+  "title": "Pose Checkpoints v1",
+  "description": "Deterministic analyzer pose checkpoints for planner-side motion constraints.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "analysis_id",
+    "source_video_relpath",
+    "checkpoints"
+  ],
+  "properties": {
+    "version": {
+      "const": "pose_checkpoints.v1"
+    },
+    "analysis_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "source_video_relpath": {
+      "type": "string",
+      "pattern": "^sandbox/.+\\.(mp4|mov|mkv|webm)$"
+    },
+    "model": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "checkpoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/checkpoint"
+      }
+    }
+  },
+  "definitions": {
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t_sec",
+        "pose_signature"
+      ],
+      "properties": {
+        "t_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "pose_signature": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 64,
+          "items": {
+            "type": "number"
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}
