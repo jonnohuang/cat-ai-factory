@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/episode_continuity_pack.v1.schema.json",
+  "title": "Episode Continuity Pack v1",
+  "description": "Planner/quality shared continuity reference contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "pack_id",
+    "hero",
+    "style",
+    "costume",
+    "rules"
+  ],
+  "properties": {
+    "version": {
+      "const": "episode_continuity_pack.v1"
+    },
+    "pack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hero": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hero_id"
+      ],
+      "properties": {
+        "hero_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "style_id"
+      ],
+      "properties": {
+        "style_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "palette_hint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "costume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "costume_profile_id"
+      ],
+      "properties": {
+        "costume_profile_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "require_costume_fidelity",
+        "require_identity_consistency"
+      ],
+      "properties": {
+        "require_costume_fidelity": {
+          "type": "boolean"
+        },
+        "require_identity_consistency": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

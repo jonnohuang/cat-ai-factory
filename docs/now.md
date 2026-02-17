@@ -14,13 +14,13 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-34.7 — Deterministic quality-controller loop (planning + contracts)**
+PR: **PR-34.6a — Quality decision to retry-plan mapping (deterministic contracts)**
 Last Updated: 2026-02-17
 
 ### Status by Role
 - ARCH: In Progress (scope/contract lock)
-- CODEX: Pending (awaiting ARCH handoff)
-- CLOUD-REVIEW: Not Required (PR-34.7 is non-cloud scope)
+- CODEX: In Progress (PR-34.6a implementation kickoff)
+- CLOUD-REVIEW: Not Required (PR-34.6a is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
@@ -30,6 +30,75 @@ Last Updated: 2026-02-17
 - ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
+- Docs scope update for quality-loop sequencing:
+  - `docs/PR_PROJECT_PLAN.md` now includes explicit PR-34.6 sub-PRs:
+    - PR-34.6a decision->retry-plan mapping
+    - PR-34.6b controller bounded auto-retry execution
+    - PR-34.6c retry attempt lineage/audit contracts
+    - PR-34.6d worker retry-parameter hooks
+    - PR-34.6e acceptance gate enforcement
+    - PR-34.6f closed-loop end-to-end smoke suite
+  - PR-34.7 status marked COMPLETED in plan as the delivered contract foundation.
+- Added PR-34.7m episode continuity pack (planner + quality shared input):
+  - contract + example:
+    - `repo/shared/episode_continuity_pack.v1.schema.json`
+    - `repo/examples/episode_continuity_pack.v1.example.json`
+  - validator:
+    - `repo/tools/validate_episode_continuity_pack.py`
+  - `job.json` optional continuity pointer:
+    - `repo/shared/job.schema.json` + `repo/tools/validate_job.py` now allow `continuity_pack.relpath`
+  - planner shared-consumption:
+    - `repo/services/planner/planner_cli.py` now discovers continuity pack in quality context and applies `job.continuity_pack.relpath` when absent
+  - quality shared-consumption:
+    - `repo/tools/decide_quality_action.py` now reads continuity pack from `job.json`, validates contract structure, and applies continuity rules (e.g., required costume fidelity report)
+    - `repo/shared/quality_decision.v1.schema.json` + `repo/examples/quality_decision.v1.example.json` include continuity pack source/error fields
+  - smoke coverage:
+    - `repo/tools/smoke_continuity_pack_shared.py`
+- Added PR-34.7l deterministic segment/shot debug exports:
+  - Worker now emits debug artifacts under `sandbox/output/<job_id>/debug/**` when segment runtime exists:
+    - seam preview clips
+    - motion curve snapshot JSON
+    - checkpoint strip PNG (when frame snapshots available)
+  - new contract + validation:
+    - `repo/shared/segment_debug_manifest.v1.schema.json`
+    - `repo/examples/segment_debug_manifest.v1.example.json`
+    - `repo/tools/validate_segment_debug_manifest.py`
+  - smoke coverage:
+    - `repo/tools/smoke_segment_debug_exports.py`
+  - `repo/worker/render_ffmpeg.py` now appends `segment_debug_exports` pointers to `result.json`.
+- Added PR-34.7k quality target contract artifact + enforcement wiring:
+  - `repo/shared/quality_target.v1.schema.json`
+  - `repo/examples/quality_target.v1.example.json`
+  - `repo/examples/quality_target.motion_strict.v1.example.json`
+  - `repo/tools/validate_quality_target.py`
+  - `repo/shared/job.schema.json` + `repo/tools/validate_job.py` now allow optional `job.quality_target.relpath`.
+  - `repo/tools/decide_quality_action.py` now loads per-job quality target contract (when configured), enforces threshold parsing, and emits contract source/error in decision inputs.
+  - `repo/shared/quality_decision.v1.schema.json` + `repo/examples/quality_decision.v1.example.json` extended with quality-target contract input fields.
+  - `repo/tools/smoke_quality_target_contract.py` added for deterministic contract-override smoke validation.
+- Added PR-34.7i quality target tuning + segment-level auto-retry policy:
+  - `repo/tools/decide_quality_action.py` now codifies deterministic quality targets and tuned-failure mapping by metric dimension.
+  - `repo/shared/quality_decision.v1.schema.json` now includes:
+    - `policy.quality_targets`
+    - `segment_retry` (mode + target segments + trigger metrics)
+  - `repo/examples/quality_decision.v1.example.json` updated for tuned targets + segment retry structure.
+  - `repo/tools/validate_quality_decision.py` now enforces retry-motion/segment-retry semantics.
+  - `repo/tools/smoke_quality_segment_retry.py` added to verify deterministic segment-level retry mapping (`retry_motion` + targeted segments).
+- Added PR-34.7h two-pass motion->identity orchestration artifacts + controller consumption:
+  - `repo/shared/two_pass_orchestration.v1.schema.json`
+  - `repo/examples/two_pass_orchestration.v1.example.json`
+  - `repo/tools/derive_two_pass_orchestration.py`
+  - `repo/tools/validate_two_pass_orchestration.py`
+  - `repo/tools/smoke_two_pass_orchestration.py`
+  - `repo/services/orchestrator/ralph_loop.py` now derives two-pass artifact before quality decision and treats `retry_motion` as bounded retry action
+  - `repo/tools/decide_quality_action.py` now consumes pass-level statuses and emits pass-aware action mapping (`retry_motion` vs `retry_recast`)
+  - `repo/shared/quality_decision.v1.schema.json` now includes optional `inputs.two_pass_orchestration_relpath`, pass statuses, and `retry_motion` action
+- Added PR-34.7g executable segment runtime completion details:
+  - worker executes deterministic segment runtime from `segment_stitch_plan.v1` and emits:
+    - `sandbox/output/<job_id>/segments/seg_*.mp4`
+    - `sandbox/output/<job_id>/segments/stitched_preview.mp4`
+    - `sandbox/output/<job_id>/segments/segment_stitch_report.v1.json`
+  - fixed frame-snapshot timestamp selection to clamp to probed video duration (prevents audio-pad tail snapshot failure)
+  - `repo/tools/smoke_segment_stitch_runtime.py` now validates runtime report + `result.json` runtime pointer end-to-end
 - Added PR-34.7f facts-only planner guard + analyzer fact completeness:
   - `repo/shared/caf.video_reverse_prompt.v1.schema.json` expanded with `truth.visual_facts` plus shot-level camera/brightness/palette fact fields
   - `repo/tools/build_analyzer_core_pack.py` now emits deterministic brightness/palette stats and basic camera movement mode/confidence
@@ -317,8 +386,7 @@ Last Updated: 2026-02-17
   - Execution order override: Phase 8 runs first; Phase 7 resumes after Phase 8 closeout.
   - Planning directive (2026-02-16): only quality-path PRs will be planned from this point forward.
   - Fallback-only/scaffolding PRs are deferred unless they directly raise output quality or recast fidelity.
-- Scope update (2026-02-17): PR-34.6 remains planned but is not currently in execution; add PR-34.7 deterministic quality-controller loop scope before PR-34.6 implementation work.
-  - ARCH scope addendum (2026-02-17): PR-34.7 includes implemented PR-34.7a..PR-34.7f and planned follow-ons PR-34.7g/34.7h/34.7i/34.7k/34.7l/34.7m for runtime segment execution, two-pass orchestration, quality-target tuning, explicit quality target contracts, debug exports, and continuity-pack inputs.
+- Scope update (2026-02-17): PR-34.7 contract pack is completed and PR-34.6 execution is now unblocked via PR-34.6a..PR-34.6f sequence.
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
@@ -331,9 +399,9 @@ Last Updated: 2026-02-17
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: lock sequencing + acceptance criteria for PR-34.7g/34.7h/34.7i/34.7k/34.7l/34.7m against FR-28.9..FR-28.12.
-- CODEX: proceed with PR-34.7g implementation kickoff (segment generate+stitch runtime execution path).
-- ARCH: keep PR-34.6 in planned state until PR-34.7g..PR-34.7m quality follow-ons are accepted.
+- ARCH: confirm PR-34.6a scope lock (decision->retry-plan mapping contract + validator + smoke).
+- CODEX: implement PR-34.6a.
+- ARCH: pre-approve PR-34.6b boundaries (bounded retries, deterministic terminal states).
 
 ### ARCH Decision Queue Snapshot (PR-34.5 Focus)
 1) Video Analyzer contracts:
@@ -353,7 +421,7 @@ Last Updated: 2026-02-17
 - Must provide a deterministic non-overlay internal quality path that is benchmark-comparable and output-bound.
 - Must preserve `job.json` authority and avoid external API dependencies in Worker.
 
-### ARCH Decision Queue Snapshot (PR-34.7 Focus)
+### ARCH Decision Queue Snapshot (PR-34.6 Focus)
 1) Analyzer core posture:
 - Approved: deterministic, open/local-first, schema-driven analyzer core as primary path.
 - Core stack: FFprobe/FFmpeg metadata, PySceneDetect, pose checkpoints, optical-flow motion curve, librosa beat/onset grid.
@@ -391,5 +459,3 @@ Last Updated: 2026-02-17
 - Preserve `job.json` execution authority.
 - Preserve Worker determinism/no-network.
 - Preserve external recast as explicit Ops/Distribution HITL boundary.
-
-------------------------------------------------------------

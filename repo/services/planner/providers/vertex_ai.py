@@ -157,7 +157,19 @@ class _VertexBaseProvider(BaseProvider):
         )
         fallback = GeminiAIStudioProvider()
         job = fallback.generate_job(prd, inbox, hero_registry, quality_context)
-        return self._apply_lane_hint(job)
+        job = self._apply_lane_hint(job)
+        if self.provider_name == "vertex_veo":
+            context_text = _job_context_text(job, prd)
+            if _job_uses_demo_background(job) and not _allow_demo_background_fallback():
+                raise RuntimeError(
+                    "Planner fail-loud: vertex_veo resolved to demo background_asset via fallback. "
+                    "Set CAF_ALLOW_DEMO_BACKGROUND_FALLBACK=1 only for explicit dev-only runs."
+                )
+            if self._must_require_generated_video(context_text) and _job_uses_demo_background(job):
+                raise RuntimeError(
+                    "Planner fail-loud: dance context requires generated video; demo background fallback is disallowed."
+                )
+        return job
 
     def _apply_lane_hint(self, job: Dict[str, Any]) -> Dict[str, Any]:
         if self.lane_hint and not job.get("lane"):
@@ -1140,6 +1152,25 @@ def _job_context_text(job: Dict[str, Any], prd: Dict[str, Any]) -> str:
     if isinstance(hashtags, list):
         parts.extend([h for h in hashtags if isinstance(h, str)])
     return " ".join(parts).lower()
+
+
+def _job_uses_demo_background(job: Dict[str, Any]) -> bool:
+    render = job.get("render")
+    if not isinstance(render, dict):
+        return False
+    bg = render.get("background_asset")
+    if not isinstance(bg, str):
+        return False
+    s = bg.strip().lower()
+    return s.startswith("assets/demo/") or s.startswith("sandbox/assets/demo/")
+
+
+def _allow_demo_background_fallback() -> bool:
+    return os.environ.get("CAF_ALLOW_DEMO_BACKGROUND_FALLBACK", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 def _dance_loop_directives(context: str) -> List[str]:

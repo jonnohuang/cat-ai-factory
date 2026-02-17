@@ -38,6 +38,21 @@ def _run(cmd: List[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, text=True, capture_output=True, check=False)
 
 
+def _job_uses_demo_background(job_path: str) -> bool:
+    try:
+        data = json.loads(pathlib.Path(job_path).read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    render = data.get("render")
+    if not isinstance(render, dict):
+        return False
+    bg = render.get("background_asset")
+    if not isinstance(bg, str):
+        return False
+    s = bg.strip().lower()
+    return s.startswith("assets/demo/") or s.startswith("sandbox/assets/demo/")
+
+
 def _build_duet_job(source_job_path: str, out_dir: str) -> Optional[str]:
     src_path = pathlib.Path(source_job_path)
     if not src_path.exists():
@@ -399,6 +414,13 @@ def main(argv: List[str]) -> int:
         return 1
 
     print(f"STEP planner output: {job_path}")
+    if args.provider == "vertex_veo" and _job_uses_demo_background(job_path):
+        print(
+            "ERROR: planner output is using demo background_asset for vertex_veo. "
+            "Refusing to run orchestrator. This indicates fallback/non-generated output.",
+            file=sys.stderr,
+        )
+        return 3
     if args.dry_run:
         print("DRY RUN: skipping orchestrator")
         return 0

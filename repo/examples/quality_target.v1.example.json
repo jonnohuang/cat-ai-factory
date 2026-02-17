@@ -1,0 +1,11 @@
+{
+  "version": "quality_target.v1",
+  "profile_id": "dance_loop_strict_v1",
+  "thresholds": {
+    "identity_consistency": 0.7,
+    "mask_edge_bleed": 0.6,
+    "temporal_stability": 0.7,
+    "loop_seam": 0.7,
+    "audio_video": 0.95
+  }
+}

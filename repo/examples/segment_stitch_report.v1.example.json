@@ -1,0 +1,32 @@
+{
+  "version": "segment_stitch_report.v1",
+  "job_id": "smoke-segment-stitch-runtime",
+  "plan_relpath": "repo/examples/segment_stitch_plan.v1.example.json",
+  "segments_dir": "sandbox/output/smoke-segment-stitch-runtime/segments",
+  "stitched_preview": "sandbox/output/smoke-segment-stitch-runtime/segments/stitched_preview.mp4",
+  "segments": [
+    {
+      "segment_id": "seg_001",
+      "start_sec": 0.0,
+      "end_sec": 2.0,
+      "output_relpath": "sandbox/output/smoke-segment-stitch-runtime/segments/seg_001.mp4",
+      "duration_sec": 2.0
+    },
+    {
+      "segment_id": "seg_002",
+      "start_sec": 2.0,
+      "end_sec": 4.0,
+      "output_relpath": "sandbox/output/smoke-segment-stitch-runtime/segments/seg_002.mp4",
+      "duration_sec": 2.0
+    }
+  ],
+  "seams": [
+    {
+      "from_segment": "seg_001",
+      "to_segment": "seg_002",
+      "method": "crossfade",
+      "blend_frames": 6,
+      "transition": "fade"
+    }
+  ]
+}

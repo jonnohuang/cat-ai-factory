@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/quality_target.v1.schema.json",
+  "title": "Quality Target v1",
+  "description": "Per-job deterministic quality threshold contract consumed by quality policy engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "profile_id",
+    "thresholds"
+  ],
+  "properties": {
+    "version": {
+      "const": "quality_target.v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_consistency",
+        "mask_edge_bleed",
+        "temporal_stability",
+        "loop_seam",
+        "audio_video"
+      ],
+      "properties": {
+        "identity_consistency": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "mask_edge_bleed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "temporal_stability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "loop_seam": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "audio_video": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}

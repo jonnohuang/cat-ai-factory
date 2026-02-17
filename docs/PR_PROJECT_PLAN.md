@@ -1090,8 +1090,101 @@ Outcome:
 
 ---
 
+Sub-PR plan:
+
+### PR-34.6a — Quality decision to retry-plan mapping (deterministic contracts)
+Status: **NEXT**
+
+Scope:
+- Map `quality_decision.v1` outputs to deterministic retry-plan artifacts (no hidden controller logic).
+- Define retry intent contract for:
+  - full rerender
+  - segment-only rerender
+  - identity/recast rerun request
+- Keep mapping auditable under `sandbox/logs/<job_id>/qc/**`.
+
+Outcome:
+- Quality failures deterministically produce explicit, machine-readable retry plans.
+
+---
+
+### PR-34.6b — Controller auto-retry execution loop (bounded, deterministic)
+Status: **PLANNED**
+
+Scope:
+- Execute retry-plan artifacts in Ralph Loop with bounded retry budgets.
+- Preserve idempotency and explicit terminal states (`completed`, `failed`, `escalated`).
+- Keep retries artifact-driven with no LLM/no hidden background autonomy.
+
+Outcome:
+- Quality loop transitions from recommendation-only to deterministic execution.
+
+---
+
+### PR-34.6c — Attempt lineage + audit trail contracts
+Status: **PLANNED**
+
+Scope:
+- Add explicit attempt lineage artifact(s) linking:
+  - source attempt
+  - retry reason
+  - retry parameters
+  - resulting outputs/quality reports
+- Ensure all lineage is file-based and queryable from logs.
+
+Outcome:
+- Every quality retry is explainable and reproducible.
+
+---
+
+### PR-34.6d — Worker retry-parameter hooks (deterministic deltas)
+Status: **PLANNED**
+
+Scope:
+- Add deterministic worker parameter hooks for retry deltas:
+  - stitch/seam strategy
+  - segment target selection
+  - bounded motion/identity tuning knobs
+- Keep authority in `job.json` + retry-plan artifacts only.
+
+Outcome:
+- Controller retries can apply targeted deterministic changes instead of blind reruns.
+
+---
+
+### PR-34.6e — Acceptance gate enforcement + finalize block
+Status: **PLANNED**
+
+Scope:
+- Enforce finalize gating from quality targets/contracts:
+  - block finalize on fail
+  - allow finalize only when pass conditions are met
+  - escalate explicitly when retry budget is exhausted
+- Keep gate outcomes explicit in QC decision artifacts.
+
+Outcome:
+- Poor-quality outputs stop at the gate instead of being treated as done.
+
+---
+
+### PR-34.6f — Closed-loop end-to-end smoke suite
+Status: **PLANNED**
+
+Scope:
+- Add deterministic smoke suite covering:
+  - initial render -> QC fail
+  - retry-plan generation
+  - bounded controller retries
+  - pass/fail terminal behavior + escalation
+- Produce one-command reproducible validation of the full quality loop.
+
+Outcome:
+- PR-34.6 quality loop is verified end-to-end, not just by unit contracts.
+
+---
+
 ### PR-34.7 — Deterministic quality-controller loop (artifact-driven retries + escalation)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Add deterministic quality decision contract artifact under:
@@ -1234,7 +1327,7 @@ Outcome:
 ---
 
 ### PR-34.7g — Segment generate+stitch runtime execution path
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Implement deterministic segment render execution from `segment_stitch_plan.v1` (not contracts-only).
@@ -1247,7 +1340,7 @@ Outcome:
 ---
 
 ### PR-34.7h — Two-pass motion→identity orchestration
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add explicit pass-level orchestration artifacts for:
@@ -1262,7 +1355,7 @@ Outcome:
 ---
 
 ### PR-34.7i — Quality target tuning + segment-level auto-retry policy
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Extend quality decision mapping to segment-level retry actions.
@@ -1275,7 +1368,7 @@ Outcome:
 ---
 
 ### PR-34.7k — Quality target contract artifact
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add a versioned quality-target contract artifact for per-job acceptance thresholds.
@@ -1288,7 +1381,7 @@ Outcome:
 ---
 
 ### PR-34.7l — Segment/shot debug exports for quality tuning
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Emit deterministic debug artifacts per segment/shot:
@@ -1303,7 +1396,7 @@ Outcome:
 ---
 
 ### PR-34.7m — Episode continuity pack (planner + quality shared input)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Introduce a versioned episode continuity pack contract (hero/style/costume refs + drift rules).

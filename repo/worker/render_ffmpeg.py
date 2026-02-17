@@ -8,6 +8,13 @@ import statistics
 import subprocess
 from typing import Any
 
+try:
+    import cv2  # type: ignore
+    import numpy as np  # type: ignore
+except Exception:
+    cv2 = None
+    np = None
+
 
 PADDING_PX = 24
 OPACITY = 0.35
@@ -226,6 +233,28 @@ def validate_safe_path(path: pathlib.Path, root: pathlib.Path) -> None:
         raise ValueError(f"Path is strictly forbidden outside sandbox root: {path}")
 
 
+def validate_safe_path_under(path: pathlib.Path, root: pathlib.Path, label: str) -> None:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        raise ValueError(f"{label} path forbidden outside {root}: {path}")
+
+
+def resolve_project_relpath(rel_path_str: str, repo_root: pathlib.Path, sandbox_root: pathlib.Path) -> pathlib.Path:
+    p = pathlib.Path(rel_path_str)
+    if p.is_absolute():
+        raise ValueError(f"Path must be relative: {rel_path_str}")
+    if rel_path_str.startswith("sandbox/"):
+        out = normalize_sandbox_path(rel_path_str, sandbox_root)
+        validate_safe_path(out, sandbox_root)
+        return out
+    if rel_path_str.startswith("repo/"):
+        out = (repo_root / rel_path_str).resolve()
+        validate_safe_path_under(out, repo_root / "repo", "repo")
+        return out
+    raise ValueError(f"Unsupported relpath prefix (expected repo/ or sandbox/): {rel_path_str}")
+
+
 def load_json_file(path: pathlib.Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -413,7 +442,11 @@ def emit_media_stack_artifacts(
 
     duration = int(job["video"]["length_seconds"])
     fps = int(job["video"]["fps"])
-    frame_times = sorted(set([0.0, max(0.0, duration / 2.0), max(0.0, duration - 0.2)]))
+    video_duration = get_video_duration(final_mp4)
+    sample_duration = video_duration if video_duration > 0.0 else float(duration)
+    frame_times = sorted(
+        set([0.0, max(0.0, sample_duration / 2.0), max(0.0, sample_duration - 0.2)])
+    )
     frame_files: list[str] = []
     for idx, t in enumerate(frame_times, start=1):
         out_png = frames_dir / f"frame_{idx:04d}.png"
@@ -533,6 +566,370 @@ def emit_media_stack_artifacts(
         "audio_manifest": str(audio_manifest_path),
         "timeline": str(timeline_path),
         "render_manifest": str(render_manifest_path),
+    }
+
+
+def execute_segment_stitch_runtime(
+    *,
+    job: dict,
+    repo_root: pathlib.Path,
+    sandbox_root: pathlib.Path,
+    out_dir: pathlib.Path,
+    source_mp4: pathlib.Path,
+) -> dict[str, Any] | None:
+    segment_cfg = job.get("segment_stitch")
+    if not isinstance(segment_cfg, dict):
+        return None
+    if segment_cfg.get("enabled") is False:
+        return None
+
+    plan_relpath = segment_cfg.get("plan_relpath")
+    if not isinstance(plan_relpath, str) or not plan_relpath.strip():
+        raise SystemExit("segment_stitch.plan_relpath must be a non-empty string")
+    plan_path = resolve_project_relpath(plan_relpath, repo_root, sandbox_root)
+    if not plan_path.exists():
+        raise SystemExit(f"segment_stitch plan not found: {plan_path}")
+
+    plan = load_json_file(plan_path)
+    if plan.get("version") != "segment_stitch_plan.v1":
+        raise SystemExit("segment_stitch.plan_relpath must point to segment_stitch_plan.v1")
+    segments = plan.get("segments", [])
+    if not isinstance(segments, list) or not segments:
+        raise SystemExit("segment_stitch plan requires non-empty segments array")
+
+    fps = int(job.get("video", {}).get("fps", 30) or 30)
+    seg_dir = out_dir / "segments"
+    seg_dir.mkdir(parents=True, exist_ok=True)
+
+    ordered = sorted(
+        [s for s in segments if isinstance(s, dict)],
+        key=lambda s: int(s.get("order", 0)),
+    )
+    if not ordered:
+        raise SystemExit("segment_stitch plan has no valid segment entries")
+
+    seg_outputs: list[dict[str, Any]] = []
+    seg_paths: list[pathlib.Path] = []
+    seg_durations: list[float] = []
+    for seg in ordered:
+        seg_id = str(seg.get("segment_id", "")).strip()
+        if not seg_id:
+            raise SystemExit("segment_stitch segment_id is required")
+        start = float(seg.get("start_sec", 0.0))
+        end = float(seg.get("end_sec", 0.0))
+        if end <= start:
+            raise SystemExit(f"segment_stitch {seg_id} has end_sec <= start_sec")
+        out_mp4 = seg_dir / f"{seg_id}.mp4"
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            f"{start:.3f}",
+            "-to",
+            f"{end:.3f}",
+            "-i",
+            str(source_mp4),
+            "-r",
+            str(fps),
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            str(out_mp4),
+        ]
+        run_ffmpeg(cmd, out_mp4)
+        seg_paths.append(out_mp4)
+        seg_durations.append(max(0.001, end - start))
+        seg_outputs.append(
+            {
+                "segment_id": seg_id,
+                "start_sec": round(start, 3),
+                "end_sec": round(end, 3),
+                "output_relpath": str(out_mp4.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+                "duration_sec": round(end - start, 3),
+            }
+        )
+
+    seams: list[dict[str, Any]] = []
+    for idx in range(1, len(ordered)):
+        cur = ordered[idx]
+        prev = ordered[idx - 1]
+        seam = cur.get("seam") if isinstance(cur.get("seam"), dict) else {}
+        method = str(seam.get("method") or "hard_cut")
+        blend_frames = int(seam.get("blend_frames", 0) or 0)
+        transition = "none"
+        if method == "crossfade":
+            transition = "fade"
+        elif method == "motion_blend":
+            transition = "smoothleft"
+        seams.append(
+            {
+                "from_segment": str(prev.get("segment_id")),
+                "to_segment": str(cur.get("segment_id")),
+                "method": method if method in ("hard_cut", "crossfade", "motion_blend") else "hard_cut",
+                "blend_frames": max(0, min(60, blend_frames)),
+                "transition": transition,
+            }
+        )
+
+    stitched_preview = seg_dir / "stitched_preview.mp4"
+    has_non_hard = any(s["method"] != "hard_cut" for s in seams)
+    if not has_non_hard or len(seg_paths) == 1:
+        concat_file = seg_dir / "concat_inputs.txt"
+        concat_lines = [f"file '{p.name}'" for p in seg_paths]
+        atomic_write_text(concat_file, "\n".join(concat_lines) + "\n")
+        concat_cmd = [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_file),
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            str(stitched_preview),
+        ]
+        run_ffmpeg(concat_cmd, stitched_preview)
+    else:
+        # Deterministic xfade chain when seam methods request blending.
+        inputs: list[str] = []
+        for p in seg_paths:
+            inputs += ["-i", str(p)]
+        chains: list[str] = []
+        acc = seg_durations[0]
+        prev_label = "[0:v]"
+        for idx in range(1, len(seg_paths)):
+            seam = seams[idx - 1]
+            method = seam["method"]
+            transition = "fade" if method == "crossfade" else ("smoothleft" if method == "motion_blend" else "fade")
+            blend_frames = int(seam["blend_frames"])
+            dur = max(0.03, min(0.7, blend_frames / max(1, fps)))
+            offset = max(0.0, acc - dur)
+            out_label = f"[x{idx}]"
+            chains.append(
+                f"{prev_label}[{idx}:v]xfade=transition={transition}:duration={dur:.3f}:offset={offset:.3f}{out_label}"
+            )
+            prev_label = out_label
+            acc = acc + seg_durations[idx] - dur
+        filter_complex = ";".join(chains)
+        xfade_cmd = [
+            "ffmpeg",
+            "-y",
+            *inputs,
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            prev_label,
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            str(stitched_preview),
+        ]
+        run_ffmpeg(xfade_cmd, stitched_preview)
+
+    report = {
+        "version": "segment_stitch_report.v1",
+        "job_id": str(job.get("job_id")),
+        "plan_relpath": plan_relpath,
+        "segments_dir": str(seg_dir.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+        "stitched_preview": str(stitched_preview.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+        "segments": seg_outputs,
+        "seams": seams,
+    }
+    report_path = seg_dir / "segment_stitch_report.v1.json"
+    atomic_write_json(report_path, report)
+    return {
+        "segments_dir": str(seg_dir),
+        "stitched_preview": str(stitched_preview),
+        "report": str(report_path),
+    }
+
+
+def emit_segment_debug_exports(
+    *,
+    job: dict,
+    repo_root: pathlib.Path,
+    out_dir: pathlib.Path,
+    final_mp4: pathlib.Path,
+    segment_runtime: dict[str, Any] | None,
+    media_stack_paths: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not isinstance(segment_runtime, dict):
+        return None
+    report_path_s = segment_runtime.get("report")
+    if not isinstance(report_path_s, str):
+        return None
+    report_path = pathlib.Path(report_path_s)
+    if not report_path.exists():
+        return None
+    report = load_json_file(report_path)
+    if report.get("version") != "segment_stitch_report.v1":
+        return None
+
+    debug_dir = out_dir / "debug"
+    seams_dir = debug_dir / "seams"
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    seams_dir.mkdir(parents=True, exist_ok=True)
+
+    segments = report.get("segments", [])
+    seams = report.get("seams", [])
+    seg_by_id: dict[str, dict[str, Any]] = {}
+    if isinstance(segments, list):
+        for seg in segments:
+            if isinstance(seg, dict):
+                sid = seg.get("segment_id")
+                if isinstance(sid, str):
+                    seg_by_id[sid] = seg
+
+    seam_previews: list[dict[str, Any]] = []
+    if isinstance(seams, list):
+        for idx, seam in enumerate(seams, start=1):
+            if not isinstance(seam, dict):
+                continue
+            from_id = str(seam.get("from_segment", ""))
+            to_id = str(seam.get("to_segment", ""))
+            to_seg = seg_by_id.get(to_id)
+            if not to_seg:
+                continue
+            seam_center = float(to_seg.get("start_sec", 0.0))
+            clip_start = max(0.0, seam_center - 0.4)
+            clip_end = max(clip_start + 0.2, seam_center + 0.4)
+            preview = seams_dir / f"seam_{idx:03d}.mp4"
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-ss",
+                f"{clip_start:.3f}",
+                "-to",
+                f"{clip_end:.3f}",
+                "-i",
+                str(final_mp4),
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-an",
+                "-movflags",
+                "+faststart",
+                str(preview),
+            ]
+            run_ffmpeg(cmd, preview)
+            seam_previews.append(
+                {
+                    "seam_index": idx,
+                    "from_segment": from_id,
+                    "to_segment": to_id,
+                    "preview_relpath": str(preview.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+                    "start_sec": round(clip_start, 3),
+                    "end_sec": round(clip_end, 3),
+                }
+            )
+
+    motion_curve_path = debug_dir / "motion_curve_snapshot.v1.json"
+    motion_curve_payload: dict[str, Any] = {
+        "version": "motion_curve_snapshot.v1",
+        "job_id": str(job.get("job_id")),
+        "available": False,
+        "reason": "opencv_not_available",
+        "points": [],
+    }
+    if cv2 is not None and np is not None:
+        cap = cv2.VideoCapture(str(final_mp4))
+        if cap.isOpened():
+            fps = float(cap.get(cv2.CAP_PROP_FPS) or 30.0)
+            step = 2
+            ok, prev = cap.read()
+            points: list[dict[str, float]] = []
+            i = 0
+            if ok:
+                prev_g = cv2.cvtColor(cv2.resize(prev, (160, 90)), cv2.COLOR_BGR2GRAY)
+                while True:
+                    ok, frame = cap.read()
+                    if not ok:
+                        break
+                    i += 1
+                    if i % step != 0:
+                        continue
+                    g = cv2.cvtColor(cv2.resize(frame, (160, 90)), cv2.COLOR_BGR2GRAY)
+                    score = float(np.mean(np.abs(g.astype("float32") - prev_g.astype("float32"))))
+                    t = float((i + 1) / max(1.0, fps))
+                    points.append({"t_sec": round(t, 3), "score": round(score, 6)})
+                    prev_g = g
+            cap.release()
+            motion_curve_payload = {
+                "version": "motion_curve_snapshot.v1",
+                "job_id": str(job.get("job_id")),
+                "available": True,
+                "reason": "",
+                "sample_step_frames": step,
+                "points": points,
+            }
+        else:
+            motion_curve_payload["reason"] = "video_open_failed"
+    atomic_write_json(motion_curve_path, motion_curve_payload)
+
+    checkpoint_strip_relpath = None
+    frame_manifest_path = None
+    if isinstance(media_stack_paths, dict):
+        fm = media_stack_paths.get("frame_manifest")
+        if isinstance(fm, str):
+            frame_manifest_path = pathlib.Path(fm)
+    if frame_manifest_path is not None and frame_manifest_path.exists() and cv2 is not None and np is not None:
+        frame_manifest = load_json_file(frame_manifest_path)
+        frames = frame_manifest.get("frames", [])
+        imgs = []
+        if isinstance(frames, list):
+            for p in frames[:3]:
+                if not isinstance(p, str):
+                    continue
+                im = cv2.imread(p)
+                if im is None:
+                    continue
+                im = cv2.resize(im, (360, 640))
+                imgs.append(im)
+        if imgs:
+            strip = imgs[0]
+            for im in imgs[1:]:
+                sep = np.zeros((strip.shape[0], 8, 3), dtype=strip.dtype)
+                strip = np.hstack([strip, sep, im])
+            strip_path = debug_dir / "checkpoint_strip.png"
+            cv2.imwrite(str(strip_path), strip)
+            checkpoint_strip_relpath = str(strip_path.resolve().relative_to(repo_root.resolve())).replace("\\", "/")
+
+    manifest_path = debug_dir / "segment_debug_manifest.v1.json"
+    manifest = {
+        "version": "segment_debug_manifest.v1",
+        "job_id": str(job.get("job_id")),
+        "source_final_mp4": str(final_mp4.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+        "debug_dir": str(debug_dir.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+        "inputs": {
+            "segment_stitch_report_relpath": str(report_path.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+            "frame_manifest_relpath": str(frame_manifest_path.resolve().relative_to(repo_root.resolve())).replace("\\", "/")
+            if frame_manifest_path is not None and frame_manifest_path.exists()
+            else None,
+        },
+        "seam_previews": seam_previews,
+        "motion_curve_snapshot_relpath": str(motion_curve_path.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+        "checkpoint_strip_relpath": checkpoint_strip_relpath,
+    }
+    atomic_write_json(manifest_path, manifest)
+    return {
+        "manifest": str(manifest_path),
+        "debug_dir": str(debug_dir),
     }
 
 
@@ -1906,6 +2303,14 @@ def main():
         # Use simple standard render directly
         render_result = render_standard(job, sandbox_root, out_dir, wm_path)
 
+    segment_runtime = execute_segment_stitch_runtime(
+        job=job,
+        repo_root=root,
+        sandbox_root=sandbox_root,
+        out_dir=out_dir,
+        source_mp4=pathlib.Path(render_result["outputs"]["final_mp4"]),
+    )
+
     # Final result assembly
     final_result = {
         "job_id": job_id,
@@ -1949,6 +2354,18 @@ def main():
         result_path=result_path,
     )
     final_result["media_stack"] = media_stack_paths
+    if segment_runtime is not None:
+        final_result["segment_stitch_runtime"] = segment_runtime
+    debug_exports = emit_segment_debug_exports(
+        job=job,
+        repo_root=root,
+        out_dir=out_dir,
+        final_mp4=pathlib.Path(render_result["outputs"]["final_mp4"]),
+        segment_runtime=segment_runtime,
+        media_stack_paths=media_stack_paths,
+    )
+    if debug_exports is not None:
+        final_result["segment_debug_exports"] = debug_exports
 
     atomic_write_text(result_path, json.dumps(final_result, indent=2, sort_keys=True))
 
