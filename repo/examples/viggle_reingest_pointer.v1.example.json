@@ -1,0 +1,9 @@
+{
+  "version": "viggle_reingest_pointer.v1",
+  "job_id": "demo-dance-loop-v1",
+  "source": "viggle",
+  "result_video_relpath": "sandbox/inbox/viggle_results/demo-dance-loop-v1/viggle.mp4",
+  "submitted_at": "2026-02-17T00:08:00Z",
+  "notes": "Manual re-ingest pointer from external HITL step."
+}
+

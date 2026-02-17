@@ -14,19 +14,20 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-33.3 — Optional Mode B contract expansion (script/identity/storyboard)**
+PR: **PR-34.1 — External HITL recast implementation (ops flow + re-ingest path)**
 Last Updated: 2026-02-16
 
 ### Status by Role
 - ARCH: In Progress (review/closeout)
 - CODEX: Completed
-- CLOUD-REVIEW: Not Required (PR-33.3 is non-cloud scope)
+- CLOUD-REVIEW: Not Required (PR-34.x is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
 - ADR-0042 (Dance Swap v1 deterministic lane)
 - ADR-0040 (Media Stack v1 stage contracts)
 - ADR-0043 (Mode B default strategy)
+- ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
 - `docs/PR_PROJECT_PLAN.md`:
@@ -38,6 +39,10 @@ Last Updated: 2026-02-16
   - PR-33.1 status updated to COMPLETED
   - PR-33.2 status updated to COMPLETED
   - PR-33.3 status updated to COMPLETED
+  - PR-34 status updated to COMPLETED
+  - PR-34.1 status updated to COMPLETED
+  - PR-34.2 status updated to COMPLETED
+  - PR-34.3 status updated to COMPLETED
   - added implementation sub-PRs:
     - PR-32.1 (analyzer runtime implementation)
     - PR-33.1 (Dance Swap deterministic recipe implementation)
@@ -199,6 +204,28 @@ Last Updated: 2026-02-16
 - PR-33.3 smoke validation (Conda `cat-ai-factory`):
   - `python -m py_compile repo/tools/validate_mode_b_contracts.py repo/tools/smoke_mode_b_contracts.py` passed
   - `python -m repo.tools.smoke_mode_b_contracts` passed
+- Added PR-34.x external HITL recast contracts + implementation:
+  - Schemas:
+    - `repo/shared/viggle_pack.v1.schema.json`
+    - `repo/shared/external_recast_lifecycle.v1.schema.json`
+    - `repo/shared/viggle_reingest_pointer.v1.schema.json`
+  - Examples:
+    - `repo/examples/viggle_pack.v1.example.json`
+    - `repo/examples/external_recast_lifecycle.v1.example.json`
+    - `repo/examples/viggle_reingest_pointer.v1.example.json`
+  - Tools:
+    - `repo/tools/export_viggle_pack.py`
+    - `repo/tools/create_viggle_reingest_pointer.py`
+    - `repo/tools/process_viggle_reingest.py`
+    - `repo/tools/validate_viggle_handoff.py`
+    - `repo/tools/smoke_viggle_handoff.py`
+- PR-34.x smoke validation (Conda `cat-ai-factory`):
+  - `python -m py_compile repo/tools/export_viggle_pack.py repo/tools/create_viggle_reingest_pointer.py repo/tools/process_viggle_reingest.py repo/tools/validate_viggle_handoff.py repo/tools/smoke_viggle_handoff.py` passed
+  - `python -m repo.tools.smoke_viggle_handoff` passed
+  - generated and validated:
+    - `sandbox/dist_artifacts/mochi-dino-replace-smoke-20240515/viggle_pack/viggle_pack.v1.json`
+    - `sandbox/dist_artifacts/mochi-dino-replace-smoke-20240515/viggle_pack/external_recast_lifecycle.v1.json`
+    - `sandbox/inbox/viggle-reingest-mochi-dino-replace-smoke-20240515-*.json`
 
 ### Open Findings / Conditions
 - Roadmap policy:
@@ -209,19 +236,19 @@ Last Updated: 2026-02-16
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
-- PR-33.3 scope lock:
-  - Mode B contracts remain optional planner/control artifacts
-  - `job.json` remains execution authority
-  - no Worker authority change and no LLM/network side effects in Worker
-- PR-33.3 completion notes:
-  - optional Mode B contracts are now explicit, validated, and reusable
+- PR-34.x scope lock:
+  - external recast remains explicit Ops/Distribution HITL flow
+  - Worker does not call external recast services
+  - no cross-plane authority changes
+- PR-34.x completion notes:
+  - export/re-ingest lifecycle is now explicit, auditable, and validation-backed
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: review PR-33.3 implementation closeout against ADR-0043 boundaries.
-- CODEX: prepare PR-33.3 branch/PR metadata and proceed only with quality-path scoped PRs (next: PR-34.x, including PR-34.4/PR-34.5 quality gating).
+- ARCH: review PR-34.x implementation closeout against ADR-0044 boundaries.
+- CODEX: proceed to quality gating track (PR-34.4 / PR-34.5).
 
-### ARCH Decision Queue Snapshot (PR-33.3 Focus)
+### ARCH Decision Queue Snapshot (PR-34.x Focus)
 1) Video Analyzer contracts:
 - Approved as planner enrichment layer.
 - Metadata-only canon and index/query contracts.
@@ -232,8 +259,8 @@ Last Updated: 2026-02-16
 3) Dance Swap v1 contracts:
 - Approved as deterministic choreography-preserving lane artifact layer.
 - Contract set must remain lane-permissive and preserve `job.json` authority.
-4) Optional Mode B contracts:
-- Must remain planner/control-plane optional artifacts (`script_plan.v1`, `identity_anchor.v1`, `storyboard.v1`).
-- Must preserve `job.json` as execution authority and avoid Worker authority drift.
+4) External HITL recast contracts:
+- Must remain explicit Ops/Distribution flow (`viggle_pack.v1`, lifecycle, re-ingest pointer).
+- Must preserve `job.json` as execution authority and keep Worker external-call free.
 
 ------------------------------------------------------------

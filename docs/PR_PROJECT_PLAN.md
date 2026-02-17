@@ -979,7 +979,7 @@ Outcome:
 ---
 
 ### PR-34 — External HITL recast flow (Viggle pack export + re-ingest contract)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Model external recast as Ops/Distribution flow with explicit states/artifacts.
@@ -993,7 +993,7 @@ Outcome:
 ---
 
 ### PR-34.1 — External HITL recast implementation (ops flow + re-ingest path)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Implement deterministic export-pack builder for:
@@ -1009,7 +1009,7 @@ Outcome:
 ---
 
 ### PR-34.2 — HITL lifecycle + inbox pointer contracts
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Define lifecycle/state contracts for external recast steps (e.g., ready/exported/re-ingested/finished).
@@ -1023,7 +1023,7 @@ Outcome:
 ---
 
 ### PR-34.3 — `viggle_pack.v1` schema + export/re-ingest validation
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add `viggle_pack.v1` schema for pack completeness/consistency checks.

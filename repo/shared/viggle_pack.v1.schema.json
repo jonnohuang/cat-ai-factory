@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/viggle_pack.v1.schema.json",
+  "title": "Viggle Pack v1",
+  "description": "Deterministic external HITL recast pack manifest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "pack_root",
+    "hero_image",
+    "motion_video",
+    "prompt_file",
+    "instructions_file"
+  ],
+  "properties": {
+    "version": {
+      "const": "viggle_pack.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pack_root": {
+      "type": "string",
+      "pattern": "^sandbox/dist_artifacts/[a-z0-9-]+/viggle_pack$"
+    },
+    "hero_image": {
+      "type": "string",
+      "pattern": "^sandbox/dist_artifacts/[a-z0-9-]+/viggle_pack/hero\\.(png|jpg|jpeg|webp)$"
+    },
+    "motion_video": {
+      "type": "string",
+      "pattern": "^sandbox/dist_artifacts/[a-z0-9-]+/viggle_pack/motion\\.(mp4|mov|mkv|webm)$"
+    },
+    "prompt_file": {
+      "type": "string",
+      "pattern": "^sandbox/dist_artifacts/[a-z0-9-]+/viggle_pack/prompt\\.txt$"
+    },
+    "instructions_file": {
+      "type": "string",
+      "pattern": "^sandbox/dist_artifacts/[a-z0-9-]+/viggle_pack/instructions\\.md$"
+    },
+    "created_at": {
+      "type": "string"
+    }
+  }
+}
+
