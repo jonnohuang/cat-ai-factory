@@ -422,6 +422,34 @@ The system MUST support a deterministic benchmark harness for recast quality reg
   - benchmark process MUST NOT bypass runtime write boundaries
   - no copyrighted source media committed into repo canon
 
+### FR-28.4 — Internal Baseline V2 motion-preserve path (non-overlay fallback)
+The system MUST support a deterministic internal baseline quality path that is better than legacy overlay outputs and does not require external HITL.
+
+- Required behavior:
+  - motion-preserve 9:16 reframing and deterministic preprocess filters
+  - loop seam refinement and audio-stream guarantee
+  - subtitle/watermark finishing in deterministic Worker flow
+  - benchmark-visible comparison against prior internal baseline
+- Hard constraints:
+  - no overlay-based identity recast fallback in this path
+  - no external API/tool invocation inside Worker
+  - outputs and stage artifacts remain under `/sandbox/output/<job_id>/**`
+  - `job.json` remains execution authority
+
+### FR-28.5 — Deterministic quality-controller loop (bounded retry + explicit escalation)
+The system MUST support an artifact-driven quality-controller loop that deterministically maps quality results to bounded next actions.
+
+- Required behavior:
+  - emit deterministic decision artifact under `/sandbox/logs/<job_id>/qc/quality_decision.v1.json`
+  - map failed quality dimensions to explicit policy actions (retry, block finalize, escalate)
+  - enforce bounded retry budgets and fail-loud escalation states
+  - keep all decision state auditable and reproducible from artifacts
+- Hard constraints:
+  - no hidden autonomous/background agent behavior
+  - no changes to write boundaries (Planner/Control/Worker remain separated)
+  - external recast remains explicit HITL outside Worker runtime
+  - quality policy artifacts are deterministic guidance, not authority overrides of `job.json`
+
 
 ------------------------------------------------------------
 

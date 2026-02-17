@@ -719,7 +719,7 @@ Phase 7 is staged: early PRs define mappings and local stubs; live GCP provision
 is deferred to a dedicated infra PR.
 Execution policy:
 - Phase 7 implementation PRs (PR-26..PR-30) are explicitly postponed until quality-video track
-  PR-31..PR-34.5 reaches accepted output quality and deterministic handoff readiness.
+  PR-31..PR-34.6 reaches accepted output quality and deterministic handoff readiness.
 - Execution order override: Phase 8 is intentionally executed before returning to Phase 7.
 
 ### PR-23 — Cloud artifact layout (GCS + Firestore mapping)
@@ -833,7 +833,7 @@ Outcome:
 Purpose: lock deterministic media contracts and quality/recast pathways without breaking
 three-plane authority or cloud sequencing.
 Execution order:
-- Active now; complete PR-31..PR-34.5 before resuming deferred Phase 7 PRs.
+- Active now; complete PR-31..PR-34.6 before resuming deferred Phase 7 PRs.
 
 Planning directive (effective 2026-02-16):
 - New PR planning is restricted to the quality-path track only.
@@ -1056,7 +1056,7 @@ Outcome:
 ---
 
 ### PR-34.5 — Recast benchmark harness (quality regression set)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add deterministic benchmark harness for a fixed set of demo loops + hero targets.
@@ -1066,6 +1066,125 @@ Scope:
 
 Outcome:
 - Quality improvements and regressions are visible, testable, and auditable before release decisions.
+
+---
+
+### PR-34.6 — Internal Baseline V2 motion-preserve pipeline (deterministic, non-overlay)
+Status: **PLANNED**
+
+Scope:
+- Add a deterministic internal baseline path that improves quality without overlay recast and without external HITL dependency:
+  - motion-preserve 9:16 reframing
+  - stabilization/denoise/color normalization
+  - deterministic loop seam refinement
+  - deterministic audio normalization + stream guarantee
+  - subtitle/watermark finishing
+- Add optional contract block/settings for internal baseline tuning while preserving permissive lane policy.
+- Emit deterministic stage artifacts/manifests under `sandbox/output/<job_id>/**`.
+- Keep `job.json` as execution authority and preserve Worker determinism/no-network rules.
+- ADR requirement:
+  - requires an ARCH-approved ADR before implementation because it introduces new Worker contract semantics for baseline-v2 tuning.
+
+Outcome:
+- Internal baseline output quality is materially better than legacy overlay path and benchmark-comparable as a non-HITL fallback.
+
+---
+
+### PR-34.7 — Deterministic quality-controller loop (artifact-driven retries + escalation)
+Status: **PLANNED**
+
+Scope:
+- Add deterministic quality decision contract artifact under:
+  - `sandbox/logs/<job_id>/qc/quality_decision.v1.json`
+- Add deterministic policy engine that maps failed quality metrics to bounded next actions:
+  - recast quality failure -> retry recommendation (within capped attempts)
+  - costume fidelity failure -> block finalize and require corrected recast input
+  - repeated failures -> explicit HITL escalation state
+- Add deterministic loop runner orchestration for:
+  - evaluate reports
+  - compute next action
+  - emit auditable decision artifact
+- Keep all loop state file-based; no hidden autonomy/background agents.
+- Preserve existing authority boundaries:
+  - Planner writes job contracts only
+  - Control Plane writes logs/state only
+  - Worker writes output only
+  - external recast remains explicit HITL.
+- ADR requirement:
+  - requires an ARCH-approved ADR before implementation because it introduces a new deterministic quality-decision policy contract.
+
+Outcome:
+- Quality iteration becomes deterministic, auditable, and repeatable with explicit retry budgets and fail-loud escalation.
+
+Sub-PR plan:
+
+### PR-34.7a — Reverse-analysis contracts (truth vs suggestions split)
+Status: **PLANNED**
+
+Scope:
+- Add CAF-owned canonical reverse-analysis schema:
+  - `repo/shared/caf.video_reverse_prompt.v1.schema.json`
+- Add deterministic analyzer checkpoint schemas:
+  - beat grid (timestamps/BPM)
+  - pose checkpoints (key timestamps + compact pose features)
+  - keyframe checkpoints
+- Add optional vendor suggestion artifact envelope (non-authoritative):
+  - `repo/analysis/vendor/indiegtm/**`
+  - `repo/analysis/vendor/nanophoto/**`
+  - `repo/analysis/vendor/bigspy/**`
+- Enforce contract rule:
+  - deterministic analyzer fields = authoritative facts
+  - vendor fields = optional suggestions only
+
+Outcome:
+- Reverse-analysis data model is stable, planner-readable, and authority-safe.
+
+---
+
+### PR-34.7b — Planner enrichment adapter (optional vendor plugins)
+Status: **PLANNED**
+
+Scope:
+- Add planner-side optional plugin adapter for vendor suggestion ingestion.
+- Merge vendor suggestions into planner context as optional hints only.
+- Keep all vendor integrations non-blocking and optional for daily pipeline.
+- No Worker dependency on vendor artifacts.
+
+Outcome:
+- Planner can consume reverse-engineering suggestions without introducing hard vendor dependencies.
+
+---
+
+### PR-34.7c — Deterministic segment-generate-stitch planning contracts
+Status: **PLANNED**
+
+Scope:
+- Add planner/control contracts for short segment generation plans:
+  - bounded segment duration defaults (<=3s)
+  - deterministic stitch order + seam metadata
+  - explicit retry slots per segment
+- Encode locked defaults for dance-quality scenarios:
+  - `constraints.camera_lock = true`
+  - `constraints.background_lock = true`
+  - `constraints.max_shot_length_sec = 3`
+
+Outcome:
+- Motion/identity drift risk is reduced via deterministic short-segment orchestration.
+
+---
+
+### PR-34.7d — Quality-loop policy engine + escalation states
+Status: **PLANNED**
+
+Scope:
+- Add deterministic quality decision artifact:
+  - `sandbox/logs/<job_id>/qc/quality_decision.v1.json`
+- Add bounded action policy map from failed metrics to next actions.
+- Add explicit capped retry + escalation states (fail-loud HITL handoff).
+- Keep loop artifact-driven and auditable; no hidden autonomous agent execution.
+
+Outcome:
+- Quality optimization loop is deterministic, reproducible, and operationally safe.
 
 
 ------------------------------------------------------------

@@ -15,6 +15,7 @@ class PlannerState(TypedDict, total=False):
     prd: Dict[str, Any]
     inbox: List[Dict[str, Any]]
     hero_registry: Optional[Dict[str, Any]]
+    quality_context: Optional[Dict[str, Any]]
     job: Dict[str, Any]
 
 
@@ -32,6 +33,7 @@ class LangGraphDemoProvider(BaseProvider):
         prd: Dict[str, Any],
         inbox: Optional[List[Dict[str, Any]]] = None,
         hero_registry: Optional[Dict[str, Any]] = None,
+        quality_context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         try:
             from langgraph.graph import StateGraph, END
@@ -46,6 +48,7 @@ class LangGraphDemoProvider(BaseProvider):
                 state["prd"],
                 state.get("inbox", []),
                 hero_registry=state.get("hero_registry"),
+                quality_context=state.get("quality_context"),
             )
             return {"job": job}
 
@@ -119,6 +122,7 @@ class LangGraphDemoProvider(BaseProvider):
                 "prd": prd,
                 "inbox": inbox or [],
                 "hero_registry": hero_registry,
+                "quality_context": quality_context,
             }
         )
         return result["job"]

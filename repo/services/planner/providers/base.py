@@ -30,6 +30,7 @@ class BaseProvider(ABC):
         prd: Dict[str, Any],
         inbox: List[Dict[str, Any]] | None = None,
         hero_registry: Dict[str, Any] | None = None,
+        quality_context: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """
         Generates a job dictionary from the given PRD and inbox.
@@ -38,6 +39,7 @@ class BaseProvider(ABC):
             prd: The product definition dictionary.
             inbox: An optional list of inbox message dictionaries.
             hero_registry: Optional reference-only hero registry data (hero_registry.v1).
+            quality_context: Optional planner-side quality signals (analyzer/benchmark/manifests).
 
         Returns:
             A dictionary representing the generated job, ready for validation and writing.

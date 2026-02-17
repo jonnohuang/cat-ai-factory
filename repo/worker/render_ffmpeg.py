@@ -1878,12 +1878,15 @@ def main():
         if recipe_id == "standard_render":
             # Use refactored standard logic
             render_result = render_standard(job, sandbox_root, out_dir, wm_path)
-        elif recipe_id == "duet_overlay_mochi":
-            render_result = render_duet_overlay_mochi(job, sandbox_root, out_dir, wm_path)
-        elif recipe_id == "motion_source_overlay_mochi":
-            render_result = render_motion_source_overlay_mochi(job, sandbox_root, out_dir, wm_path)
-        elif recipe_id == "dance_loop_replace_dino_with_mochi":
-            render_result = render_dance_loop_replace_dino_with_mochi(job, sandbox_root, out_dir, wm_path)
+        elif recipe_id in (
+            "duet_overlay_mochi",
+            "motion_source_overlay_mochi",
+            "dance_loop_replace_dino_with_mochi",
+        ):
+            raise SystemExit(
+                "Overlay-based recast recipes are disabled due to quality policy. "
+                "Use external HITL recast flow (export_viggle_pack -> re-ingest -> finalize_viggle_reingest)."
+            )
         else:
             raise SystemExit(f"Unsupported recipe_id: {recipe_id}")
 
@@ -1891,8 +1894,12 @@ def main():
         # PR19 Lane B Logic
         render_result = render_image_motion(job, sandbox_root, out_dir, wm_path)
     elif lane == "dance_swap":
-        # PR-33.1 deterministic Dance Swap route
-        render_result = render_dance_swap(job, sandbox_root, out_dir, wm_path)
+        raise SystemExit(
+            "Lane 'dance_swap' internal overlay route is disabled due to quality policy. "
+            "Use external HITL recast flow (repo/tools/export_viggle_pack.py, "
+            "repo/tools/create_viggle_reingest_pointer.py, repo/tools/process_viggle_reingest.py, "
+            "repo/tools/finalize_viggle_reingest.py)."
+        )
 
     else:
         # Legacy / Default behavior (Lane A, Lane B, or no lane)

@@ -41,10 +41,12 @@ def main(argv: list[str]) -> int:
             "repo/tools/export_viggle_pack.py",
             "--job",
             str(job_path),
-            "--hero-image",
-            "assets/demo/dance_loop_ref_01.png",
+            "--hero-id",
+            "mochi-grey-tabby",
             "--motion-video",
             "assets/demo/dance_loop.mp4",
+            "--costume-profile-id",
+            "dance_loop_dino_onesie",
             "--prompt",
             "Replace dancer with Mochi while preserving choreography and camera timing.",
         ],
@@ -87,4 +89,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

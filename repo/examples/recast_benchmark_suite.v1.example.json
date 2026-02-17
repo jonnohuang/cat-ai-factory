@@ -1,0 +1,35 @@
+{
+  "version": "recast_benchmark_suite.v1",
+  "suite_id": "recast-regression-smoke",
+  "cases": [
+    {
+      "case_id": "baseline-worker-output",
+      "job_id": "mochi-dino-replace-smoke-20240515",
+      "video_relpath": "sandbox/output/mochi-dino-replace-smoke-20240515/final.mp4",
+      "hero_image_relpath": "sandbox/assets/demo/dance_loop_ref_01.png",
+      "tracks_relpath": "repo/examples/dance_swap_tracks.v1.example.json",
+      "subject_id": "cat-1",
+      "loop_start_frame": 12,
+      "loop_end_frame": 348,
+      "tags": [
+        "baseline",
+        "worker"
+      ]
+    },
+    {
+      "case_id": "hitl-viggle-output",
+      "job_id": "mochi-dino-replace-smoke-20240515",
+      "video_relpath": "sandbox/inbox/viggle_results/mochi-dino-replace-smoke-20240515/viggle.mp4",
+      "hero_image_relpath": "sandbox/assets/demo/dance_loop_ref_01.png",
+      "tracks_relpath": "repo/examples/dance_swap_tracks.v1.example.json",
+      "subject_id": "cat-1",
+      "loop_start_frame": 12,
+      "loop_end_frame": 348,
+      "tags": [
+        "hitl",
+        "viggle"
+      ]
+    }
+  ]
+}
+
