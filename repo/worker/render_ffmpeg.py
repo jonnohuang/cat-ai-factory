@@ -262,6 +262,54 @@ def load_json_file(path: pathlib.Path) -> dict:
         raise SystemExit(f"Invalid JSON artifact: {path} ({ex})")
 
 
+def load_retry_hook(
+    *,
+    job: dict,
+    sandbox_root: pathlib.Path,
+) -> dict[str, Any] | None:
+    retry_plan_path_s = os.environ.get("CAF_RETRY_PLAN_PATH", "").strip()
+    if not retry_plan_path_s:
+        return None
+    retry_plan_path = pathlib.Path(retry_plan_path_s)
+    try:
+        validate_safe_path(retry_plan_path, sandbox_root)
+    except Exception:
+        raise SystemExit(f"Unsafe retry plan path: {retry_plan_path}")
+    if not retry_plan_path.exists():
+        return None
+    payload = load_json_file(retry_plan_path)
+    if payload.get("version") != "retry_plan.v1":
+        raise SystemExit("CAF_RETRY_PLAN_PATH must point to retry_plan.v1")
+    if str(payload.get("job_id", "")) != str(job.get("job_id", "")):
+        raise SystemExit("retry_plan job_id mismatch with current job")
+    retry = payload.get("retry", {})
+    if not isinstance(retry, dict):
+        return None
+    if retry.get("enabled") is not True:
+        return None
+    retry_type = str(retry.get("retry_type", "none"))
+    if retry_type not in {"motion", "recast"}:
+        return None
+    seg_retry = retry.get("segment_retry", {})
+    if not isinstance(seg_retry, dict):
+        seg_retry = {"mode": "none", "target_segments": [], "trigger_metrics": []}
+    mode = str(seg_retry.get("mode", "none"))
+    targets = seg_retry.get("target_segments", [])
+    if not isinstance(targets, list):
+        targets = []
+    triggers = seg_retry.get("trigger_metrics", [])
+    if not isinstance(triggers, list):
+        triggers = []
+    return {
+        "retry_type": retry_type,
+        "mode": mode,
+        "target_segments": [str(x) for x in targets if isinstance(x, str)],
+        "trigger_metrics": [str(x) for x in triggers if isinstance(x, str)],
+        "retry_plan_relpath": str(retry_plan_path.resolve().relative_to(repo_root_from_here().resolve())).replace("\\", "/"),
+        "attempt_id": os.environ.get("CAF_RETRY_ATTEMPT_ID"),
+    }
+
+
 def _with_temp_env(overrides: dict[str, str], fn):
     original: dict[str, str | None] = {k: os.environ.get(k) for k in overrides}
     try:
@@ -576,6 +624,7 @@ def execute_segment_stitch_runtime(
     sandbox_root: pathlib.Path,
     out_dir: pathlib.Path,
     source_mp4: pathlib.Path,
+    retry_hook: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     segment_cfg = job.get("segment_stitch")
     if not isinstance(segment_cfg, dict):
@@ -607,6 +656,23 @@ def execute_segment_stitch_runtime(
     )
     if not ordered:
         raise SystemExit("segment_stitch plan has no valid segment entries")
+
+    retry_hook_applied: dict[str, Any] | None = None
+    if isinstance(retry_hook, dict) and retry_hook.get("retry_type") in {"motion", "recast"}:
+        mode = str(retry_hook.get("mode", "none"))
+        targets = set(retry_hook.get("target_segments", []) or [])
+        if mode == "retry_selected" and targets:
+            ordered = [s for s in ordered if str(s.get("segment_id", "")) in targets]
+            if not ordered:
+                raise SystemExit("retry_hook selected zero segments after filtering")
+        retry_hook_applied = {
+            "retry_type": str(retry_hook.get("retry_type")),
+            "mode": mode,
+            "target_segments": sorted(list(targets)),
+            "trigger_metrics": sorted([str(x) for x in (retry_hook.get("trigger_metrics", []) or [])]),
+            "retry_plan_relpath": retry_hook.get("retry_plan_relpath"),
+            "attempt_id": retry_hook.get("attempt_id"),
+        }
 
     seg_outputs: list[dict[str, Any]] = []
     seg_paths: list[pathlib.Path] = []
@@ -674,6 +740,13 @@ def execute_segment_stitch_runtime(
                 "transition": transition,
             }
         )
+
+    if retry_hook_applied is not None and retry_hook_applied.get("retry_type") == "motion":
+        for seam in seams:
+            if seam["method"] == "hard_cut":
+                seam["method"] = "crossfade"
+                seam["transition"] = "fade"
+            seam["blend_frames"] = max(int(seam["blend_frames"]), 6)
 
     stitched_preview = seg_dir / "stitched_preview.mp4"
     has_non_hard = any(s["method"] != "hard_cut" for s in seams)
@@ -749,6 +822,7 @@ def execute_segment_stitch_runtime(
         "stitched_preview": str(stitched_preview.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
         "segments": seg_outputs,
         "seams": seams,
+        "retry_hook_applied": retry_hook_applied,
     }
     report_path = seg_dir / "segment_stitch_report.v1.json"
     atomic_write_json(report_path, report)
@@ -2303,12 +2377,14 @@ def main():
         # Use simple standard render directly
         render_result = render_standard(job, sandbox_root, out_dir, wm_path)
 
+    retry_hook = load_retry_hook(job=job, sandbox_root=sandbox_root)
     segment_runtime = execute_segment_stitch_runtime(
         job=job,
         repo_root=root,
         sandbox_root=sandbox_root,
         out_dir=out_dir,
         source_mp4=pathlib.Path(render_result["outputs"]["final_mp4"]),
+        retry_hook=retry_hook,
     )
 
     # Final result assembly
@@ -2356,6 +2432,8 @@ def main():
     final_result["media_stack"] = media_stack_paths
     if segment_runtime is not None:
         final_result["segment_stitch_runtime"] = segment_runtime
+    if retry_hook is not None:
+        final_result["worker_retry_hook"] = retry_hook
     debug_exports = emit_segment_debug_exports(
         job=job,
         repo_root=root,

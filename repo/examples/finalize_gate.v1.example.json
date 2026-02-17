@@ -1,0 +1,14 @@
+{
+  "version": "finalize_gate.v1",
+  "job_id": "smoke-segment-stitch-runtime",
+  "generated_at": "2026-02-17T00:00:00Z",
+  "source": {
+    "quality_decision_relpath": "sandbox/logs/smoke-segment-stitch-runtime/qc/quality_decision.v1.json",
+    "decision_action": "retry_motion",
+    "decision_reason": "Motion quality metrics failed within retry budget; deterministic motion retry requested."
+  },
+  "gate": {
+    "allow_finalize": false,
+    "status": "block"
+  }
+}

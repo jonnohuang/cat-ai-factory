@@ -49,6 +49,18 @@ def main(argv: list[str]) -> int:
         if float(seg.get("end_sec", 0.0)) <= float(seg.get("start_sec", 0.0)):
             eprint(f"SEMANTIC_ERROR: segments[{i}] end_sec must be > start_sec")
             return 1
+    retry_hook = data.get("retry_hook_applied")
+    if isinstance(retry_hook, dict):
+        mode = str(retry_hook.get("mode", "none"))
+        targets = retry_hook.get("target_segments", [])
+        seg_ids = [str(seg.get("segment_id")) for seg in segs if isinstance(seg, dict)]
+        if mode == "retry_selected":
+            if not isinstance(targets, list) or len(targets) == 0:
+                eprint("SEMANTIC_ERROR: retry_selected hook requires non-empty target_segments")
+                return 1
+            if not set(seg_ids).issubset(set(str(x) for x in targets)):
+                eprint("SEMANTIC_ERROR: segment outputs must be subset of retry target segments")
+                return 1
 
     print(f"OK: {target}")
     return 0

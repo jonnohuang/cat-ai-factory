@@ -1,0 +1,34 @@
+{
+  "version": "retry_attempt_lineage.v1",
+  "job_id": "smoke-segment-stitch-runtime",
+  "generated_at": "2026-02-17T00:00:00Z",
+  "updated_at": "2026-02-17T00:00:05Z",
+  "attempts": [
+    {
+      "ts": "2026-02-17T00:00:01Z",
+      "attempt_id": "preexisting-output",
+      "source_attempt_id": null,
+      "decision_action": "retry_motion",
+      "decision_reason": "Motion quality metrics failed within retry budget; deterministic motion retry requested.",
+      "resolution": "retry",
+      "retry_type": "motion",
+      "segment_retry": {
+        "mode": "retry_selected",
+        "target_segments": [
+          "seg_001",
+          "seg_002"
+        ],
+        "trigger_metrics": [
+          "temporal_stability",
+          "loop_seam"
+        ]
+      },
+      "artifacts": {
+        "quality_decision_relpath": "sandbox/logs/smoke-segment-stitch-runtime/qc/quality_decision.v1.json",
+        "retry_plan_relpath": "sandbox/logs/smoke-segment-stitch-runtime/qc/retry_plan.v1.json",
+        "result_relpath": "sandbox/output/smoke-segment-stitch-runtime/result.json",
+        "output_final_relpath": "sandbox/output/smoke-segment-stitch-runtime/final.mp4"
+      }
+    }
+  ]
+}

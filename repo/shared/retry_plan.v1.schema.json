@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/retry_plan.v1.schema.json",
+  "title": "Retry Plan v1",
+  "description": "Deterministic retry intent artifact derived from quality decision outputs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "generated_at",
+    "source",
+    "retry",
+    "state"
+  ],
+  "properties": {
+    "version": {
+      "const": "retry_plan.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quality_decision_relpath",
+        "action",
+        "reason"
+      ],
+      "properties": {
+        "quality_decision_relpath": {
+          "type": "string",
+          "pattern": "^sandbox/.+\\.json$"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "proceed_finalize",
+            "retry_motion",
+            "retry_recast",
+            "block_for_costume",
+            "escalate_hitl"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "retry_type",
+        "next_attempt",
+        "max_retries",
+        "segment_retry",
+        "pass_target"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "retry_type": {
+          "type": "string",
+          "enum": [
+            "none",
+            "motion",
+            "recast"
+          ]
+        },
+        "next_attempt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "segment_retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "target_segments",
+            "trigger_metrics"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "none",
+                "retry_all",
+                "retry_selected"
+              ]
+            },
+            "target_segments": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^seg_[0-9]{3}$"
+              }
+            },
+            "trigger_metrics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "pass_target": {
+          "type": "string",
+          "enum": [
+            "unknown",
+            "motion",
+            "identity"
+          ]
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "motion_status",
+        "identity_status",
+        "terminal_state"
+      ],
+      "properties": {
+        "motion_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        },
+        "identity_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        },
+        "terminal_state": {
+          "type": "string",
+          "enum": [
+            "none",
+            "block_for_costume",
+            "escalate_hitl"
+          ]
+        }
+      }
+    }
+  }
+}

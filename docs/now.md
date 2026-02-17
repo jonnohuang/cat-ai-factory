@@ -14,13 +14,13 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-34.6a — Quality decision to retry-plan mapping (deterministic contracts)**
+PR: **PR-34.8a — Storyboard-first I2V default routing (planner contracts + provider wiring)**
 Last Updated: 2026-02-17
 
 ### Status by Role
-- ARCH: In Progress (scope/contract lock)
-- CODEX: In Progress (PR-34.6a implementation kickoff)
-- CLOUD-REVIEW: Not Required (PR-34.6a is non-cloud scope)
+- ARCH: In Progress (PR-34.8 scope lock + acceptance criteria)
+- CODEX: Ready (implementation queued after docs approval)
+- CLOUD-REVIEW: Not Required (PR-34.8 is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
@@ -30,6 +30,44 @@ Last Updated: 2026-02-17
 - ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
+- Added new quality-path follow-on PR pack (PR-34.8) to planning docs:
+  - `docs/PR_PROJECT_PLAN.md`
+  - PR-34.8 (parent): storyboard-first deterministic generation path
+  - PR-34.8a: storyboard-first I2V default routing
+  - PR-34.8b: analyzer-grounded frame-labeling contract lane
+  - PR-34.8c: optional Whisper captions lane (non-blocking)
+  - explicit defer note: MoveNet deferred pending measured lift beyond MediaPipe.
+- Added new requirements for PR-34.8 scope:
+  - `docs/system-requirements.md`
+  - FR-28.13 storyboard-first I2V default for quality paths
+  - FR-28.14 frame-labeling contract with analyzer-grounded enrichment
+  - FR-28.15 optional Whisper captions lane (non-blocking)
+- Added PR-34.6e finalize-gate contract enforcement:
+  - fail-closed controller behavior when quality decision tooling fails:
+    - `repo/services/orchestrator/ralph_loop.py`
+  - finalize gate artifacts emitted by decision engine:
+    - `sandbox/logs/<job_id>/qc/finalize_gate.v1.json`
+  - new validator:
+    - `repo/tools/validate_finalize_gate.py`
+  - contract + example already added:
+    - `repo/shared/finalize_gate.v1.schema.json`
+    - `repo/examples/finalize_gate.v1.example.json`
+- Added PR-34.6f closed-loop smoke coverage:
+  - finalize gate smoke:
+    - `repo/tools/smoke_finalize_gate_contract.py`
+  - one-command quality-controller loop smoke:
+    - `repo/tools/smoke_quality_controller_loop.py`
+  - closed-loop suite now executes deterministic chain:
+    - retry plan contract
+    - worker retry hooks
+    - controller bounded retry execution
+    - retry lineage contract
+    - finalize gate contract
+- Validation run (Conda `cat-ai-factory`) passed:
+  - `python -m py_compile repo/tools/validate_finalize_gate.py repo/tools/smoke_finalize_gate_contract.py repo/tools/smoke_quality_controller_loop.py repo/services/orchestrator/ralph_loop.py repo/tools/decide_quality_action.py`
+  - `python -m repo.tools.validate_finalize_gate repo/examples/finalize_gate.v1.example.json`
+  - `python -m repo.tools.smoke_finalize_gate_contract`
+  - `python -m repo.tools.smoke_quality_controller_loop`
 - Docs scope update for quality-loop sequencing:
   - `docs/PR_PROJECT_PLAN.md` now includes explicit PR-34.6 sub-PRs:
     - PR-34.6a decision->retry-plan mapping

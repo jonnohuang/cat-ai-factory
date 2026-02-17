@@ -221,6 +221,86 @@ def _segment_retry_plan(
     return {"mode": "retry_all", "target_segments": [], "trigger_metrics": trigger}
 
 
+def _build_retry_plan(
+    *,
+    job_id: str,
+    quality_decision_relpath: str,
+    max_retries: int,
+    retry_attempt: int,
+    action: str,
+    reason: str,
+    segment_retry: Dict[str, Any],
+    motion_status: Optional[str],
+    identity_status: Optional[str],
+) -> Dict[str, Any]:
+    retry_type = "none"
+    enabled = False
+    terminal_state = "none"
+    pass_target = "unknown"
+    if action == "retry_motion":
+        retry_type = "motion"
+        enabled = True
+        pass_target = "motion"
+    elif action == "retry_recast":
+        retry_type = "recast"
+        enabled = True
+        pass_target = "identity"
+    elif action in {"block_for_costume", "escalate_hitl"}:
+        terminal_state = action
+
+    motion = motion_status if motion_status in {"pass", "fail"} else "unknown"
+    identity = identity_status if identity_status in {"pass", "fail"} else "unknown"
+
+    return {
+        "version": "retry_plan.v1",
+        "job_id": job_id,
+        "generated_at": _utc_now(),
+        "source": {
+            "quality_decision_relpath": quality_decision_relpath,
+            "action": action,
+            "reason": reason,
+        },
+        "retry": {
+            "enabled": enabled,
+            "retry_type": retry_type,
+            "next_attempt": retry_attempt,
+            "max_retries": max_retries,
+            "segment_retry": segment_retry,
+            "pass_target": pass_target,
+        },
+        "state": {
+            "motion_status": motion,
+            "identity_status": identity,
+            "terminal_state": terminal_state,
+        },
+    }
+
+
+def _build_finalize_gate(
+    *,
+    job_id: str,
+    quality_decision_relpath: str,
+    action: str,
+    reason: str,
+) -> Dict[str, Any]:
+    allow_finalize = action == "proceed_finalize"
+    gate_status = "pass" if allow_finalize else "block"
+    return {
+        "version": "finalize_gate.v1",
+        "job_id": job_id,
+        "generated_at": _utc_now(),
+        "source": {
+            "quality_decision_relpath": quality_decision_relpath,
+            "decision_action": action,
+            "decision_reason": reason,
+        },
+        "gate": {
+            "allow_finalize": allow_finalize,
+            "status": gate_status,
+        },
+    }
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Deterministic quality decision engine")
     parser.add_argument("--job-id", required=True)
@@ -233,6 +313,8 @@ def main(argv: list[str]) -> int:
     costume_path = qc_dir / "costume_fidelity.v1.json"
     two_pass_path = qc_dir / "two_pass_orchestration.v1.json"
     decision_path = qc_dir / "quality_decision.v1.json"
+    retry_plan_path = qc_dir / "retry_plan.v1.json"
+    finalize_gate_path = qc_dir / "finalize_gate.v1.json"
 
     quality = _load_json(quality_path)
     costume = _load_json(costume_path)
@@ -359,6 +441,26 @@ def main(argv: list[str]) -> int:
     }
 
     _save_json(decision_path, payload)
+    decision_relpath = _safe_rel(decision_path, project_root) or str(decision_path)
+    retry_plan = _build_retry_plan(
+        job_id=args.job_id,
+        quality_decision_relpath=decision_relpath,
+        max_retries=max(0, args.max_retries),
+        retry_attempt=retry_attempt,
+        action=action,
+        reason=reason,
+        segment_retry=segment_retry,
+        motion_status=motion_status,
+        identity_status=identity_status,
+    )
+    _save_json(retry_plan_path, retry_plan)
+    finalize_gate = _build_finalize_gate(
+        job_id=args.job_id,
+        quality_decision_relpath=decision_relpath,
+        action=action,
+        reason=reason,
+    )
+    _save_json(finalize_gate_path, finalize_gate)
     print(str(decision_path))
     return 0
 

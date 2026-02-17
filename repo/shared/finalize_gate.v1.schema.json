@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/finalize_gate.v1.schema.json",
+  "title": "Finalize Gate v1",
+  "description": "Deterministic finalize gate derived from quality decision outcomes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "generated_at",
+    "source",
+    "gate"
+  ],
+  "properties": {
+    "version": {
+      "const": "finalize_gate.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quality_decision_relpath",
+        "decision_action",
+        "decision_reason"
+      ],
+      "properties": {
+        "quality_decision_relpath": {
+          "type": "string",
+          "pattern": "^sandbox/.+\\.json$"
+        },
+        "decision_action": {
+          "type": "string",
+          "enum": [
+            "proceed_finalize",
+            "retry_motion",
+            "retry_recast",
+            "block_for_costume",
+            "escalate_hitl"
+          ]
+        },
+        "decision_reason": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allow_finalize",
+        "status"
+      ],
+      "properties": {
+        "allow_finalize": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "block"
+          ]
+        }
+      }
+    }
+  }
+}
