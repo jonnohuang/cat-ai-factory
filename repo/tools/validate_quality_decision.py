@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+from typing import Any
+
+try:
+    from jsonschema import ValidationError, validate
+except Exception:
+    print("ERROR: jsonschema not installed", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def eprint(*args: Any) -> None:
+    print(*args, file=sys.stderr)
+
+
+def _repo_root() -> pathlib.Path:
+    return pathlib.Path(__file__).resolve().parents[2]
+
+
+def _load(path: pathlib.Path) -> Any:
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 2:
+        eprint("Usage: python -m repo.tools.validate_quality_decision path/to/quality_decision.v1.json")
+        return 1
+    target = pathlib.Path(argv[1]).resolve()
+    if not target.exists():
+        eprint(f"ERROR: file not found: {target}")
+        return 1
+
+    root = _repo_root()
+    schema = _load(root / "repo" / "shared" / "quality_decision.v1.schema.json")
+    data = _load(target)
+
+    try:
+        validate(instance=data, schema=schema)
+    except ValidationError as ex:
+        eprint(f"SCHEMA_ERROR: {ex.message}")
+        return 1
+
+    max_retries = int(data.get("policy", {}).get("max_retries", 0))
+    retry_attempt = int(data.get("policy", {}).get("retry_attempt", 0))
+    action = str(data.get("decision", {}).get("action", ""))
+    if action == "retry_recast" and retry_attempt > max_retries:
+        eprint("SEMANTIC_ERROR: retry_recast requires retry_attempt <= max_retries")
+        return 1
+
+    print(f"OK: {target}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

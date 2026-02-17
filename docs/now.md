@@ -30,6 +30,53 @@ Last Updated: 2026-02-17
 - ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
+- Added PR-34.7f facts-only planner guard + analyzer fact completeness:
+  - `repo/shared/caf.video_reverse_prompt.v1.schema.json` expanded with `truth.visual_facts` plus shot-level camera/brightness/palette fact fields
+  - `repo/tools/build_analyzer_core_pack.py` now emits deterministic brightness/palette stats and basic camera movement mode/confidence
+  - `repo/services/planner/planner_cli.py` now enforces facts-only guard in reverse-analysis mode and fails loud on unsupported claims
+  - `repo/tools/validate_planner_facts_only.py` added for deterministic facts-grounding checks
+  - `repo/tools/smoke_planner_facts_only.py` added for repeatable facts-only guard smoke validation
+- Added PR-34.7b planner quality wiring:
+  - `repo/services/planner/planner_cli.py` now loads reverse-analysis/checkpoint artifacts into `quality_context`
+  - deterministic planner shot-timing hints now consume reverse-analysis timestamps
+- Added PR-34.7c segment-stitch contracts + planner wiring:
+  - `repo/shared/segment_stitch_plan.v1.schema.json`
+  - `repo/examples/segment_stitch_plan.v1.example.json`
+  - `repo/tools/validate_segment_stitch_plan.py`
+  - planner now consumes segment-stitch anchors for deterministic shot timing
+- Added PR-34.7d quality-policy decision engine + controller integration:
+  - `repo/shared/quality_decision.v1.schema.json`
+  - `repo/examples/quality_decision.v1.example.json`
+  - `repo/tools/decide_quality_action.py`
+  - `repo/tools/validate_quality_decision.py`
+  - `repo/services/orchestrator/ralph_loop.py` now emits/consumes deterministic quality decisions for bounded retry/escalation
+- Added PR-34.7e analyzer core pack implementation:
+  - `repo/tools/build_analyzer_core_pack.py`
+  - `repo/tools/smoke_analyzer_core_pack.py`
+  - outputs canonical artifacts (`beat_grid.v1`, `pose_checkpoints.v1`, `keyframe_checkpoints.v1`, `caf.video_reverse_prompt.v1`, `segment_stitch_plan.v1`)
+- Dependencies updated:
+  - `repo/requirements-dev.txt` adds optional `scenedetect`, `librosa`, and `mediapipe` marker for analyzer-core extraction
+- PR-34.7b..PR-34.7e smoke validation (Conda `cat-ai-factory`):
+  - `python -m py_compile repo/services/planner/planner_cli.py repo/services/orchestrator/ralph_loop.py repo/tools/validate_segment_stitch_plan.py repo/tools/decide_quality_action.py repo/tools/validate_quality_decision.py repo/tools/build_analyzer_core_pack.py repo/tools/smoke_analyzer_core_pack.py` passed
+  - `python -m repo.tools.validate_segment_stitch_plan repo/examples/segment_stitch_plan.v1.example.json` passed
+  - `python -m repo.tools.validate_quality_decision repo/examples/quality_decision.v1.example.json` passed
+  - `python -m repo.tools.decide_quality_action --job-id pr347d-smoke --max-retries 2` passed and produced decision artifact
+  - `python -m repo.tools.smoke_analyzer_core_pack` passed
+- Added PR-34.7a reverse-analysis contract artifacts:
+  - `repo/shared/caf.video_reverse_prompt.v1.schema.json`
+  - `repo/shared/beat_grid.v1.schema.json`
+  - `repo/shared/pose_checkpoints.v1.schema.json`
+  - `repo/shared/keyframe_checkpoints.v1.schema.json`
+- Added PR-34.7a examples + deterministic validator:
+  - `repo/examples/caf.video_reverse_prompt.v1.example.json`
+  - `repo/examples/beat_grid.v1.example.json`
+  - `repo/examples/pose_checkpoints.v1.example.json`
+  - `repo/examples/keyframe_checkpoints.v1.example.json`
+  - `repo/tools/validate_reverse_analysis_contracts.py`
+  - `repo/analysis/vendor/README.md`
+- PR-34.7a smoke validation (Conda `cat-ai-factory`):
+  - `python -m py_compile repo/tools/validate_reverse_analysis_contracts.py` passed
+  - `python -m repo.tools.validate_reverse_analysis_contracts --reverse repo/examples/caf.video_reverse_prompt.v1.example.json --beat repo/examples/beat_grid.v1.example.json --pose repo/examples/pose_checkpoints.v1.example.json --keyframes repo/examples/keyframe_checkpoints.v1.example.json` passed
 - `docs/PR_PROJECT_PLAN.md`:
   - added explicit ADR-required notes for PR-34.6 and PR-34.7 before implementation kickoff.
 - `docs/system-requirements.md`:
@@ -271,7 +318,7 @@ Last Updated: 2026-02-17
   - Planning directive (2026-02-16): only quality-path PRs will be planned from this point forward.
   - Fallback-only/scaffolding PRs are deferred unless they directly raise output quality or recast fidelity.
 - Scope update (2026-02-17): PR-34.6 remains planned but is not currently in execution; add PR-34.7 deterministic quality-controller loop scope before PR-34.6 implementation work.
-  - ARCH scope addendum (2026-02-17): PR-34.7 will include sub-PRs PR-34.7a..PR-34.7d for reverse-analysis contracts, optional vendor enrichment adapters, segment-stitch planning contracts, and deterministic quality-loop policy/escalation artifacts.
+  - ARCH scope addendum (2026-02-17): PR-34.7 includes implemented PR-34.7a..PR-34.7f and planned follow-ons PR-34.7g/34.7h/34.7i/34.7k/34.7l/34.7m for runtime segment execution, two-pass orchestration, quality-target tuning, explicit quality target contracts, debug exports, and continuity-pack inputs.
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
@@ -284,9 +331,9 @@ Last Updated: 2026-02-17
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: review PR-34.5 implementation closeout against FR-28.3 boundaries.
-- CODEX: draft PR-34.7 deterministic quality-controller loop contracts/scope handoff prompt; keep PR-34.6 in planned state.
-- ARCH: lock PR-34.7a..PR-34.7d sequencing and acceptance criteria before CODEX implementation kickoff.
+- ARCH: lock sequencing + acceptance criteria for PR-34.7g/34.7h/34.7i/34.7k/34.7l/34.7m against FR-28.9..FR-28.12.
+- CODEX: proceed with PR-34.7g implementation kickoff (segment generate+stitch runtime execution path).
+- ARCH: keep PR-34.6 in planned state until PR-34.7g..PR-34.7m quality follow-ons are accepted.
 
 ### ARCH Decision Queue Snapshot (PR-34.5 Focus)
 1) Video Analyzer contracts:

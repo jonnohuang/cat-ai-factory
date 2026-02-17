@@ -1,0 +1,75 @@
+{
+  "version": "caf.video_reverse_prompt.v1",
+  "analysis_id": "demo-dance-loop-mochi-01",
+  "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
+  "truth": {
+    "beat_grid_ref": "repo/examples/beat_grid.v1.example.json",
+    "pose_checkpoints_ref": "repo/examples/pose_checkpoints.v1.example.json",
+    "keyframe_checkpoints_ref": "repo/examples/keyframe_checkpoints.v1.example.json",
+    "visual_facts": {
+      "camera_movement_mode": "locked",
+      "camera_movement_confidence": 0.94,
+      "brightness_bucket": "mid",
+      "luma_mean": 121.7,
+      "palette_top_hex": ["#5F6A7A", "#AEB6C1", "#2F343B"]
+    },
+    "shots": [
+      {
+        "shot_id": "shot_001",
+        "start_sec": 0.0,
+        "end_sec": 0.9,
+        "camera": "locked",
+        "camera_confidence": 0.94,
+        "motion_intensity": 0.72,
+        "brightness_luma_mean": 120.9,
+        "palette_hint": "#5F6A7A"
+      },
+      {
+        "shot_id": "shot_002",
+        "start_sec": 0.9,
+        "end_sec": 1.8,
+        "camera": "locked",
+        "camera_confidence": 0.93,
+        "motion_intensity": 0.78,
+        "brightness_luma_mean": 122.4,
+        "palette_hint": "#AEB6C1"
+      }
+    ]
+  },
+  "suggestions": {
+    "vendor_style_tokens": [
+      "crisp-fur-detail",
+      "stage-light-contrast",
+      "high-energy-dance"
+    ],
+    "vendor_prompt_lines": [
+      "keep camera locked and preserve beat-driven body accents",
+      "avoid frame jitter and maintain temporal coherence"
+    ],
+    "vendor_sources": [
+      {
+        "vendor": "nanophoto",
+        "relpath": "repo/analysis/vendor/nanophoto/demo-dance-loop-mochi-01.json"
+      }
+    ]
+  },
+  "prompt_packages": {
+    "text2video": {
+      "prompt": "A grey tabby kitten in a dinosaur costume performs an energetic looped dance, camera locked, beat-synced accents at key poses.",
+      "negative": ["camera shake", "flicker", "identity drift", "ghost limbs"]
+    },
+    "image2video": {
+      "prompt": "Use the reference hero appearance, preserve dance timing and return to start pose at loop boundary.",
+      "negative": ["costume mismatch", "background drift", "hard cuts"]
+    }
+  },
+  "continuity_hooks": {
+    "hero_ids": ["mochi-grey-tabby"],
+    "style_id": "dance-loop-realistic"
+  },
+  "confidence": {
+    "measured_truth": 0.91,
+    "inferred_semantics": 0.63,
+    "notes": "Measured timing/pose data is high confidence; prompt styling remains suggestive."
+  }
+}

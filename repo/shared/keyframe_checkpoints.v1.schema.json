@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/keyframe_checkpoints.v1.schema.json",
+  "title": "Keyframe Checkpoints v1",
+  "description": "Deterministic analyzer keyframe checkpoints for planning and review.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "analysis_id",
+    "source_video_relpath",
+    "keyframes"
+  ],
+  "properties": {
+    "version": {
+      "const": "keyframe_checkpoints.v1"
+    },
+    "analysis_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "source_video_relpath": {
+      "type": "string",
+      "pattern": "^sandbox/.+\\.(mp4|mov|mkv|webm)$"
+    },
+    "keyframes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/keyframe"
+      }
+    }
+  },
+  "definitions": {
+    "keyframe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t_sec",
+        "label"
+      ],
+      "properties": {
+        "t_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        }
+      }
+    }
+  }
+}

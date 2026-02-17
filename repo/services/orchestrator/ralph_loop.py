@@ -76,6 +76,15 @@ def run_cmd(cmd: List[str], log_path: pathlib.Path) -> int:
     return proc.returncode
 
 
+def load_json_if_exists(path: pathlib.Path) -> Optional[Dict[str, Any]]:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
 def job_id_from_filename(job_path: pathlib.Path) -> str:
     name = job_path.name
     if name.endswith(".job.json"):
@@ -207,6 +216,40 @@ def main(argv: List[str]) -> int:
     def warn(event: str, details: Dict[str, Any]) -> None:
         append_event(events_path, event, current_state, current_state, None, details)
 
+    def quality_decision(attempt_id: Optional[str] = None) -> Tuple[str, str]:
+        qc_dir = logs_dir / "qc"
+        qc_dir.mkdir(parents=True, exist_ok=True)
+        decision_log = qc_dir / "quality_decision.log"
+        decision_cmd = [
+            "python3",
+            "repo/tools/decide_quality_action.py",
+            "--job-id",
+            canonical_job_id,
+            "--max-retries",
+            str(max(0, args.max_retries)),
+        ]
+        rc = run_cmd(decision_cmd, decision_log)
+        if rc != 0:
+            warn("QUALITY_DECISION_FAILED", {"exit_code": rc})
+            return "proceed_finalize", "quality decision tool failed; defaulting to finalize"
+
+        decision_path = qc_dir / "quality_decision.v1.json"
+        payload = load_json_if_exists(decision_path) or {}
+        decision = payload.get("decision", {}) if isinstance(payload, dict) else {}
+        action = decision.get("action") if isinstance(decision, dict) else None
+        reason = decision.get("reason") if isinstance(decision, dict) else None
+        action_s = str(action) if isinstance(action, str) and action else "proceed_finalize"
+        reason_s = str(reason) if isinstance(reason, str) and reason else "quality decision unavailable"
+        append_event(
+            events_path,
+            "QUALITY_DECISION",
+            current_state,
+            current_state,
+            attempt_id,
+            {"action": action_s, "reason": reason_s, "artifact": str(decision_path)},
+        )
+        return action_s, reason_s
+
     try:
         validate_log = logs_dir / "validate_job.log"
         pointers["validate_log"] = str(validate_log)
@@ -253,6 +296,21 @@ def main(argv: List[str]) -> int:
             rc = run_cmd(lineage_cmd, lineage_log)
             if rc == 0:
                 transition("VERIFIED", "LINEAGE_OK")
+                action, reason = quality_decision()
+                if action == "retry_recast":
+                    transition(
+                        "FAIL_QUALITY",
+                        "QUALITY_RETRY",
+                        reason=reason,
+                    )
+                    return 1
+                elif action in ("block_for_costume", "escalate_hitl"):
+                    transition(
+                        "FAIL_QUALITY",
+                        "QUALITY_ESCALATED",
+                        reason=reason,
+                    )
+                    return 1
                 transition("COMPLETED", "COMPLETED")
                 return 0
             transition(
@@ -324,6 +382,25 @@ def main(argv: List[str]) -> int:
             rc = run_cmd(lineage_cmd, lineage_log)
             if rc == 0:
                 transition("VERIFIED", "LINEAGE_OK", attempt_id=attempt_id)
+                action, reason = quality_decision(attempt_id=attempt_id)
+                if action == "retry_recast":
+                    transition(
+                        "FAIL_QUALITY",
+                        "QUALITY_RETRY",
+                        attempt_id=attempt_id,
+                        reason=reason,
+                    )
+                    if attempt_index < total_attempts - 1:
+                        continue
+                    return 1
+                if action in ("block_for_costume", "escalate_hitl"):
+                    transition(
+                        "FAIL_QUALITY",
+                        "QUALITY_ESCALATED",
+                        attempt_id=attempt_id,
+                        reason=reason,
+                    )
+                    return 1
                 transition("COMPLETED", "COMPLETED", attempt_id=attempt_id)
                 return 0
 

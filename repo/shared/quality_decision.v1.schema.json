@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/quality_decision.v1.schema.json",
+  "title": "Quality Decision v1",
+  "description": "Deterministic quality-controller decision artifact for bounded retries and escalation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "generated_at",
+    "inputs",
+    "policy",
+    "decision"
+  ],
+  "properties": {
+    "version": {
+      "const": "quality_decision.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quality_report_relpath",
+        "costume_report_relpath",
+        "segment_stitch_plan_relpath"
+      ],
+      "properties": {
+        "quality_report_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "costume_report_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "segment_stitch_plan_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(repo/.+\\.json)?$"
+        },
+        "failed_metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_retries",
+        "retry_attempt"
+      ],
+      "properties": {
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "retry_attempt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action",
+        "reason"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "proceed_finalize",
+            "retry_recast",
+            "block_for_costume",
+            "escalate_hitl"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
+    }
+  }
+}

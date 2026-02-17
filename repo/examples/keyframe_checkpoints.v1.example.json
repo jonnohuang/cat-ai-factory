@@ -1,0 +1,22 @@
+{
+  "version": "keyframe_checkpoints.v1",
+  "analysis_id": "demo-dance-loop-mochi-01",
+  "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
+  "keyframes": [
+    {
+      "t_sec": 0.12,
+      "label": "hook-arm-up",
+      "tags": ["hook", "arms-up", "dance"]
+    },
+    {
+      "t_sec": 0.88,
+      "label": "center-pose-lock",
+      "tags": ["center-frame", "pose-hold"]
+    },
+    {
+      "t_sec": 1.74,
+      "label": "loop-return-pose",
+      "tags": ["loop", "end-pose"]
+    }
+  ]
+}
