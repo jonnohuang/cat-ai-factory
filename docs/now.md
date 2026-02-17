@@ -14,13 +14,13 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-34.1 — External HITL recast implementation (ops flow + re-ingest path)**
+PR: **PR-34.4 — Recast quality gates + deterministic scoring**
 Last Updated: 2026-02-16
 
 ### Status by Role
 - ARCH: In Progress (review/closeout)
 - CODEX: Completed
-- CLOUD-REVIEW: Not Required (PR-34.x is non-cloud scope)
+- CLOUD-REVIEW: Not Required (PR-34.4 is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
@@ -43,6 +43,7 @@ Last Updated: 2026-02-16
   - PR-34.1 status updated to COMPLETED
   - PR-34.2 status updated to COMPLETED
   - PR-34.3 status updated to COMPLETED
+  - PR-34.4 status updated to COMPLETED
   - added implementation sub-PRs:
     - PR-32.1 (analyzer runtime implementation)
     - PR-33.1 (Dance Swap deterministic recipe implementation)
@@ -226,6 +227,19 @@ Last Updated: 2026-02-16
     - `sandbox/dist_artifacts/mochi-dino-replace-smoke-20240515/viggle_pack/viggle_pack.v1.json`
     - `sandbox/dist_artifacts/mochi-dino-replace-smoke-20240515/viggle_pack/external_recast_lifecycle.v1.json`
     - `sandbox/inbox/viggle-reingest-mochi-dino-replace-smoke-20240515-*.json`
+- Added PR-34.4 deterministic quality-gate scoring:
+  - schema:
+    - `repo/shared/recast_quality_report.v1.schema.json`
+  - example:
+    - `repo/examples/recast_quality_report.v1.example.json`
+  - tools:
+    - `repo/tools/score_recast_quality.py`
+    - `repo/tools/validate_recast_quality_report.py`
+    - `repo/tools/smoke_recast_quality.py`
+- PR-34.4 smoke validation (Conda `cat-ai-factory`):
+  - `python -m py_compile repo/tools/score_recast_quality.py repo/tools/validate_recast_quality_report.py repo/tools/smoke_recast_quality.py` passed
+  - `python -m repo.tools.smoke_recast_quality` passed
+  - `python -m repo.tools.validate_recast_quality_report sandbox/logs/mochi-dino-replace-smoke-20240515/qc/recast_quality_report.v1.json` passed
 
 ### Open Findings / Conditions
 - Roadmap policy:
@@ -236,19 +250,19 @@ Last Updated: 2026-02-16
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
-- PR-34.x scope lock:
-  - external recast remains explicit Ops/Distribution HITL flow
-  - Worker does not call external recast services
-  - no cross-plane authority changes
-- PR-34.x completion notes:
-  - export/re-ingest lifecycle is now explicit, auditable, and validation-backed
+- PR-34.4 scope lock:
+  - quality scoring remains deterministic and artifact-only
+  - no external API calls in scoring path
+  - no Worker authority change
+- PR-34.4 completion notes:
+  - recast quality is now measurable with explicit pass/fail thresholds and report artifact
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: review PR-34.x implementation closeout against ADR-0044 boundaries.
-- CODEX: proceed to quality gating track (PR-34.4 / PR-34.5).
+- ARCH: review PR-34.4 implementation closeout against FR-28.2 boundaries.
+- CODEX: proceed to PR-34.5 benchmark harness implementation.
 
-### ARCH Decision Queue Snapshot (PR-34.x Focus)
+### ARCH Decision Queue Snapshot (PR-34.4 Focus)
 1) Video Analyzer contracts:
 - Approved as planner enrichment layer.
 - Metadata-only canon and index/query contracts.
@@ -259,8 +273,8 @@ Last Updated: 2026-02-16
 3) Dance Swap v1 contracts:
 - Approved as deterministic choreography-preserving lane artifact layer.
 - Contract set must remain lane-permissive and preserve `job.json` authority.
-4) External HITL recast contracts:
-- Must remain explicit Ops/Distribution flow (`viggle_pack.v1`, lifecycle, re-ingest pointer).
-- Must preserve `job.json` as execution authority and keep Worker external-call free.
+4) Recast quality gating:
+- Must remain deterministic, artifact-driven scoring/reporting (`recast_quality_report.v1`).
+- Must preserve authority boundaries and avoid hidden/non-deterministic quality decisions.
 
 ------------------------------------------------------------
