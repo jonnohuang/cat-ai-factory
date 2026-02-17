@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/viggle_reingest_pointer.v1.schema.json",
+  "title": "Viggle Reingest Pointer v1",
+  "description": "Inbox metadata pointer contract for externally generated Viggle output.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "source",
+    "result_video_relpath",
+    "submitted_at"
+  ],
+  "properties": {
+    "version": {
+      "const": "viggle_reingest_pointer.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "const": "viggle"
+    },
+    "result_video_relpath": {
+      "type": "string",
+      "pattern": "^sandbox/inbox/viggle_results/[a-z0-9-]+/.+\\.(mp4|mov|mkv|webm)$"
+    },
+    "submitted_at": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  }
+}
+

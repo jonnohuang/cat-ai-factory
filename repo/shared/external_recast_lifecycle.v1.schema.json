@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/external_recast_lifecycle.v1.schema.json",
+  "title": "External Recast Lifecycle v1",
+  "description": "Lifecycle/state artifact for external HITL recast flow.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "state",
+    "updated_at"
+  ],
+  "properties": {
+    "version": {
+      "const": "external_recast_lifecycle.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "READY_FOR_VIGGLE",
+        "VIGGLE_EXPORTED",
+        "VIGGLE_DONE",
+        "FINISHING",
+        "DONE",
+        "FAILED"
+      ]
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "reingest_pointer": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sandbox/inbox/viggle-reingest-[a-z0-9-]+-[0-9]{10}\\.json$"
+    },
+    "reingest_result_video": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sandbox/inbox/viggle_results/[a-z0-9-]+/.+\\.(mp4|mov|mkv|webm)$"
+    }
+  }
+}
+

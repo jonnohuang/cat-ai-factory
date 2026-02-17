@@ -1,0 +1,10 @@
+{
+  "version": "external_recast_lifecycle.v1",
+  "job_id": "demo-dance-loop-v1",
+  "state": "VIGGLE_DONE",
+  "updated_at": "2026-02-17T00:10:00Z",
+  "notes": "External Viggle output has been re-ingested.",
+  "reingest_pointer": "sandbox/inbox/viggle-reingest-demo-dance-loop-v1-1760000000.json",
+  "reingest_result_video": "sandbox/inbox/viggle_results/demo-dance-loop-v1/viggle.mp4"
+}
+
