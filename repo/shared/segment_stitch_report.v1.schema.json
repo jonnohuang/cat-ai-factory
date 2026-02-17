@@ -50,6 +50,64 @@
           "transition": {"type": "string", "enum": ["none", "fade", "smoothleft"]}
         }
       }
+    },
+    "retry_hook_applied": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "retry_type",
+        "mode",
+        "target_segments",
+        "trigger_metrics",
+        "retry_plan_relpath",
+        "attempt_id"
+      ],
+      "properties": {
+        "retry_type": {
+          "type": "string",
+          "enum": [
+            "motion",
+            "recast"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "retry_all",
+            "retry_selected"
+          ]
+        },
+        "target_segments": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^seg_[0-9]{3}$"
+          }
+        },
+        "trigger_metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "retry_plan_relpath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "attempt_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
     }
   }
 }

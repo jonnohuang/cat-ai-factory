@@ -526,8 +526,47 @@ The system MUST support continuity-pack inputs and deterministic debug exports f
   - versioned continuity pack consumed by planner and quality checks
   - deterministic segment/shot debug export artifacts for diagnostics
 - Hard constraints:
-  - debug exports are non-authoritative artifacts
-  - continuity inputs remain planner/quality-side references and must not alter Worker determinism rules
+- debug exports are non-authoritative artifacts
+- continuity inputs remain planner/quality-side references and must not alter Worker determinism rules
+
+### FR-28.13 — Storyboard-first image-to-video default for quality paths
+The system MUST support storyboard-first I2V routing as the default generation strategy for quality/dance paths.
+
+- Required behavior:
+  - planner emits shot/segment references that map to storyboard/keyframe assets
+  - provider routing prefers I2V from storyboard frames over prompt-only T2V for quality paths
+  - fallback behavior is explicit and contract-visible when storyboard inputs are unavailable
+- Hard constraints:
+  - routing remains deterministic from artifacts/contract inputs
+  - Worker remains provider-agnostic and deterministic
+  - no hidden runtime side-channel state
+
+### FR-28.14 — Frame-labeling contract lane with analyzer-grounded enrichment
+The system MUST support a planner-side frame-labeling contract that separates deterministic analyzer facts from optional multimodal semantic enrichment.
+
+- Required behavior:
+  - FFmpeg-extracted keyframes and analyzer facts are the authoritative base inputs
+  - multimodal labeling (Gemini/ChatGPT Vision class) is constrained to facts-backed claims or explicit `unknown`
+  - frame-label artifacts include confidence/uncertainty fields and are versioned/validated
+- Hard constraints:
+  - analyzer truth MUST NOT be overwritten by enrichment output
+  - enrichment remains planner-side only
+  - Worker MUST NOT depend on frame-label enrichment as runtime authority
+
+### FR-28.15 — Optional Whisper captions lane (non-blocking)
+The system MUST support optional subtitle/caption artifact ingestion from Whisper-class tooling without making it a required dependency.
+
+- Required behavior:
+  - when captions artifact exists, deterministic worker subtitle burn path may consume it
+  - when captions artifact is absent/unavailable, pipeline proceeds without failure
+  - optional captions artifact pointers are validated and auditable
+- Hard constraints:
+  - captions extraction remains outside Worker runtime determinism requirements
+  - Worker network/LLM prohibitions remain unchanged
+  - no failure escalation solely due to optional captions unavailability
+
+Defer note:
+- MoveNet integration is deferred until measured quality gains exceed current MediaPipe-based pose extraction.
 
 
 ------------------------------------------------------------

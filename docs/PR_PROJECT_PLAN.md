@@ -1070,7 +1070,7 @@ Outcome:
 ---
 
 ### PR-34.6 — Internal Baseline V2 motion-preserve pipeline (deterministic, non-overlay)
-Status: **PLANNED**
+Status: **ACTIVE**
 
 Scope:
 - Add a deterministic internal baseline path that improves quality without overlay recast and without external HITL dependency:
@@ -1093,7 +1093,7 @@ Outcome:
 Sub-PR plan:
 
 ### PR-34.6a — Quality decision to retry-plan mapping (deterministic contracts)
-Status: **NEXT**
+Status: **COMPLETED**
 
 Scope:
 - Map `quality_decision.v1` outputs to deterministic retry-plan artifacts (no hidden controller logic).
@@ -1109,7 +1109,7 @@ Outcome:
 ---
 
 ### PR-34.6b — Controller auto-retry execution loop (bounded, deterministic)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Execute retry-plan artifacts in Ralph Loop with bounded retry budgets.
@@ -1122,7 +1122,7 @@ Outcome:
 ---
 
 ### PR-34.6c — Attempt lineage + audit trail contracts
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add explicit attempt lineage artifact(s) linking:
@@ -1138,7 +1138,7 @@ Outcome:
 ---
 
 ### PR-34.6d — Worker retry-parameter hooks (deterministic deltas)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add deterministic worker parameter hooks for retry deltas:
@@ -1153,7 +1153,7 @@ Outcome:
 ---
 
 ### PR-34.6e — Acceptance gate enforcement + finalize block
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Enforce finalize gating from quality targets/contracts:
@@ -1168,7 +1168,7 @@ Outcome:
 ---
 
 ### PR-34.6f — Closed-loop end-to-end smoke suite
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add deterministic smoke suite covering:
@@ -1405,6 +1405,78 @@ Scope:
 
 Outcome:
 - Cross-episode consistency improves with shared continuity authority inputs.
+
+
+---
+
+### PR-34.8 — Storyboard-first deterministic generation path (I2V default + analyzer-grounded labeling)
+Status: **NEXT**
+
+Scope:
+- Shift default generation planning for dance-quality paths from prompt-only to storyboard-first image-to-video (I2V).
+- Keep planner/control/worker boundaries and files-as-bus invariants unchanged.
+- Treat multimodal labeling as planner-side enrichment constrained by deterministic analyzer facts.
+- Keep non-deterministic external dependencies optional and non-blocking.
+
+Outcome:
+- Lower randomness and improved repeatability for dance/continuity outputs without introducing SaaS lock-in.
+
+Sub-PR plan:
+
+### PR-34.8a — Storyboard-first I2V default routing (planner contracts + provider wiring)
+Status: **NEXT**
+
+Scope:
+- Add/extend planner contracts to make storyboard/frame references first-class for Veo generation.
+- Set default planner strategy for quality/dance contexts to:
+  - segment/shot plan -> storyboard frames -> I2V generation
+  - avoid prompt-only T2V fallback unless explicitly configured.
+- Ensure controller/worker consume unchanged deterministic contracts and remain provider-agnostic.
+- Add deterministic smoke coverage proving route selection and artifact pointers.
+
+Outcome:
+- Generation path is explicitly storyboard-first and less stochastic than prompt-only routing.
+
+---
+
+### PR-34.8b — Frame labeling contract lane (analyzer facts + constrained vision enrichment)
+Status: **PLANNED**
+
+Scope:
+- Add a versioned frame-labeling contract artifact (planner-side) for shot/frame semantic tags.
+- Implement deterministic extraction flow:
+  - FFmpeg keyframes + analyzer facts as authority inputs
+  - optional Gemini/ChatGPT Vision labeling constrained by "facts-only-or-unknown" policy.
+- Enforce rule:
+  - measured analyzer facts are authoritative
+  - vision labels are enrichment fields with explicit confidence/unknown semantics.
+- Add deterministic validators and smoke tests for contract shape and grounding constraints.
+
+Outcome:
+- Frame semantics become reusable planner inputs without violating deterministic truth boundaries.
+
+---
+
+### PR-34.8c — Optional Whisper captions lane (non-blocking, deterministic integration)
+Status: **PLANNED**
+
+Scope:
+- Add optional caption/subtitle extraction lane using Whisper-class tooling as planner/ops-side pre-processing.
+- Ensure subtitle generation remains non-blocking:
+  - pipeline must succeed when Whisper is unavailable
+  - worker keeps deterministic subtitle burn behavior from provided `.srt`.
+- Add contract pointer fields and validators for optional captions artifacts.
+- Add smoke checks for both modes:
+  - with captions artifact
+  - without captions artifact.
+
+Outcome:
+- Caption quality can improve while keeping runtime deterministic and failure-safe.
+
+---
+
+Defer note:
+- MoveNet integration is deferred until there is measured quality lift beyond current MediaPipe-based pose checkpoints.
 
 
 ------------------------------------------------------------

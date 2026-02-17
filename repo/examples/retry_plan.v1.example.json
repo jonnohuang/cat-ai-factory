@@ -1,0 +1,33 @@
+{
+  "version": "retry_plan.v1",
+  "job_id": "smoke-segment-stitch-runtime",
+  "generated_at": "2026-02-17T00:00:00Z",
+  "source": {
+    "quality_decision_relpath": "sandbox/logs/smoke-segment-stitch-runtime/qc/quality_decision.v1.json",
+    "action": "retry_motion",
+    "reason": "Motion pass failed within retry budget; deterministic motion retry requested."
+  },
+  "retry": {
+    "enabled": true,
+    "retry_type": "motion",
+    "next_attempt": 1,
+    "max_retries": 2,
+    "segment_retry": {
+      "mode": "retry_selected",
+      "target_segments": [
+        "seg_001",
+        "seg_002"
+      ],
+      "trigger_metrics": [
+        "temporal_stability",
+        "loop_seam"
+      ]
+    },
+    "pass_target": "motion"
+  },
+  "state": {
+    "motion_status": "fail",
+    "identity_status": "pass",
+    "terminal_state": "none"
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/retry_attempt_lineage.v1.schema.json",
+  "title": "Retry Attempt Lineage v1",
+  "description": "Deterministic audit trail for quality-driven retry decisions and outcomes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "generated_at",
+    "updated_at",
+    "attempts"
+  ],
+  "properties": {
+    "version": {
+      "const": "retry_attempt_lineage.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "attempts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ts",
+          "attempt_id",
+          "source_attempt_id",
+          "decision_action",
+          "decision_reason",
+          "resolution",
+          "retry_type",
+          "segment_retry",
+          "artifacts"
+        ],
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attempt_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_attempt_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decision_action": {
+            "type": "string",
+            "enum": [
+              "proceed_finalize",
+              "retry_motion",
+              "retry_recast",
+              "block_for_costume",
+              "escalate_hitl"
+            ]
+          },
+          "decision_reason": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "resolution": {
+            "type": "string",
+            "enum": [
+              "retry",
+              "escalate",
+              "finalize"
+            ]
+          },
+          "retry_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "motion",
+              "recast",
+              "none",
+              null
+            ]
+          },
+          "segment_retry": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "mode",
+              "target_segments",
+              "trigger_metrics"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "retry_all",
+                  "retry_selected"
+                ]
+              },
+              "target_segments": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^seg_[0-9]{3}$"
+                }
+              },
+              "trigger_metrics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "artifacts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "quality_decision_relpath",
+              "retry_plan_relpath",
+              "result_relpath",
+              "output_final_relpath"
+            ],
+            "properties": {
+              "quality_decision_relpath": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(sandbox/.+\\.json)?$"
+              },
+              "retry_plan_relpath": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(sandbox/.+\\.json)?$"
+              },
+              "result_relpath": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(sandbox/.+\\.json)?$"
+              },
+              "output_final_relpath": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(sandbox/.+\\.mp4)?$"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
