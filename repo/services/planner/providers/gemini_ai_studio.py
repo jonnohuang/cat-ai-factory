@@ -34,11 +34,12 @@ class GeminiAIStudioProvider(BaseProvider):
         prd: Dict[str, Any],
         inbox: Optional[List[Dict[str, Any]]] = None,
         hero_registry: Optional[Dict[str, Any]] = None,
+        quality_context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         if not self.api_key:
             env_name = "GEMINI_" + "API" + "_" + "KEY"
             raise ValueError(f"{env_name} is required")
-        prompt = _build_prompt(prd, inbox or [], hero_registry)
+        prompt = _build_prompt(prd, inbox or [], hero_registry, quality_context)
         raw = self._generate_content(prompt)
         if _looks_truncated(raw):
             repair_prompt = _build_repair_prompt(prompt, raw)
@@ -142,7 +143,12 @@ def _validate_job(job: Dict[str, Any]) -> Tuple[bool, str]:
             os.unlink(temp_path)
 
 
-def _build_prompt(prd: Dict[str, Any], inbox: List[Dict[str, Any]], hero_registry: Optional[Dict[str, Any]] = None) -> str:
+def _build_prompt(
+    prd: Dict[str, Any],
+    inbox: List[Dict[str, Any]],
+    hero_registry: Optional[Dict[str, Any]] = None,
+    quality_context: Optional[Dict[str, Any]] = None,
+) -> str:
     prd_json = json.dumps(prd, indent=None, separators=(",", ":"), ensure_ascii=True)
     inbox_json = json.dumps(inbox, indent=None, separators=(",", ":"), ensure_ascii=True)
     
@@ -156,6 +162,16 @@ def _build_prompt(prd: Dict[str, Any], inbox: List[Dict[str, Any]], hero_registr
             f"{registry_json}\n"
             "Read-only reference; do not invent new hero characters; pick from the registry list.\n"
             "Do not output the registry content. Do not paste registry JSON into captions.\n\n"
+        )
+
+    quality_context_block = ""
+    if quality_context:
+        quality_json = json.dumps(quality_context, indent=None, separators=(",", ":"), ensure_ascii=True)
+        quality_context_block = (
+            "Quality Context (Planner-Only Reference):\n"
+            f"{quality_json}\n"
+            "Use this only as planning guidance. Keep output strictly within job schema.\n"
+            "Do not emit non-schema fields.\n\n"
         )
 
     template = (
@@ -182,6 +198,7 @@ def _build_prompt(prd: Dict[str, Any], inbox: List[Dict[str, Any]], hero_registr
         "You are the Planner for Cat AI Factory.\n"
         f"{rules}\n"
         f"{registry_context}"
+        f"{quality_context_block}"
         f"Template (structure only): {template}\n\n"
         f"PRD JSON:\n{prd_json}\n\n"
         f"Inbox JSON list:\n{inbox_json}\n"

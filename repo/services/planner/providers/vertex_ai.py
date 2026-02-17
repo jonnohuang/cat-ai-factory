@@ -61,15 +61,16 @@ class _VertexBaseProvider(BaseProvider):
         prd: Dict[str, Any],
         inbox: Optional[List[Dict[str, Any]]] = None,
         hero_registry: Optional[Dict[str, Any]] = None,
+        quality_context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         self._selected_hero = _select_target_hero(hero_registry, prd, inbox or [])
         if self._selected_hero:
             _persist_hero_bundle(self._selected_hero)
 
         if not self._vertex_ready():
-            return self._fallback_generate(prd, inbox, hero_registry)
+            return self._fallback_generate(prd, inbox, hero_registry, quality_context)
 
-        prompt = _build_prompt(prd, inbox or [], hero_registry)
+        prompt = _build_prompt(prd, inbox or [], hero_registry, quality_context)
         raw = self._generate_content(prompt)
         self._last_raw_text = raw
 
@@ -148,13 +149,14 @@ class _VertexBaseProvider(BaseProvider):
         prd: Dict[str, Any],
         inbox: Optional[List[Dict[str, Any]]],
         hero_registry: Optional[Dict[str, Any]],
+        quality_context: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
         self._last_path = "ai_studio_fallback"
         print(
             f"INFO planner provider={self.name} fallback=ai_studio reason={self._fallback_reason}"
         )
         fallback = GeminiAIStudioProvider()
-        job = fallback.generate_job(prd, inbox, hero_registry)
+        job = fallback.generate_job(prd, inbox, hero_registry, quality_context)
         return self._apply_lane_hint(job)
 
     def _apply_lane_hint(self, job: Dict[str, Any]) -> Dict[str, Any]:

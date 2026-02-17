@@ -14,13 +14,13 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-34.4 — Recast quality gates + deterministic scoring**
-Last Updated: 2026-02-16
+PR: **PR-34.7 — Deterministic quality-controller loop (planning + contracts)**
+Last Updated: 2026-02-17
 
 ### Status by Role
-- ARCH: In Progress (review/closeout)
-- CODEX: Completed
-- CLOUD-REVIEW: Not Required (PR-34.4 is non-cloud scope)
+- ARCH: In Progress (scope/contract lock)
+- CODEX: Pending (awaiting ARCH handoff)
+- CLOUD-REVIEW: Not Required (PR-34.7 is non-cloud scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
@@ -30,6 +30,10 @@ Last Updated: 2026-02-16
 - ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
+- `docs/PR_PROJECT_PLAN.md`:
+  - added explicit ADR-required notes for PR-34.6 and PR-34.7 before implementation kickoff.
+- `docs/system-requirements.md`:
+  - added FR-28.5 deterministic quality-controller loop requirements (artifact-driven decision, bounded retries, explicit escalation).
 - `docs/PR_PROJECT_PLAN.md`:
   - PR-31 status updated to COMPLETED
   - PR-32 status updated to COMPLETED
@@ -44,6 +48,7 @@ Last Updated: 2026-02-16
   - PR-34.2 status updated to COMPLETED
   - PR-34.3 status updated to COMPLETED
   - PR-34.4 status updated to COMPLETED
+  - PR-34.5 status updated to COMPLETED
   - added implementation sub-PRs:
     - PR-32.1 (analyzer runtime implementation)
     - PR-33.1 (Dance Swap deterministic recipe implementation)
@@ -240,29 +245,50 @@ Last Updated: 2026-02-16
   - `python -m py_compile repo/tools/score_recast_quality.py repo/tools/validate_recast_quality_report.py repo/tools/smoke_recast_quality.py` passed
   - `python -m repo.tools.smoke_recast_quality` passed
   - `python -m repo.tools.validate_recast_quality_report sandbox/logs/mochi-dino-replace-smoke-20240515/qc/recast_quality_report.v1.json` passed
+- Added PR-34.5 deterministic benchmark harness:
+  - schemas:
+    - `repo/shared/recast_benchmark_suite.v1.schema.json`
+    - `repo/shared/recast_benchmark_report.v1.schema.json`
+  - examples:
+    - `repo/examples/recast_benchmark_suite.v1.example.json`
+    - `repo/examples/recast_benchmark_report.v1.example.json`
+  - tools:
+    - `repo/tools/run_recast_benchmark.py`
+    - `repo/tools/validate_recast_benchmark.py`
+    - `repo/tools/smoke_recast_benchmark.py`
+- PR-34.5 smoke validation (Conda `cat-ai-factory`):
+  - `python -m py_compile repo/tools/run_recast_benchmark.py repo/tools/validate_recast_benchmark.py repo/tools/smoke_recast_benchmark.py` passed
+  - `python -m repo.tools.smoke_recast_benchmark` passed
+  - generated and validated:
+    - `sandbox/logs/benchmarks/recast-regression-smoke/baseline-worker-output.recast_quality_report.v1.json`
+    - `sandbox/logs/benchmarks/recast-regression-smoke/hitl-viggle-output.recast_quality_report.v1.json`
+    - `sandbox/logs/benchmarks/recast-regression-smoke/recast_benchmark_report.v1.json`
 
 ### Open Findings / Conditions
 - Roadmap policy:
-  - Cloud migration PRs are postponed until quality-video track (PR-31..PR-34.5) is complete and accepted.
+  - Cloud migration PRs are postponed until quality-video track (PR-31..PR-34.6) is complete and accepted.
   - Execution order override: Phase 8 runs first; Phase 7 resumes after Phase 8 closeout.
   - Planning directive (2026-02-16): only quality-path PRs will be planned from this point forward.
   - Fallback-only/scaffolding PRs are deferred unless they directly raise output quality or recast fidelity.
+- Scope update (2026-02-17): PR-34.6 remains planned but is not currently in execution; add PR-34.7 deterministic quality-controller loop scope before PR-34.6 implementation work.
+  - ARCH scope addendum (2026-02-17): PR-34.7 will include sub-PRs PR-34.7a..PR-34.7d for reverse-analysis contracts, optional vendor enrichment adapters, segment-stitch planning contracts, and deterministic quality-loop policy/escalation artifacts.
 - Analyzer lock:
   - metadata/patterns only in canon; no copyrighted media in repo.
   - Worker must not depend on analyzer artifacts.
-- PR-34.4 scope lock:
-  - quality scoring remains deterministic and artifact-only
-  - no external API calls in scoring path
-  - no Worker authority change
-- PR-34.4 completion notes:
-  - recast quality is now measurable with explicit pass/fail thresholds and report artifact
+- PR-34.5 scope lock:
+  - benchmark suite/report remain deterministic contract artifacts
+  - no authority-boundary changes and no Worker external recast calls
+  - benchmark outputs remain under sandbox logs for auditability
+- PR-34.5 completion notes:
+  - benchmark regression harness now produces comparable case reports + aggregate summary
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: review PR-34.4 implementation closeout against FR-28.2 boundaries.
-- CODEX: proceed to PR-34.5 benchmark harness implementation.
+- ARCH: review PR-34.5 implementation closeout against FR-28.3 boundaries.
+- CODEX: draft PR-34.7 deterministic quality-controller loop contracts/scope handoff prompt; keep PR-34.6 in planned state.
+- ARCH: lock PR-34.7a..PR-34.7d sequencing and acceptance criteria before CODEX implementation kickoff.
 
-### ARCH Decision Queue Snapshot (PR-34.4 Focus)
+### ARCH Decision Queue Snapshot (PR-34.5 Focus)
 1) Video Analyzer contracts:
 - Approved as planner enrichment layer.
 - Metadata-only canon and index/query contracts.
@@ -273,8 +299,50 @@ Last Updated: 2026-02-16
 3) Dance Swap v1 contracts:
 - Approved as deterministic choreography-preserving lane artifact layer.
 - Contract set must remain lane-permissive and preserve `job.json` authority.
-4) Recast quality gating:
-- Must remain deterministic, artifact-driven scoring/reporting (`recast_quality_report.v1`).
-- Must preserve authority boundaries and avoid hidden/non-deterministic quality decisions.
+4) Recast benchmark regression:
+- Must remain deterministic suite/report artifacts (`recast_benchmark_suite.v1`, `recast_benchmark_report.v1`).
+- Must preserve authority boundaries and provide comparable outputs across runs.
+5) Internal Baseline V2 fallback:
+- Must provide a deterministic non-overlay internal quality path that is benchmark-comparable and output-bound.
+- Must preserve `job.json` authority and avoid external API dependencies in Worker.
+
+### ARCH Decision Queue Snapshot (PR-34.7 Focus)
+1) Analyzer core posture:
+- Approved: deterministic, open/local-first, schema-driven analyzer core as primary path.
+- Core stack: FFprobe/FFmpeg metadata, PySceneDetect, pose checkpoints, optical-flow motion curve, librosa beat/onset grid.
+
+2) Reverse prompt contracts:
+- Approved target canonical artifact: `caf.video_reverse_prompt.v1`.
+- Contract must explicitly separate:
+  - deterministic measured truth fields
+  - inferred semantic/prompt fields
+  - confidence/uncertainty markers.
+
+3) Vendor enrichment policy:
+- Approved as optional planner-side plugins only:
+  - IndieGTM
+  - NanoPhoto.ai
+  - BigSpy AI Prompt Generator
+- Vendor outputs are non-authoritative suggestions and must never overwrite analyzer truth fields.
+- Vendor dependency must remain non-blocking for daily pipeline operation.
+
+4) Quality strategy for dance loops:
+- Approved shift from prompt-only to constraint-driven generation:
+  - segment -> generate -> stitch
+  - beat grid + pose checkpoints as first-class constraints
+  - locked camera/background defaults for stability.
+
+5) Two-pass motion -> identity:
+- Approved as planning/orchestration pattern.
+- Identity pass must remain either:
+  - reference-constrained generator pass, or
+  - explicit external HITL recast pass.
+- No hidden autonomous recast behavior inside factory.
+
+6) Invariant lock:
+- Preserve three-plane separation and files-as-bus.
+- Preserve `job.json` execution authority.
+- Preserve Worker determinism/no-network.
+- Preserve external recast as explicit Ops/Distribution HITL boundary.
 
 ------------------------------------------------------------
