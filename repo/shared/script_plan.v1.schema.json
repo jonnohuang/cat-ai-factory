@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/script_plan.v1.schema.json",
+  "title": "Script Plan v1",
+  "description": "Optional Mode B planner-side script and shot intent contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "language",
+    "hook",
+    "voiceover",
+    "ending",
+    "shots"
+  ],
+  "properties": {
+    "version": {
+      "const": "script_plan.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "en",
+        "zh-Hans"
+      ]
+    },
+    "hook": {
+      "type": "string",
+      "minLength": 1
+    },
+    "voiceover": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ending": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "shot_id",
+          "duration_sec",
+          "intent"
+        ],
+        "properties": {
+          "shot_id": {
+            "type": "string",
+            "pattern": "^shot_[0-9]{3}$"
+          },
+          "duration_sec": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "intent": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
+

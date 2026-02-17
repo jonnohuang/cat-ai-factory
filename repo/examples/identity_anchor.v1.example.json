@@ -1,0 +1,14 @@
+{
+  "version": "identity_anchor.v1",
+  "job_id": "modeb-demo-20260217",
+  "anchors": [
+    {
+      "anchor_id": "anchor-mochi-main",
+      "hero_id": "mochi-grey-tabby",
+      "style_id": "dance-loop-demo",
+      "reference_asset": "assets/demo/dance_loop_ref_01.png",
+      "seed": 123456,
+      "notes": "Primary hero appearance lock."
+    }
+  ]
+}
