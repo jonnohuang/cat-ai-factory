@@ -1,0 +1,45 @@
+{
+  "version": "recast_quality_report.v1",
+  "job_id": "demo-dance-loop-v1",
+  "video_relpath": "sandbox/output/demo-dance-loop-v1/final.mp4",
+  "generated_at": "2026-02-17T00:20:00Z",
+  "metrics": {
+    "identity_consistency": {
+      "available": true,
+      "score": 0.71,
+      "threshold": 0.55,
+      "pass": true
+    },
+    "mask_edge_bleed": {
+      "available": true,
+      "score": 0.62,
+      "threshold": 0.45,
+      "pass": true
+    },
+    "temporal_stability": {
+      "available": true,
+      "score": 0.66,
+      "threshold": 0.55,
+      "pass": true
+    },
+    "loop_seam": {
+      "available": true,
+      "score": 0.64,
+      "threshold": 0.6,
+      "pass": true
+    },
+    "audio_video": {
+      "audio_stream_present": true,
+      "av_sync_sec": 0.0,
+      "score": 1.0,
+      "threshold": 0.95,
+      "pass": true
+    }
+  },
+  "overall": {
+    "score": 0.726,
+    "pass": true,
+    "failed_metrics": []
+  }
+}
+

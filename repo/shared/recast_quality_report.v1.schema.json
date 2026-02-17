@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/recast_quality_report.v1.schema.json",
+  "title": "Recast Quality Report v1",
+  "description": "Deterministic quality-gate scoring report for external recast outputs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "video_relpath",
+    "generated_at",
+    "metrics",
+    "overall"
+  ],
+  "properties": {
+    "version": {
+      "const": "recast_quality_report.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "video_relpath": {
+      "type": "string",
+      "pattern": "^sandbox/.+\\.(mp4|mov|mkv|webm)$"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_consistency",
+        "mask_edge_bleed",
+        "temporal_stability",
+        "loop_seam",
+        "audio_video"
+      ],
+      "properties": {
+        "identity_consistency": {
+          "$ref": "#/definitions/scored_metric"
+        },
+        "mask_edge_bleed": {
+          "$ref": "#/definitions/scored_metric"
+        },
+        "temporal_stability": {
+          "$ref": "#/definitions/scored_metric"
+        },
+        "loop_seam": {
+          "$ref": "#/definitions/scored_metric"
+        },
+        "audio_video": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "audio_stream_present",
+            "av_sync_sec",
+            "score",
+            "threshold",
+            "pass"
+          ],
+          "properties": {
+            "audio_stream_present": {
+              "type": "boolean"
+            },
+            "av_sync_sec": {
+              "type": "number"
+            },
+            "score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "threshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "pass": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "overall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "pass",
+        "failed_metrics"
+      ],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "failed_metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "scored_metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "available",
+        "score",
+        "threshold",
+        "pass"
+      ],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+

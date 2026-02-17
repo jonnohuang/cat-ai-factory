@@ -1038,7 +1038,7 @@ Outcome:
 ---
 
 ### PR-34.4 — Recast quality gates + deterministic scoring
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Define deterministic quality metrics and report artifacts for recast outputs:
