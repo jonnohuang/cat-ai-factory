@@ -10,6 +10,7 @@ import tempfile
 from typing import Any, Dict, List, Optional, Tuple
 
 from .providers import get_provider, list_providers
+from .util.engine_routing import route_engine_policy
 from .util.redact import redact_text
 
 
@@ -500,6 +501,15 @@ def _latest_matching_file(base_dir: str, filename: str) -> Optional[str]:
     return matches[0]
 
 
+def _select_engine_adapter_registry(project_root: str) -> Optional[Dict[str, Any]]:
+    rel = "repo/shared/engine_adapter_registry.v1.json"
+    abs_p = os.path.join(project_root, rel)
+    doc = _load_json_if_exists(abs_p)
+    if isinstance(doc, dict) and doc.get("version") == "engine_adapter_registry.v1":
+        return {"relpath": rel, "data": doc}
+    return None
+
+
 def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     ctx: Dict[str, Any] = {}
 
@@ -689,6 +699,27 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "timeline_segments": len(timeline.get("segments", []) or []),
             "final_duration_sec": render.get("output", {}).get("duration_sec"),
         }
+    registry = _select_engine_adapter_registry(project_root)
+    if isinstance(registry, dict):
+        reg_doc = registry.get("data", {})
+        baseline = reg_doc.get("baseline", {}) if isinstance(reg_doc, dict) else {}
+        routing = reg_doc.get("routing", {}) if isinstance(reg_doc, dict) else {}
+        if not isinstance(baseline, dict):
+            baseline = {}
+        if not isinstance(routing, dict):
+            routing = {}
+        ctx["engine_adapter_policy"] = {
+            "relpath": registry.get("relpath"),
+            "registry_id": reg_doc.get("registry_id") if isinstance(reg_doc, dict) else None,
+            "baseline_video_provider": baseline.get("video_provider"),
+            "baseline_frame_provider": baseline.get("frame_provider"),
+            "video_provider_order": routing.get("video_provider_order", []),
+            "frame_provider_order": routing.get("frame_provider_order", []),
+            "lab_challenger_order": routing.get("lab_challenger_order", []),
+            "motion_constraints": routing.get("motion_constraints", []),
+            "post_process_order": routing.get("post_process_order", []),
+            "providers": reg_doc.get("providers", []) if isinstance(reg_doc, dict) else [],
+        }
     return ctx
 
 
@@ -716,6 +747,44 @@ def _apply_quality_policy_hints(job: Dict[str, Any], quality_context: Dict[str, 
                 script["ending"] = "External recast HITL recommended."
             if len(script["ending"]) > 120:
                 script["ending"] = script["ending"][:120].rstrip()
+    return job
+
+
+def _apply_engine_adapter_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(job, dict) or not isinstance(quality_context, dict):
+        return job
+    if isinstance(job.get("generation_policy"), dict):
+        return job
+    policy = quality_context.get("engine_adapter_policy")
+    if not isinstance(policy, dict):
+        return job
+    lane = str(job.get("lane", "")).strip() or "ai_video"
+    route_mode = os.environ.get("CAF_ENGINE_ROUTE_MODE", "production").strip().lower()
+    if route_mode not in ("production", "lab"):
+        route_mode = "production"
+    route = route_engine_policy(policy, lane=lane, mode=route_mode)
+    video_order = policy.get("video_provider_order")
+    frame_order = policy.get("frame_provider_order")
+    lab_order = route.get("lab_challenger_candidates")
+    motion_constraints = route.get("motion_constraints")
+    post_process = route.get("post_process_order")
+    if not isinstance(video_order, list) or not video_order:
+        return job
+    if not isinstance(frame_order, list) or not frame_order:
+        return job
+    job["generation_policy"] = {
+        "registry_relpath": policy.get("relpath"),
+        "baseline_video_provider": policy.get("baseline_video_provider"),
+        "baseline_frame_provider": policy.get("baseline_frame_provider"),
+        "route_mode": route.get("mode"),
+        "selected_video_provider": route.get("selected_video_provider"),
+        "selected_frame_provider": route.get("selected_frame_provider"),
+        "video_provider_order": [str(x) for x in route.get("video_candidates", []) if isinstance(x, str)],
+        "frame_provider_order": [str(x) for x in route.get("frame_candidates", []) if isinstance(x, str)],
+        "lab_challenger_order": [str(x) for x in (lab_order or []) if isinstance(x, str)],
+        "motion_constraints": [str(x) for x in (motion_constraints or []) if isinstance(x, str)],
+        "post_process_order": [str(x) for x in (post_process or []) if isinstance(x, str)],
+    }
     return job
 
 
@@ -1083,6 +1152,7 @@ def main(argv: List[str]) -> int:
         job = _apply_segment_stitch_hints(job, quality_context, project_root)
         job = _apply_continuity_pack_hints(job, quality_context)
         job = _apply_quality_target_hints(job, quality_context)
+        job = _apply_engine_adapter_hints(job, quality_context)
         job = _apply_quality_policy_hints(job, quality_context)
         job = _apply_facts_only_guard(job, quality_context)
         facts_errors = _validate_facts_only_guard(job, quality_context)

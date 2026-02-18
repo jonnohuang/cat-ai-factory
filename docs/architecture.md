@@ -31,6 +31,9 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
 - Deterministic CV utilities (e.g., OpenCV) are implementation tools, not authority layers.
 - Planner-side asset generation (e.g., AI-generated templates or seed frames) is permitted,
   but generated assets are treated as explicit inputs and must not change Worker determinism.
+- Motion-conditioned, frame-first generation is preferred for identity/motion-critical jobs:
+  - canonical path: sample dance -> pose/motion contract -> pose-conditioned hero frames -> animation -> assembly.
+  - prompt-only generation is fallback, not default, for choreography-critical contexts.
 
 - Verification agents are deterministic QC only:
   - Read-only evaluation of contracts and outputs
@@ -509,6 +512,12 @@ Routing authority rule:
   - normalized QC report
   - retry budget/state
 - Planner/OpenClaw may propose improvements, but do not override production authority by default.
+
+Motion/identity gate rule:
+- QC authority must cover both:
+  - identity consistency gates (anchor similarity over selected frames)
+  - pose/motion similarity gates against deterministic dance-trace artifacts.
+- Multimodal LLM diagnostics are advisory only; they cannot directly pass/fail production routes.
 
 Guarded authority trial rule:
 - Advisory-to-authority trials are allowed only when feature-flagged, default-off, and reversible.

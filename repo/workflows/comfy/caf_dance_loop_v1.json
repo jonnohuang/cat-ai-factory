@@ -1,0 +1,28 @@
+{
+  "workflow_id": "caf_dance_loop_v1",
+  "description": "CAF baseline dance loop workflow placeholder. Replace node graph with your ComfyUI export.",
+  "nodes": {
+    "input_prompt": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "Mochi kitten dance loop, stable background, 9:16"
+      }
+    },
+    "input_negative_prompt": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "extra limbs, flicker, background drift, identity drift"
+      }
+    },
+    "sampler": {
+      "class_type": "KSampler",
+      "inputs": {
+        "seed": 123456,
+        "steps": 28,
+        "cfg": 6.5,
+        "sampler_name": "dpmpp_2m",
+        "scheduler": "karras"
+      }
+    }
+  }
+}

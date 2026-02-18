@@ -1,0 +1,81 @@
+{
+  "version": "engine_adapter_registry.v1",
+  "registry_id": "example-adapters-v1",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "baseline": {
+    "video_provider": "vertex_veo",
+    "frame_provider": "grok_image"
+  },
+  "routing": {
+    "video_provider_order": [
+      "vertex_veo",
+      "wan_dashscope",
+      "wan_local"
+    ],
+    "frame_provider_order": [
+      "grok_image"
+    ],
+    "lab_challenger_order": [
+      "sora_lab",
+      "meta_ai_lab"
+    ],
+    "motion_constraints": [
+      "openpose_constraint"
+    ],
+    "post_process_order": [
+      "rife_film_post"
+    ]
+  },
+  "providers": [
+    {
+      "provider_id": "vertex_veo",
+      "kind": "video",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video"
+      ],
+      "notes": "Baseline video lane."
+    },
+    {
+      "provider_id": "grok_image",
+      "kind": "frame",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "image_motion"
+      ],
+      "notes": "Frame lane."
+    },
+    {
+      "provider_id": "wan_local",
+      "kind": "video",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video"
+      ],
+      "notes": "Local Wan adapter lane.",
+      "config": {
+        "model_family": "wan",
+        "model_version": "2.6"
+      }
+    },
+    {
+      "provider_id": "wan_dashscope",
+      "kind": "video",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video"
+      ],
+      "notes": "Wan API adapter via DashScope.",
+      "config": {
+        "model_family": "wan",
+        "model_version": "2.2",
+        "endpoint_region": "ap-southeast-1"
+      }
+    }
+  ]
+}

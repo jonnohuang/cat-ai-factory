@@ -63,6 +63,7 @@
         "next_attempt",
         "max_retries",
         "segment_retry",
+        "provider_switch",
         "pass_target"
       ],
       "properties": {
@@ -116,6 +117,45 @@
               "items": {
                 "type": "string"
               }
+            }
+          }
+        },
+        "provider_switch": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "current_provider",
+            "next_provider",
+            "provider_order_index"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "none",
+                "video_provider",
+                "frame_provider"
+              ]
+            },
+            "current_provider": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "next_provider": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "provider_order_index": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
             }
           }
         },

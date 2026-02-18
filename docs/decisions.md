@@ -1481,3 +1481,75 @@ Consequences:
 References:
 - docs/system-requirements.md (FR-28.20)
 - docs/PR_PROJECT_PLAN.md (PR-35)
+
+------------------------------------------------------------
+
+## ADR-0048 — Motion-conditioned, frame-first quality path for dance/identity-critical generation
+Date: 2026-02-18
+Status: Accepted
+
+Context:
+- Prompt-first video generation remains unreliable for two critical goals:
+  - hero identity consistency
+  - choreography/motion fidelity to a reference dance.
+- CAF already has deterministic analyzer and QC foundations that can support a stronger contract-first approach.
+
+Decision:
+- Adopt motion-conditioned, frame-first generation as the preferred architecture for dance/identity-critical jobs:
+  - sample dance -> deterministic pose/motion contract -> pose-conditioned hero keyframes -> animation -> deterministic FFmpeg assembly.
+- Introduce a first-class deterministic motion analyzer contract family (planner-side/offline generation, worker-independent authority).
+- Standardize CAF-owned ComfyUI workflow registry semantics:
+  - `workflow_id -> repo/workflows/comfy/<workflow_id>.json` as repo-truth.
+  - external UI workflow identifiers are not authoritative.
+- QC policy/report authority must include both:
+  - identity consistency gates
+  - pose/motion similarity gates against dance-trace artifacts.
+- Multimodal LLM diagnostics remain advisory (classification/diagnosis/suggested adjustments), not production routing authority.
+
+Consequences:
+- Increases quality ceiling where prompt-only paths fail (identity + dance fidelity).
+- Keeps existing plane invariants intact:
+  - planner/analyzer produce contracts
+  - controller routes deterministically via policy/report artifacts
+  - worker stays deterministic and assembly-focused.
+- Cloud migration remains endpoint-swappable without contract redesign.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-35)
+- docs/architecture.md
+- docs/briefs/GUARDRAILS.md
+
+------------------------------------------------------------
+
+## ADR-0049 — Autonomous lab->production bridge is contract-driven (auto-ingest + pointer resolver + promotion queue)
+Date: 2026-02-18
+Status: Accepted
+
+Context:
+- Current quality iteration requires too much manual CLI/path handling for sample onboarding and contract pointer selection.
+- CAF’s original goal includes autonomous improvement while preserving deterministic, auditable production authority.
+
+Decision:
+- Add a contract-driven autonomy bridge (PR-35g direction):
+  - lab-first sample onboarding for new demo inputs (incoming sample path -> lab artifacts/manifests)
+  - deterministic planner pointer resolver:
+    - high-level briefs may omit pointers
+    - planner resolves best available pointers from canon/manifests/policy
+    - selected pointers are emitted explicitly in `job.json` (or referenced contracts)
+  - promotion queue contracts for non-CLI operations:
+    - candidate artifacts from lab benchmarking
+    - approve/reject request artifacts via ingress (`sandbox/inbox/*.json`)
+    - deterministic promotion processor and promotion decision artifact
+- Production authority remains unchanged:
+  - controller routes from policy/report contracts
+  - lab remains non-authoritative at runtime unless guarded trial flags explicitly enable limited experiments.
+
+Consequences:
+- Reduces operator burden for sample-to-production iteration.
+- Preserves files-as-bus and three-plane invariants while increasing practical autonomy.
+- Provides a clear path for Telegram/UI-driven promotion actions without bypassing deterministic authority.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-35g)
+- docs/system-requirements.md (FR-28.21, FR-28.22)
+- docs/telegram-commands.md

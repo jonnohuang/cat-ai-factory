@@ -1,0 +1,143 @@
+{
+  "version": "engine_adapter_registry.v1",
+  "registry_id": "pr35-core-adapters-v1",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "baseline": {
+    "video_provider": "vertex_veo",
+    "frame_provider": "grok_image"
+  },
+  "routing": {
+    "video_provider_order": [
+      "vertex_veo",
+      "wan_dashscope",
+      "wan_local",
+      "comfyui_video"
+    ],
+    "frame_provider_order": [
+      "grok_image",
+      "vertex_imagen"
+    ],
+    "lab_challenger_order": [
+      "sora_lab",
+      "meta_ai_lab"
+    ],
+    "motion_constraints": [
+      "openpose_constraint"
+    ],
+    "post_process_order": [
+      "rife_film_post"
+    ]
+  },
+  "providers": [
+    {
+      "provider_id": "vertex_veo",
+      "kind": "video",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "dance_swap"
+      ],
+      "notes": "Baseline production lane."
+    },
+    {
+      "provider_id": "wan_dashscope",
+      "kind": "video",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "dance_swap"
+      ],
+      "notes": "Managed API lane for Wan via DashScope.",
+      "config": {
+        "model_family": "wan",
+        "model_version": "2.2",
+        "endpoint_region": "ap-southeast-1"
+      }
+    },
+    {
+      "provider_id": "wan_local",
+      "kind": "video",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "image_motion",
+        "dance_swap"
+      ],
+      "notes": "First free/open challenger and fallback lane.",
+      "config": {
+        "model_family": "wan",
+        "model_version": "2.6"
+      }
+    },
+    {
+      "provider_id": "comfyui_video",
+      "kind": "video",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "image_motion",
+        "dance_swap"
+      ],
+      "notes": "ComfyUI adapter lane for controlled generation."
+    },
+    {
+      "provider_id": "grok_image",
+      "kind": "frame",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "image_motion",
+        "dance_swap"
+      ],
+      "notes": "Storyboard/seed/hero reference frame lane."
+    },
+    {
+      "provider_id": "sora_lab",
+      "kind": "video",
+      "mode": "lab",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "dance_swap"
+      ],
+      "notes": "Lab challenger lane only; budget-capped."
+    },
+    {
+      "provider_id": "meta_ai_lab",
+      "kind": "video",
+      "mode": "lab",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "dance_swap"
+      ],
+      "notes": "Lab challenger lane only; advisory-first."
+    },
+    {
+      "provider_id": "openpose_constraint",
+      "kind": "motion_constraint",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "dance_swap"
+      ],
+      "notes": "Pose-constrained motion guard."
+    },
+    {
+      "provider_id": "rife_film_post",
+      "kind": "post_process",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "image_motion",
+        "dance_swap"
+      ],
+      "notes": "Temporal/post pass ordering lane."
+    }
+  ]
+}

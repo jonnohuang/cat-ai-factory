@@ -18,6 +18,12 @@ Binding:
 
 Non-binding:
 - Historical context: `docs/memory.md`
+- Lab mode runbook: `docs/lab-mode-runbook.md`
+- Engine adapter guide: `docs/engine-adapters.md`
+- ComfyUI workflow registry guide: `docs/comfyui-workflows.md`
+- QC pipeline guide: `docs/qc-pipeline-guide.md`
+- External HITL workflow guide: `docs/external-hitl-workflow.md`
+- End-to-end workflow guide: `docs/video-workflow-end-to-end.md`
 
 ------------------------------------------------------------
 

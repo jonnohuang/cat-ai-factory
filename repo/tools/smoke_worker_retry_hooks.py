@@ -54,6 +54,12 @@ def main(argv: list[str]) -> int:
                 "target_segments": ["seg_002"],
                 "trigger_metrics": ["temporal_stability", "loop_seam"],
             },
+            "provider_switch": {
+                "mode": "video_provider",
+                "current_provider": "vertex_veo",
+                "next_provider": "wan_local",
+                "provider_order_index": 1,
+            },
             "pass_target": "motion",
         },
         "state": {

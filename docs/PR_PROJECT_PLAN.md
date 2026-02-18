@@ -1606,19 +1606,159 @@ Outcome:
 Status: **PROPOSED**
 
 Scope:
+- Shift quality strategy from prompt-first generation to motion-conditioned, frame-first generation:
+  - sample dance -> pose/motion contract -> pose-conditioned hero frames -> animation -> assembly -> QC.
+- Keep Vertex Veo3 as baseline production video lane.
+- Add Motion Analyzer as first-class deterministic component (planner-side/offline contract generation):
+  - MediaPipe Pose and/or MoveNet keypoints per frame
+  - optional OpenCV optical-flow motion curves
+  - canonical dance trace artifact (timing + pose sequence) for downstream conditioning/QC.
 - Add free/open-source adapter track behind existing contracts:
   - ComfyUI adapter lane (image-to-video/text-to-video where available)
   - OpenPose-constrained segment generation path
-  - optional temporal/post passes (RIFE/FILM, selective ESRGAN)
-- Keep providers policy-driven and swappable; no paid-engine lock-in.
+  - temporal/post passes (RIFE/FILM, selective ESRGAN)
+- Add CAF-owned ComfyUI workflow registry (repo-truth):
+  - `workflow_id -> repo/workflows/comfy/<workflow_id>.json`
+  - planner/provider resolves workflows by ID from committed files (no external workflow ID authority).
+- Make pose-conditioned keyframe generation explicit:
+  - ControlNet OpenPose-style conditioning for motion structure
+  - IP-Adapter/identity anchor conditioning for hero stability.
+- Add Wan API adapter lane via Alibaba DashScope (region-configurable, defaulting to WAN 2.2 model IDs).
+- Add first new free/open video adapter lane: Wan local adapter (default model version 2.6; challenger/fallback, policy-gated).
+- Add Grok image lane for storyboard/seed/hero reference frame generation.
+- Add Sora challenger lane in OpenClaw LAB mode only (budget-capped; advisory-first).
+- Add Meta AI challenger lane in OpenClaw LAB mode only (budget-capped; advisory-first).
+- Add provider capability registry and policy-driven routing/fallback order.
 - Add deterministic best-of-attempt selection by existing quality reports.
+- Expand QC gates to include both identity and motion fidelity:
+  - identity consistency over keyframes (anchor-similarity thresholds)
+  - pose/motion similarity against dance trace (frame/window scoring)
+  - deterministic tech checks (flicker/brightness/blur/audio/timing) + multimodal diagnostics as advisory only.
+- Add replay benchmark + promotion gate requirements before any challenger is production-eligible.
 - Preserve all CAF authority and write-boundary invariants.
 
 Outcome:
-- Increases practical quality ceiling and engine diversity while controlling cost and preserving deterministic operations.
+- Increases practical quality ceiling and dance/identity fidelity while preserving deterministic production authority and controlled promotion.
 
 Defer note:
 - MoveNet integration is deferred until there is measured quality lift beyond current MediaPipe-based pose checkpoints.
+
+Sub-PR plan:
+
+### PR-35a — Motion contract authority wiring (pose trace -> generation constraints)
+Status: **PROPOSED**
+
+Scope:
+- Promote dance trace/pose artifacts from QC-only signals to explicit generation input contracts.
+- Ensure planner/provider payloads include pose checkpoint constraints for choreography-sensitive jobs.
+- Add deterministic validator/smoke coverage for pose-contract presence and shape.
+
+Acceptance criteria:
+- Pose-trace contract is consumed as generation input (not only post-hoc scoring).
+- Missing/invalid pose contracts fail-loud in constrained motion lanes.
+
+---
+
+### PR-35b — QC failure taxonomy + deterministic retry mapping
+Status: **PROPOSED**
+
+Scope:
+- Extend `qc_report.v1` with explicit failure classes:
+  - `identity_drift`, `pose_mismatch`, `seam_artifact`, `camera_drift`, `audio_sync`, etc.
+- Add policy mapping from failure class -> deterministic retry/fallback strategy.
+
+Acceptance criteria:
+- Controller retry path selection is class-driven and auditable from `qc_report + qc_policy`.
+- No ad-hoc free-form fallback logic outside policy contracts.
+
+---
+
+### PR-35c — Segment-targeted regeneration loop from seam/motion gates
+Status: **PROPOSED**
+
+Scope:
+- Wire seam/motion gate failures to segment-level retries by default (not full-clip rerender).
+- Persist segment-level pass/fail history in retry lineage artifacts.
+
+Acceptance criteria:
+- Failed seams produce targeted `segment_retry_targets` deterministically.
+- Repeated retries converge by segment history rather than full-pipeline reruns.
+
+---
+
+### PR-35d — Two-pass motion->identity runtime scoring and merge gate
+Status: **PROPOSED**
+
+Scope:
+- Formalize pass-1 (motion fidelity) and pass-2 (identity consistency) scoring as separate QC dimensions.
+- Gate finalization on combined policy outcome (both passes accounted for).
+
+Acceptance criteria:
+- `qc_report` and `quality_decision` expose pass-specific metrics/status.
+- Finalize route is blocked when either required pass fails policy thresholds.
+
+---
+
+### PR-35e — ComfyUI workflow presets by failure class
+Status: **PROPOSED**
+
+Scope:
+- Add deterministic workflow preset mapping:
+  - failure class -> workflow/parameter preset (identity-safe, motion-safe, seam-safe).
+- Keep workflow authority repo-owned:
+  - `workflow_id -> repo/workflows/comfy/<workflow_id>.json`.
+
+Acceptance criteria:
+- Retry strategy can switch workflow preset deterministically from gate outcomes.
+- Workflow/preset used is recorded in artifacts for replayability.
+
+---
+
+### PR-35f — Lab-to-production promotion hard gate for quality lift
+Status: **PROPOSED**
+
+Scope:
+- Require benchmark evidence before policy/workflow promotion:
+  - pass-rate lift
+  - retry-count reduction
+  - no regression on identity/motion core gates.
+- Add deterministic promotion report artifact for PR review.
+
+Acceptance criteria:
+- No lab challenger/preset becomes production-eligible without benchmark contract pass.
+- Promotion decisions are reproducible from committed artifacts.
+
+---
+
+### PR-35g — Autonomous lab->production bridge (auto-ingest, pointer resolver, promotion queue)
+Status: **PROPOSED**
+
+Scope:
+- Add deterministic sample-ingest lane for new demo inputs:
+  - monitor/ingest `sandbox/assets/demo/incoming/**`
+  - generate asset manifests + candidate contract pointers.
+- Add planner-side deterministic pointer resolver:
+  - high-level brief may omit pointers
+  - planner resolves best available pointers from canon/manifests/policy.
+- Add promotion queue contracts for non-CLI ops:
+  - candidate promotion artifacts
+  - approve/reject artifacts
+  - deterministic promotion processor.
+- Extend adapter surface (e.g., Telegram/UI) to submit promotion actions as inbox artifacts.
+
+Acceptance criteria:
+- User can submit high-level brief for known sample and planner auto-selects required contracts/pointers deterministically.
+- New sample onboarding runs lab-first automatically and emits promotion candidates without manual path editing.
+- Production consumes promoted artifacts/contracts only; no direct lab runtime authority bypass.
+- Sample onboarding extracts and stores versioned useful artifact classes, at minimum:
+  - hero/identity references (key frames/anchors)
+  - costume/style cues
+  - background/stage/setting references
+  - framing/camera/editing grammar metadata (shots, pacing, transition cues)
+  - motion/pose and beat-alignment contracts
+  - audio metadata (BPM/beat/onset/energy cues)
+  - style/tone/story-beat advisory metadata
+  - provenance + tool-version + confidence metadata for all extracted contracts.
 
 
 ------------------------------------------------------------

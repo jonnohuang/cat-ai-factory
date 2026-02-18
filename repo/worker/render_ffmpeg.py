@@ -357,14 +357,65 @@ def load_retry_hook(
     triggers = seg_retry.get("trigger_metrics", [])
     if not isinstance(triggers, list):
         triggers = []
+    provider_switch = retry.get("provider_switch", {})
+    if not isinstance(provider_switch, dict):
+        provider_switch = {}
+    switch_mode = str(provider_switch.get("mode", "none"))
+    switch_current = provider_switch.get("current_provider")
+    switch_next = provider_switch.get("next_provider")
+    switch_index = provider_switch.get("provider_order_index")
     return {
         "retry_type": retry_type,
         "mode": mode,
         "target_segments": [str(x) for x in targets if isinstance(x, str)],
         "trigger_metrics": [str(x) for x in triggers if isinstance(x, str)],
+        "provider_switch": {
+            "mode": switch_mode,
+            "current_provider": str(switch_current) if isinstance(switch_current, str) and switch_current else None,
+            "next_provider": str(switch_next) if isinstance(switch_next, str) and switch_next else None,
+            "provider_order_index": int(switch_index) if isinstance(switch_index, int) and switch_index >= 0 else None,
+        },
+        "provider_switch_env": {
+            "mode": os.environ.get("CAF_RETRY_PROVIDER_SWITCH_MODE"),
+            "current_provider": os.environ.get("CAF_RETRY_CURRENT_PROVIDER"),
+            "next_provider": os.environ.get("CAF_RETRY_NEXT_PROVIDER"),
+        },
         "retry_plan_relpath": str(retry_plan_path.resolve().relative_to(repo_root_from_here().resolve())).replace("\\", "/"),
         "attempt_id": os.environ.get("CAF_RETRY_ATTEMPT_ID"),
     }
+
+
+def build_engine_policy_runtime(
+    *,
+    job: dict,
+    retry_hook: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    gen = job.get("generation_policy")
+    if not isinstance(gen, dict):
+        return None
+    motion = gen.get("motion_constraints")
+    post = gen.get("post_process_order")
+    motion_list = [str(x) for x in motion if isinstance(x, str)] if isinstance(motion, list) else []
+    post_list = [str(x) for x in post if isinstance(x, str)] if isinstance(post, list) else []
+    if not motion_list and not post_list:
+        return None
+
+    policy_runtime: dict[str, Any] = {
+        "route_mode": gen.get("route_mode"),
+        "selected_video_provider": gen.get("selected_video_provider"),
+        "selected_frame_provider": gen.get("selected_frame_provider"),
+        "motion_constraints": [
+            {"constraint_id": cid, "status": "not_applied_worker_policy_only"}
+            for cid in motion_list
+        ],
+        "post_process_order": [
+            {"step_id": sid, "status": "not_applied_worker_policy_only"}
+            for sid in post_list
+        ],
+    }
+    if isinstance(retry_hook, dict):
+        policy_runtime["retry_provider_switch"] = retry_hook.get("provider_switch")
+    return policy_runtime
 
 
 def _with_temp_env(overrides: dict[str, str], fn):
@@ -2436,6 +2487,9 @@ def main():
         final_result["segment_stitch_runtime"] = segment_runtime
     if retry_hook is not None:
         final_result["worker_retry_hook"] = retry_hook
+    engine_policy_runtime = build_engine_policy_runtime(job=job, retry_hook=retry_hook)
+    if engine_policy_runtime is not None:
+        final_result["engine_policy_runtime"] = engine_policy_runtime
     debug_exports = emit_segment_debug_exports(
         job=job,
         repo_root=root,

@@ -306,6 +306,100 @@ def _segment_retry_plan(
     return {"mode": "retry_all", "target_segments": [], "trigger_metrics": trigger}
 
 
+def _as_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            token = item.strip()
+            if token:
+                out.append(token)
+    return out
+
+
+def _next_provider(order: list[str], current: Optional[str]) -> tuple[Optional[str], Optional[str], Optional[int]]:
+    if not order:
+        return None, None, None
+    if current in order:
+        idx = order.index(str(current))
+        if idx + 1 < len(order):
+            return order[idx], order[idx + 1], idx + 1
+        return order[idx], None, None
+    if len(order) >= 2:
+        return order[0], order[1], 1
+    return order[0], None, None
+
+
+def _build_provider_switch(
+    *,
+    project_root: pathlib.Path,
+    job_id: str,
+    action: str,
+) -> Dict[str, Any]:
+    out: Dict[str, Any] = {
+        "mode": "none",
+        "current_provider": None,
+        "next_provider": None,
+        "provider_order_index": None,
+    }
+    if action not in {"retry_motion", "retry_recast"}:
+        return out
+    job_path = _job_path_from_job_id(project_root, job_id)
+    if job_path is None:
+        return out
+    job = _load_json(job_path)
+    if not isinstance(job, dict):
+        return out
+    generation_policy = job.get("generation_policy")
+    if not isinstance(generation_policy, dict):
+        return out
+
+    video_order = _as_str_list(generation_policy.get("video_provider_order"))
+    frame_order = _as_str_list(generation_policy.get("frame_provider_order"))
+    selected_video = generation_policy.get("selected_video_provider")
+    selected_frame = generation_policy.get("selected_frame_provider")
+    selected_video_s = selected_video if isinstance(selected_video, str) and selected_video else None
+    selected_frame_s = selected_frame if isinstance(selected_frame, str) and selected_frame else None
+
+    if action == "retry_motion":
+        cur, nxt, idx = _next_provider(video_order, selected_video_s)
+        if nxt:
+            out.update(
+                {
+                    "mode": "video_provider",
+                    "current_provider": cur,
+                    "next_provider": nxt,
+                    "provider_order_index": idx,
+                }
+            )
+        return out
+
+    cur_f, nxt_f, idx_f = _next_provider(frame_order, selected_frame_s)
+    if nxt_f:
+        out.update(
+            {
+                "mode": "frame_provider",
+                "current_provider": cur_f,
+                "next_provider": nxt_f,
+                "provider_order_index": idx_f,
+            }
+        )
+        return out
+
+    cur_v, nxt_v, idx_v = _next_provider(video_order, selected_video_s)
+    if nxt_v:
+        out.update(
+            {
+                "mode": "video_provider",
+                "current_provider": cur_v,
+                "next_provider": nxt_v,
+                "provider_order_index": idx_v,
+            }
+        )
+    return out
+
+
 def _build_retry_plan(
     *,
     job_id: str,
@@ -315,6 +409,7 @@ def _build_retry_plan(
     action: str,
     reason: str,
     segment_retry: Dict[str, Any],
+    provider_switch: Dict[str, Any],
     motion_status: Optional[str],
     identity_status: Optional[str],
 ) -> Dict[str, Any]:
@@ -351,6 +446,7 @@ def _build_retry_plan(
             "next_attempt": retry_attempt,
             "max_retries": max_retries,
             "segment_retry": segment_retry,
+            "provider_switch": provider_switch,
             "pass_target": pass_target,
         },
         "state": {
@@ -615,6 +711,7 @@ def main(argv: list[str]) -> int:
         action=action,
         reason=reason,
         segment_retry=segment_retry,
+        provider_switch=_build_provider_switch(project_root=project_root, job_id=args.job_id, action=action),
         motion_status=motion_status,
         identity_status=identity_status,
     )

@@ -105,6 +105,23 @@ Examples:
 - **Action:** Queries the status of a job.
 - **Artifact:** None.
 
+### Planned Extensions (PR-35g; not implemented yet)
+
+These are planned to reduce manual CLI promotion work:
+- `/lab_status <job_id>`
+  - read latest lab summary and gate outcomes
+- `/promote <candidate_id>`
+  - write promotion-approve artifact to inbox
+- `/reject_candidate <candidate_id> [reason]`
+  - write promotion-reject artifact to inbox
+
+Planned promotion artifacts:
+- `sandbox/inbox/promotion-request-<candidate_id>-<nonce>.json`
+- `sandbox/inbox/promotion-reject-<candidate_id>-<nonce>.json`
+
+Note:
+- Bridge remains adapter-only. Promotion authority stays contract/policy-driven in processor/controller layers.
+
 ---
 
 ## Recommended Workflow (Style + Plan + Daily)

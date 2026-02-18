@@ -23,6 +23,12 @@
         "loop_seam"
       ]
     },
+    "provider_switch": {
+      "mode": "video_provider",
+      "current_provider": "vertex_veo",
+      "next_provider": "wan_local",
+      "provider_order_index": 1
+    },
     "pass_target": "motion"
   },
   "state": {
