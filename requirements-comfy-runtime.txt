@@ -1,0 +1,40 @@
+# CAF-managed Comfy runtime dependencies.
+# Keep this separate from requirements-dev.txt to avoid coupling CAF core dev deps
+# to heavy/rapidly-changing Comfy runtime stacks.
+#
+# Notes:
+# - torch/torchvision/torchaudio are intentionally unpinned because install source
+#   differs by platform (CPU/CUDA/MPS). Install these as appropriate for your host.
+# - This list mirrors the baseline ComfyUI requirements used by CAF runtime setup.
+
+comfyui-frontend-package==1.39.14
+comfyui-workflow-templates==0.8.43
+comfyui-embedded-docs==0.4.1
+torch
+torchsde
+torchvision
+torchaudio
+numpy>=1.25.0
+einops
+transformers>=4.50.3
+tokenizers>=0.13.3
+sentencepiece
+safetensors>=0.4.2
+aiohttp>=3.11.8
+yarl>=1.18.0
+pyyaml
+Pillow
+scipy
+tqdm
+psutil
+alembic
+SQLAlchemy
+av>=14.2.0
+comfy-kitchen>=0.2.7
+comfy-aimdo>=0.1.8
+requests
+kornia>=0.7.1
+spandrel
+pydantic~=2.0
+pydantic-settings~=2.0
+comfyui_manager==4.1b1

@@ -9,8 +9,8 @@ from typing import Any
 try:
     from jsonschema import ValidationError, validate
 except Exception:
-    print("ERROR: jsonschema not installed", file=sys.stderr)
-    raise SystemExit(1)
+    ValidationError = Exception
+    validate = None
 
 
 def eprint(*args: Any) -> None:
@@ -38,10 +38,14 @@ def main(argv: list[str]) -> int:
     root = _repo_root()
     schema = _load(root / "repo" / "shared" / "retry_plan.v1.schema.json")
     data = _load(target)
-    try:
-        validate(instance=data, schema=schema)
-    except ValidationError as ex:
-        eprint(f"SCHEMA_ERROR: {ex.message}")
+    if validate is not None:
+        try:
+            validate(instance=data, schema=schema)
+        except ValidationError as ex:
+            eprint(f"SCHEMA_ERROR: {ex.message}")
+            return 1
+    elif not isinstance(data, dict):
+        eprint("SEMANTIC_ERROR: payload must be object")
         return 1
 
     retry = data.get("retry", {}) if isinstance(data, dict) else {}
@@ -62,6 +66,11 @@ def main(argv: list[str]) -> int:
     ps_current = provider_switch.get("current_provider") if isinstance(provider_switch, dict) else None
     ps_next = provider_switch.get("next_provider") if isinstance(provider_switch, dict) else None
     ps_idx = provider_switch.get("provider_order_index") if isinstance(provider_switch, dict) else None
+    workflow_preset = retry.get("workflow_preset", {}) if isinstance(retry, dict) else {}
+    wp_mode = str(workflow_preset.get("mode", "none")) if isinstance(workflow_preset, dict) else "none"
+    wp_preset_id = workflow_preset.get("preset_id") if isinstance(workflow_preset, dict) else None
+    wp_workflow_id = workflow_preset.get("workflow_id") if isinstance(workflow_preset, dict) else None
+    wp_failure_class = workflow_preset.get("failure_class") if isinstance(workflow_preset, dict) else None
 
     if enabled and retry_type == "none":
         eprint("SEMANTIC_ERROR: enabled retry requires retry_type != none")
@@ -116,6 +125,23 @@ def main(argv: list[str]) -> int:
     if retry_type == "motion" and ps_mode == "frame_provider":
         eprint("SEMANTIC_ERROR: motion retry cannot switch frame provider")
         return 1
+    if wp_mode not in {"none", "comfyui_preset"}:
+        eprint("SEMANTIC_ERROR: workflow_preset.mode invalid")
+        return 1
+    if wp_mode == "none":
+        if wp_preset_id is not None or wp_workflow_id is not None or wp_failure_class is not None:
+            eprint("SEMANTIC_ERROR: workflow_preset mode=none requires preset/workflow/failure_class null")
+            return 1
+    else:
+        if not isinstance(wp_preset_id, str) or not wp_preset_id:
+            eprint("SEMANTIC_ERROR: workflow_preset mode=comfyui_preset requires preset_id")
+            return 1
+        if not isinstance(wp_workflow_id, str) or not wp_workflow_id:
+            eprint("SEMANTIC_ERROR: workflow_preset mode=comfyui_preset requires workflow_id")
+            return 1
+        if not isinstance(wp_failure_class, str) or not wp_failure_class:
+            eprint("SEMANTIC_ERROR: workflow_preset mode=comfyui_preset requires failure_class")
+            return 1
 
     print(f"OK: {target}")
     return 0

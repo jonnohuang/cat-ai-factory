@@ -19,6 +19,10 @@
     "failed_metrics": [
       "mask_edge_bleed",
       "loop_seam"
+    ],
+    "failed_failure_classes": [
+      "identity_drift",
+      "seam_artifact"
     ]
   },
   "policy": {

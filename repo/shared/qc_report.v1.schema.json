@@ -114,6 +114,13 @@
               "escalate_hitl"
             ]
           },
+          "failure_class": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([a-z0-9_]+)?$"
+          },
           "reason": {
             "type": "string",
             "maxLength": 240
@@ -127,6 +134,7 @@
       "required": [
         "pass",
         "failed_gate_ids",
+        "failed_failure_classes",
         "recommended_action"
       ],
       "properties": {
@@ -137,6 +145,13 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "failed_failure_classes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
           }
         },
         "recommended_action": {

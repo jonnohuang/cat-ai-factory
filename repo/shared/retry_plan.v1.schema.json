@@ -64,6 +64,7 @@
         "max_retries",
         "segment_retry",
         "provider_switch",
+        "workflow_preset",
         "pass_target"
       ],
       "properties": {
@@ -156,6 +157,47 @@
                 "null"
               ],
               "minimum": 0
+            }
+          }
+        },
+        "workflow_preset": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "preset_id",
+            "workflow_id",
+            "failure_class"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "none",
+                "comfyui_preset"
+              ]
+            },
+            "preset_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "workflow_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "failure_class": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^([a-z0-9_]+)?$"
+            },
+            "parameter_overrides": {
+              "type": "object"
             }
           }
         },

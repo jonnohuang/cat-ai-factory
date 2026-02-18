@@ -36,3 +36,7 @@ sandbox/assets/*
 !sandbox/assets/audio/
 !sandbox/assets/audio/**
 .DS_Store
+
+# Local third-party runtimes
+sandbox/third_party/
+sandbox/assets/models/

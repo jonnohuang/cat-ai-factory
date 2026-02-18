@@ -7,8 +7,9 @@
     "python": "3.12.8",
     "opencv": "4.10.0",
     "mediapipe": "unknown",
-    "librosa": "unknown",
-    "scenedetect": "unknown"
+    "movenet": "2.20.0",
+    "librosa": "0.11.0",
+    "scenedetect": "0.6.7.1"
   },
   "checkpoints": [
     {

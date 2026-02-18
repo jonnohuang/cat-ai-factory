@@ -76,6 +76,53 @@ Canonical flow:
 - Pose/motion similarity gates become first-class production thresholds.
 - ComfyUI workflow registry-driven keyframe generation becomes a stronger upstream feed for video generation.
 
+## 0.3) Active Environment Requirements (Wired Engines)
+
+These are required to run the currently wired deterministic stack in practice:
+
+```bash
+# Core deps
+pip install -r repo/requirements-dev.txt
+pip install jsonschema librosa scenedetect soundfile
+
+# Optional analyzer fallback (MoveNet)
+pip install tensorflow
+
+# Optional worker captions stage (Whisper)
+pip install openai-whisper torch
+```
+
+System tools required on PATH:
+
+```bash
+ffmpeg -version
+ffprobe -version
+```
+
+Required/optional env vars:
+
+```bash
+# MoveNet fallback for analyzer (when MediaPipe unavailable)
+CAF_MOVENET_MODEL_PATH=sandbox/models/movenet_singlepose_lightning_4.tflite
+
+# Optional Whisper subtitle generation in worker
+CAF_ENABLE_WHISPER_CAPTIONS=1
+CAF_WHISPER_MODEL=tiny
+```
+
+Python caveat:
+- `mediapipe` in this repo is currently installed only for Python `<3.12`.
+- On Python `3.12+`, analyzer will report `mediapipe=unknown` unless you provide an alternative install path.
+- MoveNet fallback is available through `CAF_MOVENET_MODEL_PATH`.
+
+Quick verification:
+
+```bash
+python3 -m repo.tools.smoke_worker_engine_policy_runtime
+python3 -m repo.tools.smoke_dance_swap
+python3 -m repo.tools.smoke_analyzer_core_pack
+```
+
 ## 1) Stage: User Brief / Input
 
 ### Inputs
@@ -339,7 +386,7 @@ Production mode reminder:
 CAF_ENGINE_ROUTE_MODE=production
 ```
 
-## 11.1) Manual Today vs Autonomous Target
+## 11.1) Manual Today vs Autonomous Bridge
 
 Current (manual-heavy):
 - run lab mode via CLI
@@ -347,12 +394,14 @@ Current (manual-heavy):
 - update pointers/policy/workflow by PR
 - run production with explicit contract pointers
 
-Target (PR-35g):
+Bridge now available (PR-35g MVP):
 - place new samples in `sandbox/assets/demo/incoming/`
-- automatic lab-first ingest + artifact/manifest generation
-- planner auto-resolves pointers for high-level briefs
-- user approves promotion candidates via adapter/UI artifact
-- production uses promoted contracts without per-run manual pointer editing
+- run `python3 -m repo.tools.ingest_demo_samples` for deterministic lab-first artifact extraction
+- planner pointer resolver reads:
+  - `repo/canon/demo_analyses/*.sample_ingest_manifest.v1.json`
+  - `repo/shared/promotion_registry.v1.json`
+- approve/reject promotions using `promotion_action.v1` inbox artifacts
+- run `python3 -m repo.tools.process_promotion_queue` to promote approved candidates into registry
 
 ## Related Guides
 

@@ -1,27 +1,167 @@
 {
   "workflow_id": "caf_dance_loop_v1",
-  "description": "CAF baseline dance loop workflow placeholder. Replace node graph with your ComfyUI export.",
+  "description": "CAF motion frame sequence workflow (source dance frames + Mochi dino anchor latent blend -> stitched video).",
+  "caf_mode": "motion_frame_sequence",
   "nodes": {
+    "checkpoint": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "__CAF_CHECKPOINT__"
+      }
+    },
+    "motion_frame_input": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "__CAF_FRAME_IMAGE__",
+        "upload": "image"
+      }
+    },
+    "anchor_input": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "__CAF_ANCHOR_IMAGE__",
+        "upload": "image"
+      }
+    },
+    "vae_encode": {
+      "class_type": "VAEEncode",
+      "inputs": {
+        "pixels": [
+          "motion_frame_input",
+          0
+        ],
+        "vae": [
+          "checkpoint",
+          2
+        ]
+      }
+    },
+    "vae_encode_anchor": {
+      "class_type": "VAEEncode",
+      "inputs": {
+        "pixels": [
+          "anchor_input",
+          0
+        ],
+        "vae": [
+          "checkpoint",
+          2
+        ]
+      }
+    },
+    "latent_blend": {
+      "class_type": "LatentBlend",
+      "inputs": {
+        "samples1": [
+          "vae_encode",
+          0
+        ],
+        "samples2": [
+          "vae_encode_anchor",
+          0
+        ],
+        "blend_factor": 0.9
+      }
+    },
     "input_prompt": {
       "class_type": "CLIPTextEncode",
       "inputs": {
-        "text": "Mochi kitten dance loop, stable background, 9:16"
+        "text": "(Mochi grey tabby kitten:2.0), (one character only:2.0), (single cat dancing:1.8), (feline face close fidelity:1.7), (green dinosaur kigurumi onesie:2.0), cat paws, cat tail, full body, smooth motion, same dance continuity, detailed fur, clean face, high quality",
+        "clip": [
+          "checkpoint",
+          1
+        ]
+      }
+    },
+    "identity_prompt": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "same hero identity as anchor frame, preserve Mochi cat face structure, do not become human, preserve dinosaur onesie silhouette and green belly panel",
+        "clip": [
+          "checkpoint",
+          1
+        ]
+      }
+    },
+    "positive_blend": {
+      "class_type": "ConditioningAverage",
+      "inputs": {
+        "conditioning_to": [
+          "input_prompt",
+          0
+        ],
+        "conditioning_from": [
+          "identity_prompt",
+          0
+        ],
+        "conditioning_to_strength": 0.96
       }
     },
     "input_negative_prompt": {
       "class_type": "CLIPTextEncode",
       "inputs": {
-        "text": "extra limbs, flicker, background drift, identity drift"
+        "text": "human, person, woman, man, human face, human body, multiple cats, crowd, extra limbs, giant ears, mouse ears, deformed anatomy, duplicate faces, flicker, background drift, blurry, low quality, broken costume",
+        "clip": [
+          "checkpoint",
+          1
+        ]
       }
     },
     "sampler": {
       "class_type": "KSampler",
       "inputs": {
+        "model": [
+          "checkpoint",
+          0
+        ],
         "seed": 123456,
-        "steps": 28,
-        "cfg": 6.5,
-        "sampler_name": "dpmpp_2m",
-        "scheduler": "karras"
+        "steps": 14,
+        "cfg": 7.2,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 0.56,
+        "positive": [
+          "positive_blend",
+          0
+        ],
+        "negative": [
+          "input_negative_prompt",
+          0
+        ],
+        "latent_image": [
+          "latent_blend",
+          0
+        ]
+      }
+    },
+    "vae_decode": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "sampler",
+          0
+        ],
+        "vae": [
+          "checkpoint",
+          2
+        ]
+      }
+    },
+    "save_output": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "vae_decode",
+          0
+        ],
+        "filename_prefix": "caf_dance_mochi_dino_v1"
+      }
+    },
+    "identity_anchor_note": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "__CAF_ANCHOR_IMAGE__",
+        "upload": "image"
       }
     }
   }

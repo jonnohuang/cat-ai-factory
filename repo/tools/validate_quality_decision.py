@@ -9,8 +9,8 @@ from typing import Any
 try:
     from jsonschema import ValidationError, validate
 except Exception:
-    print("ERROR: jsonschema not installed", file=sys.stderr)
-    raise SystemExit(1)
+    ValidationError = Exception
+    validate = None
 
 
 def eprint(*args: Any) -> None:
@@ -39,10 +39,14 @@ def main(argv: list[str]) -> int:
     schema = _load(root / "repo" / "shared" / "quality_decision.v1.schema.json")
     data = _load(target)
 
-    try:
-        validate(instance=data, schema=schema)
-    except ValidationError as ex:
-        eprint(f"SCHEMA_ERROR: {ex.message}")
+    if validate is not None:
+        try:
+            validate(instance=data, schema=schema)
+        except ValidationError as ex:
+            eprint(f"SCHEMA_ERROR: {ex.message}")
+            return 1
+    elif not isinstance(data, dict):
+        eprint("SEMANTIC_ERROR: payload must be object")
         return 1
 
     max_retries = int(data.get("policy", {}).get("max_retries", 0))

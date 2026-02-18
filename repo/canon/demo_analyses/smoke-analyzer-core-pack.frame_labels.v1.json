@@ -6,8 +6,9 @@
     "python": "3.12.8",
     "opencv": "4.10.0",
     "mediapipe": "unknown",
-    "librosa": "unknown",
-    "scenedetect": "unknown"
+    "movenet": "2.20.0",
+    "librosa": "0.11.0",
+    "scenedetect": "0.6.7.1"
   },
   "authority": {
     "reverse_prompt_ref": "repo/canon/demo_analyses/smoke-analyzer-core-pack.caf.video_reverse_prompt.v1.json",

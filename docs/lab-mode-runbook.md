@@ -20,6 +20,24 @@ CAF_ENGINE_ROUTE_MODE=lab
 CAF_QC_AUTHORITY_TRIAL=0
 ```
 
+Engine/runtime extras for analyzer + worker stages:
+
+```bash
+# Analyzer fallback pose model (recommended on Python 3.12+)
+CAF_MOVENET_MODEL_PATH=sandbox/models/movenet_singlepose_lightning_4.tflite
+
+# Optional worker caption synthesis from source media
+CAF_ENABLE_WHISPER_CAPTIONS=1
+CAF_WHISPER_MODEL=tiny
+```
+
+Install baseline packages in active env:
+
+```bash
+pip install -r repo/requirements-dev.txt
+pip install jsonschema librosa scenedetect soundfile tensorflow openai-whisper torch
+```
+
 Common adapter keys:
 
 ```bash
@@ -98,21 +116,56 @@ Do not bypass production policy authority:
 - `repo/shared/qc_policy.v1.json`
 - `sandbox/logs/<job_id>/qc/qc_report.v1.json`
 
-## Promotion Queue (Planned PR-35g)
+## Sample Ingest + Promotion Queue (PR-35g MVP)
 
-Goal:
-- reduce manual CLI/path handling for lab-to-production promotions
+### 1) Ingest new sample videos (lab-first)
 
-Planned flow:
-1. Lab runs emit promotion candidate artifacts.
-2. User approves/rejects candidate through adapter/UI (writes inbox artifact).
-3. Promotion processor validates benchmark/policy gates.
-4. Promoted contracts/workflows become production-consumable repo-truth.
+Put source videos under:
+- `sandbox/assets/demo/incoming/`
 
-Planned artifact families:
-- `promotion_candidate.v1`
-- `promotion_request.v1`
-- `promotion_decision.v1`
+Run deterministic ingest:
+
+```bash
+python3 -m repo.tools.ingest_demo_samples
+```
+
+Outputs:
+- `repo/canon/demo_analyses/<analysis_id>.video_analysis.v1.json`
+- `repo/canon/demo_analyses/<analysis_id>.beat_grid.v1.json`
+- `repo/canon/demo_analyses/<analysis_id>.pose_checkpoints.v1.json`
+- `repo/canon/demo_analyses/<analysis_id>.keyframe_checkpoints.v1.json`
+- `repo/canon/demo_analyses/<analysis_id>.caf.video_reverse_prompt.v1.json`
+- `repo/canon/demo_analyses/<analysis_id>.segment_stitch_plan.v1.json`
+- `repo/canon/demo_analyses/<analysis_id>.sample_ingest_manifest.v1.json`
+- `sandbox/logs/lab/sample_ingest_summary.v1.json`
+
+### 2) Create a promotion candidate
+
+```bash
+python3 -m repo.tools.create_promotion_candidate \
+  --job-id <lab_job_id> \
+  --sample-manifest-relpath repo/canon/demo_analyses/<analysis_id>.sample_ingest_manifest.v1.json \
+  --pass-rate-delta 0.10 \
+  --retry-count-delta -1
+```
+
+Output:
+- `sandbox/logs/lab/promotions/<candidate_id>.promotion_candidate.v1.json`
+
+### 3) Approve/Reject through inbox contract
+
+Write an inbox action artifact:
+- `sandbox/inbox/<action>.json` (version `promotion_action.v1`)
+
+Then process queue:
+
+```bash
+python3 -m repo.tools.process_promotion_queue
+```
+
+Outputs:
+- `repo/shared/promotion_registry.v1.json` (approved promotions)
+- `sandbox/logs/lab/promotion_queue_result.v1.json`
 
 Design rule:
-- even in non-CLI flows, promotion remains file-contract driven and auditable.
+- non-CLI promotion remains file-contract driven and auditable.

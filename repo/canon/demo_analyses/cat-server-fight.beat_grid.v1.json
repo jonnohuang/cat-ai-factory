@@ -1,0 +1,44 @@
+{
+  "version": "beat_grid.v1",
+  "analysis_id": "cat-server-fight",
+  "source_video_relpath": "sandbox/assets/demo/incoming/cat-server-fight.mp4",
+  "bpm_estimate": 120.0,
+  "beats": [
+    {
+      "t_sec": 0.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 1.667,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 2.667,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 3.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 3.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 4.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 6.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 6.333,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 10.0,
+      "strength": 0.8
+    }
+  ]
+}

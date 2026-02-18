@@ -333,6 +333,23 @@
         }
       }
     },
+    "motion_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relpath"
+      ],
+      "properties": {
+        "relpath": {
+          "type": "string",
+          "pattern": "^repo/(shared|canon|examples)/[a-zA-Z0-9._/-]+\\.json$"
+        },
+        "contract_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "captions_artifact": {
       "type": "object",
       "additionalProperties": false,
@@ -417,6 +434,108 @@
           "items": {
             "type": "string",
             "minLength": 1
+          }
+        }
+      }
+    },
+    "comfyui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "base_url",
+        "workflow_id",
+        "workflow_relpath",
+        "bindings",
+        "poll"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://.+"
+        },
+        "workflow_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workflow_relpath": {
+          "type": "string",
+          "pattern": "^repo/workflows/comfy/[a-zA-Z0-9._-]+\\.json$"
+        },
+        "client_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "positive_prompt",
+            "negative_prompt",
+            "seed",
+            "positive_nodes",
+            "negative_nodes",
+            "seed_nodes"
+          ],
+          "properties": {
+            "positive_prompt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "negative_prompt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "seed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "positive_nodes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "negative_nodes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "seed_nodes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "poll": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "timeout_seconds",
+            "interval_seconds"
+          ],
+          "properties": {
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "interval_seconds": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         }
       }

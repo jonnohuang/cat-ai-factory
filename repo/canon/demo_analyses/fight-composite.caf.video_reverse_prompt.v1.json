@@ -1,0 +1,63 @@
+{
+  "version": "caf.video_reverse_prompt.v1",
+  "analysis_id": "fight-composite",
+  "source_video_relpath": "sandbox/assets/demo/incoming/fight_composite.mp4",
+  "tool_versions": {
+    "python": "3.12.8",
+    "opencv": "4.10.0",
+    "mediapipe": "unknown",
+    "librosa": "unknown",
+    "scenedetect": "unknown"
+  },
+  "truth": {
+    "beat_grid_ref": "repo/canon/demo_analyses/fight-composite.beat_grid.v1.json",
+    "pose_checkpoints_ref": "repo/canon/demo_analyses/fight-composite.pose_checkpoints.v1.json",
+    "keyframe_checkpoints_ref": "repo/canon/demo_analyses/fight-composite.keyframe_checkpoints.v1.json",
+    "visual_facts": {
+      "camera_movement_mode": "pan",
+      "camera_movement_confidence": 0.895,
+      "brightness_bucket": "mid",
+      "luma_mean": 113.588,
+      "palette_top_hex": [
+        "#281818",
+        "#382828",
+        "#988888"
+      ]
+    },
+    "shots": [
+      {
+        "shot_id": "shot_001",
+        "start_sec": 0.0,
+        "end_sec": 10.133,
+        "camera": "pan",
+        "camera_confidence": 0.895,
+        "motion_intensity": 0.113,
+        "brightness_luma_mean": 113.588,
+        "palette_hint": "#281818"
+      }
+    ]
+  },
+  "prompt_packages": {
+    "text2video": {
+      "prompt": "Locked-camera dance sequence with beat-aligned movement and stable temporal consistency.",
+      "negative": [
+        "flicker",
+        "identity drift",
+        "camera shake"
+      ]
+    },
+    "image2video": {
+      "prompt": "Preserve key poses at checkpoint timestamps and return to a loop-safe end pose.",
+      "negative": [
+        "hard jump cuts",
+        "background drift",
+        "costume mismatch"
+      ]
+    }
+  },
+  "confidence": {
+    "measured_truth": 0.85,
+    "inferred_semantics": 0.6,
+    "notes": "beat=librosa_unavailable; scene=scenedetect_unavailable; pose=cv_fallback"
+  }
+}

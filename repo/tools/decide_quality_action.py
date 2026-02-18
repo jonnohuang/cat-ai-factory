@@ -331,6 +331,69 @@ def _next_provider(order: list[str], current: Optional[str]) -> tuple[Optional[s
     return order[0], None, None
 
 
+def _build_workflow_preset(
+    *,
+    project_root: pathlib.Path,
+    job_id: str,
+    failed_failure_classes: list[str],
+) -> Dict[str, Any]:
+    out: Dict[str, Any] = {
+        "mode": "none",
+        "preset_id": None,
+        "workflow_id": None,
+        "failure_class": None,
+        "parameter_overrides": {},
+    }
+    if not failed_failure_classes:
+        return out
+    job_path = _job_path_from_job_id(project_root, job_id)
+    if job_path is None:
+        return out
+    job = _load_json(job_path)
+    if not isinstance(job, dict):
+        return out
+    quality_policy = job.get("quality_policy")
+    relpath = "repo/shared/qc_policy.v1.json"
+    if isinstance(quality_policy, dict):
+        rel = quality_policy.get("relpath")
+        if isinstance(rel, str) and rel.startswith("repo/"):
+            relpath = rel
+    policy = _load_json(project_root / relpath)
+    if not isinstance(policy, dict):
+        return out
+    presets_cfg = policy.get("workflow_presets")
+    if not isinstance(presets_cfg, dict):
+        return out
+    mappings = presets_cfg.get("class_to_preset")
+    if not isinstance(mappings, list):
+        return out
+    classes = [x for x in failed_failure_classes if isinstance(x, str) and x]
+    for cls in classes:
+        for row in mappings:
+            if not isinstance(row, dict):
+                continue
+            if row.get("class_id") != cls:
+                continue
+            preset_id = row.get("preset_id")
+            workflow_id = row.get("workflow_id")
+            if not isinstance(preset_id, str) or not preset_id:
+                continue
+            if not isinstance(workflow_id, str) or not workflow_id:
+                continue
+            overrides = row.get("parameter_overrides")
+            out.update(
+                {
+                    "mode": "comfyui_preset",
+                    "preset_id": preset_id,
+                    "workflow_id": workflow_id,
+                    "failure_class": cls,
+                    "parameter_overrides": overrides if isinstance(overrides, dict) else {},
+                }
+            )
+            return out
+    return out
+
+
 def _build_provider_switch(
     *,
     project_root: pathlib.Path,
@@ -410,6 +473,7 @@ def _build_retry_plan(
     reason: str,
     segment_retry: Dict[str, Any],
     provider_switch: Dict[str, Any],
+    workflow_preset: Dict[str, Any],
     motion_status: Optional[str],
     identity_status: Optional[str],
 ) -> Dict[str, Any]:
@@ -447,6 +511,7 @@ def _build_retry_plan(
             "max_retries": max_retries,
             "segment_retry": segment_retry,
             "provider_switch": provider_switch,
+            "workflow_preset": workflow_preset,
             "pass_target": pass_target,
         },
         "state": {
@@ -534,6 +599,16 @@ def main(argv: list[str]) -> int:
                     if isinstance(metric, str):
                         failed_metrics.append(metric)
     failed_metrics = sorted(set(failed_metrics))
+    failed_failure_classes: list[str] = []
+    if isinstance(qc_report, dict):
+        overall = qc_report.get("overall")
+        if isinstance(overall, dict):
+            failed_failure_classes = [
+                str(x)
+                for x in overall.get("failed_failure_classes", [])
+                if isinstance(x, str) and x
+            ]
+    failed_failure_classes = sorted(set(failed_failure_classes))
     segment_retry = _segment_retry_plan(segment_report, failed_metrics)
 
     action = "proceed_finalize"
@@ -680,6 +755,7 @@ def main(argv: list[str]) -> int:
             "continuity_pack_error": continuity_pack_error,
             "segment_stitch_plan_relpath": _safe_rel(segment_plan_path, project_root) if segment_plan_path else None,
             "failed_metrics": failed_metrics,
+            "failed_failure_classes": failed_failure_classes,
         },
         "policy": {
             "max_retries": max(0, args.max_retries),
@@ -712,6 +788,11 @@ def main(argv: list[str]) -> int:
         reason=reason,
         segment_retry=segment_retry,
         provider_switch=_build_provider_switch(project_root=project_root, job_id=args.job_id, action=action),
+        workflow_preset=_build_workflow_preset(
+            project_root=project_root,
+            job_id=args.job_id,
+            failed_failure_classes=failed_failure_classes,
+        ),
         motion_status=motion_status,
         identity_status=identity_status,
     )

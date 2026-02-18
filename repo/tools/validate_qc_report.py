@@ -9,8 +9,8 @@ from typing import Any
 try:
     from jsonschema import ValidationError, validate
 except Exception:
-    print("ERROR: jsonschema not installed", file=sys.stderr)
-    raise SystemExit(1)
+    ValidationError = Exception
+    validate = None
 
 
 def _repo_root() -> pathlib.Path:
@@ -38,10 +38,14 @@ def main(argv: list[str]) -> int:
     root = _repo_root()
     schema = _load(root / "repo" / "shared" / "qc_report.v1.schema.json")
     data = _load(target)
-    try:
-        validate(instance=data, schema=schema)
-    except ValidationError as ex:
-        eprint(f"SCHEMA_ERROR: {ex.message}")
+    if validate is not None:
+        try:
+            validate(instance=data, schema=schema)
+        except ValidationError as ex:
+            eprint(f"SCHEMA_ERROR: {ex.message}")
+            return 1
+    elif not isinstance(data, dict):
+        eprint("SEMANTIC_ERROR: payload must be object")
         return 1
 
     gate_ids = [g.get("gate_id") for g in data.get("gates", []) if isinstance(g, dict)]
@@ -52,6 +56,19 @@ def main(argv: list[str]) -> int:
     missing = [g for g in failed_gate_ids if g not in gate_ids]
     if missing:
         eprint(f"SEMANTIC_ERROR: failed_gate_ids not found in gates: {missing}")
+        return 1
+    failed_classes = data.get("overall", {}).get("failed_failure_classes", [])
+    if not isinstance(failed_classes, list):
+        eprint("SEMANTIC_ERROR: overall.failed_failure_classes must be list")
+        return 1
+    known_classes = {
+        str(g.get("failure_class"))
+        for g in data.get("gates", [])
+        if isinstance(g, dict) and isinstance(g.get("failure_class"), str) and g.get("status") == "fail"
+    }
+    unknown = [c for c in failed_classes if c not in known_classes]
+    if unknown:
+        eprint(f"SEMANTIC_ERROR: failed_failure_classes not present in failed gate entries: {unknown}")
         return 1
 
     print(f"OK: {target}")

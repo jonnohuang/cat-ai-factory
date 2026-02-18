@@ -1646,7 +1646,7 @@ Defer note:
 Sub-PR plan:
 
 ### PR-35a — Motion contract authority wiring (pose trace -> generation constraints)
-Status: **PROPOSED**
+Status: **IMPLEMENTED**
 
 Scope:
 - Promote dance trace/pose artifacts from QC-only signals to explicit generation input contracts.
@@ -1660,7 +1660,7 @@ Acceptance criteria:
 ---
 
 ### PR-35b — QC failure taxonomy + deterministic retry mapping
-Status: **PROPOSED**
+Status: **IMPLEMENTED**
 
 Scope:
 - Extend `qc_report.v1` with explicit failure classes:
@@ -1674,7 +1674,7 @@ Acceptance criteria:
 ---
 
 ### PR-35c — Segment-targeted regeneration loop from seam/motion gates
-Status: **PROPOSED**
+Status: **IMPLEMENTED**
 
 Scope:
 - Wire seam/motion gate failures to segment-level retries by default (not full-clip rerender).
@@ -1687,7 +1687,7 @@ Acceptance criteria:
 ---
 
 ### PR-35d — Two-pass motion->identity runtime scoring and merge gate
-Status: **PROPOSED**
+Status: **IMPLEMENTED**
 
 Scope:
 - Formalize pass-1 (motion fidelity) and pass-2 (identity consistency) scoring as separate QC dimensions.
@@ -1700,7 +1700,7 @@ Acceptance criteria:
 ---
 
 ### PR-35e — ComfyUI workflow presets by failure class
-Status: **PROPOSED**
+Status: **IMPLEMENTED**
 
 Scope:
 - Add deterministic workflow preset mapping:
@@ -1715,7 +1715,7 @@ Acceptance criteria:
 ---
 
 ### PR-35f — Lab-to-production promotion hard gate for quality lift
-Status: **PROPOSED**
+Status: **PARTIAL (base gate implemented; stricter benchmark enforcement remains iterative)**
 
 Scope:
 - Require benchmark evidence before policy/workflow promotion:
@@ -1731,7 +1731,7 @@ Acceptance criteria:
 ---
 
 ### PR-35g — Autonomous lab->production bridge (auto-ingest, pointer resolver, promotion queue)
-Status: **PROPOSED**
+Status: **IMPLEMENTED (MVP)**
 
 Scope:
 - Add deterministic sample-ingest lane for new demo inputs:
@@ -1759,6 +1759,68 @@ Acceptance criteria:
   - audio metadata (BPM/beat/onset/energy cues)
   - style/tone/story-beat advisory metadata
   - provenance + tool-version + confidence metadata for all extracted contracts.
+
+---
+
+### PR-35h — Planner intelligence graph for brief->contract resolution
+Status: **PROPOSED**
+
+Scope:
+- Add a LangGraph planner step for brief understanding + contract retrieval/ranking:
+  - parse user brief intent (hero, costume, choreography, setting, tone)
+  - retrieve candidate analysis/manifests/contracts from canon/lab outputs
+  - deterministically rank/select pointers using policy rules.
+- Emit a deterministic resolution artifact (for audit/debug):
+  - selected pointers
+  - rejected candidates with reasons
+  - fallback path used.
+- Keep runtime authority unchanged:
+  - planner proposes contract/pointers
+  - controller still routes from policy + QC report.
+
+Acceptance criteria:
+- High-level brief can resolve to correct dance/hero contract pointers without manual `--analysis-id` in common cases.
+- Resolution is reproducible from explicit artifacts and policy.
+
+---
+
+### PR-35i — Lab bootstrap extractor pack (sample -> reusable production assets)
+Status: **PROPOSED**
+
+Scope:
+- Expand lab ingest extraction to output reusable asset/contract packs for production:
+  - hero anchors
+  - costume/style references
+  - background/stage/setting references
+  - framing/camera/edit grammar
+  - beat/audio cues
+  - motion trace and segment plans.
+- Add explicit consumer mapping metadata:
+  - which planner/provider lane consumes each artifact
+  - required/optional status
+  - confidence and provenance.
+- Add deterministic validation for extractor outputs and minimum required classes.
+
+Acceptance criteria:
+- New sample ingest emits a complete pack that production can consume without manual path hunting.
+- Missing required classes fail-loud with actionable diagnostics.
+
+---
+
+### PR-35j — One-command autonomous brief run (lab bootstrap + production execution)
+Status: **PROPOSED**
+
+Scope:
+- Add an end-to-end command path for:
+  - user brief -> auto-ingest/resolve -> job generation -> controller run -> QC decision.
+- If required sample artifacts are missing:
+  - trigger lab bootstrap first
+  - then continue production route automatically.
+- Persist deterministic lifecycle artifacts for UI/Telegram visibility.
+
+Acceptance criteria:
+- User can run a single command for the Mochi dance-loop class workflow without manual pointer editing.
+- Output and routing lineage is fully auditable from artifacts.
 
 
 ------------------------------------------------------------

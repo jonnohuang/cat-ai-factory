@@ -22,7 +22,7 @@ def main() -> int:
     reverse = _load(base / f"{aid}.caf.video_reverse_prompt.v1.json")
     frame_labels = _load(base / f"{aid}.frame_labels.v1.json")
 
-    required_keys = {"python", "opencv", "mediapipe", "librosa", "scenedetect"}
+    required_keys = {"python", "opencv", "mediapipe", "movenet", "librosa", "scenedetect"}
     pose_versions = pose.get("tool_versions")
     reverse_versions = reverse.get("tool_versions")
     frame_versions = frame_labels.get("tool_versions")

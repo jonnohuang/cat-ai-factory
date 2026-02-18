@@ -85,6 +85,7 @@
         "python",
         "opencv",
         "mediapipe",
+        "movenet",
         "librosa",
         "scenedetect"
       ],
@@ -98,6 +99,10 @@
           "maxLength": 64
         },
         "mediapipe": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "movenet": {
           "type": "string",
           "maxLength": 64
         },

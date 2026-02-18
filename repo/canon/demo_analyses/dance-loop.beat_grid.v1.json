@@ -1,0 +1,64 @@
+{
+  "version": "beat_grid.v1",
+  "analysis_id": "dance-loop",
+  "source_video_relpath": "sandbox/assets/demo/incoming/dance_loop.mp4",
+  "bpm_estimate": 120.0,
+  "beats": [
+    {
+      "t_sec": 0.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 13.333,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 14.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 15.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 15.667,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 16.667,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 18.667,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 19.167,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 19.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 20.333,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 20.667,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 21.167,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 21.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 23.6,
+      "strength": 0.8
+    }
+  ]
+}
