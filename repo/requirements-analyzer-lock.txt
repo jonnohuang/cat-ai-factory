@@ -1,0 +1,8 @@
+# Analyzer reproducibility lock set (PR-34.8d)
+# Use with:
+#   pip install -r repo/requirements-dev.txt -c repo/requirements-analyzer-lock.txt
+
+opencv-python-headless==4.10.0.84
+scenedetect==0.6.3
+librosa==0.10.2.post1
+mediapipe==0.10.14 ; python_version < "3.12"

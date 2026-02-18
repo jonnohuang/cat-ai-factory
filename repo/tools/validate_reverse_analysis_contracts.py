@@ -79,6 +79,14 @@ def _validate_semantics(
     if len(src_paths) != 1:
         errs.append("source_video_relpath must match across reverse/beat/pose/keyframes")
 
+    reverse_tools = reverse_doc.get("tool_versions")
+    pose_tools = pose_doc.get("tool_versions")
+    if isinstance(reverse_tools, dict) and isinstance(pose_tools, dict):
+        if reverse_tools != pose_tools:
+            errs.append("tool_versions mismatch between reverse and pose contracts")
+    else:
+        errs.append("tool_versions missing in reverse and/or pose contracts")
+
     shots = reverse_doc.get("truth", {}).get("shots", [])
     visual_facts = reverse_doc.get("truth", {}).get("visual_facts", {})
     shot_starts: list[float] = []

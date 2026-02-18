@@ -3,6 +3,13 @@
   "analysis_id": "smoke-analyzer-core-pack",
   "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
   "model": "cv_fallback",
+  "tool_versions": {
+    "python": "3.12.8",
+    "opencv": "4.10.0",
+    "mediapipe": "unknown",
+    "librosa": "unknown",
+    "scenedetect": "unknown"
+  },
   "checkpoints": [
     {
       "t_sec": 0.0,

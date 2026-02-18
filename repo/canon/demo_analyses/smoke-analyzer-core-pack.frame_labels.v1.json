@@ -1,0 +1,44 @@
+{
+  "version": "frame_labels.v1",
+  "analysis_id": "smoke-analyzer-core-pack",
+  "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
+  "tool_versions": {
+    "python": "3.12.8",
+    "opencv": "4.10.0",
+    "mediapipe": "unknown",
+    "librosa": "unknown",
+    "scenedetect": "unknown"
+  },
+  "authority": {
+    "reverse_prompt_ref": "repo/canon/demo_analyses/smoke-analyzer-core-pack.caf.video_reverse_prompt.v1.json",
+    "keyframe_checkpoints_ref": "repo/canon/demo_analyses/smoke-analyzer-core-pack.keyframe_checkpoints.v1.json"
+  },
+  "policy": {
+    "facts_only_or_unknown": true,
+    "enrichment_provider": "rule_based"
+  },
+  "frames": [
+    {
+      "frame_id": "frame_001",
+      "shot_id": "shot_001",
+      "t_sec": 0.0,
+      "facts": {
+        "camera_mode": "mixed",
+        "brightness_bucket": "mid",
+        "palette_hint": "#E8C8A8",
+        "motion_intensity": 0.222
+      },
+      "labels": {
+        "subject_focus": "hero",
+        "motion_phase": "low",
+        "composition": "wide",
+        "action_summary": "low motion dance beat; camera mixed."
+      },
+      "confidence": {
+        "facts": 0.92,
+        "enrichment": 0.58
+      },
+      "uncertainty": []
+    }
+  ]
+}

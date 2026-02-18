@@ -55,6 +55,8 @@ class _VertexBaseProvider(BaseProvider):
         self._generated_asset_path: str = ""
         self._selected_hero: Optional[Dict[str, Any]] = None
         self._lane_a_error: str = ""
+        self._quality_context: Optional[Dict[str, Any]] = None
+        self._last_reference_image_rels: List[str] = []
 
     def generate_job(
         self,
@@ -63,6 +65,7 @@ class _VertexBaseProvider(BaseProvider):
         hero_registry: Optional[Dict[str, Any]] = None,
         quality_context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        self._quality_context = quality_context if isinstance(quality_context, dict) else None
         self._selected_hero = _select_target_hero(hero_registry, prd, inbox or [])
         if self._selected_hero:
             _persist_hero_bundle(self._selected_hero)
@@ -426,8 +429,10 @@ class VertexVeoProvider(_VertexBaseProvider):
         base_prompt = _seed_prompt_from_job(job, prd, hero_desc)
         reference_images = self._build_veo_reference_images(job, prd)
         if reference_images:
+            preview = self._last_reference_image_rels[:3]
             print(
-                f"INFO planner provider={self.name} veo_reference_images={len(reference_images)}"
+                f"INFO planner provider={self.name} veo_reference_images={len(reference_images)} "
+                f"reference_preview={preview}"
             )
         requested_duration = int(job.get("video", {}).get("length_seconds", 15))
         target_duration = _normalize_veo_duration(requested_duration)
@@ -700,6 +705,30 @@ class VertexVeoProvider(_VertexBaseProvider):
             return []
 
         refs: List[pathlib.Path] = []
+        self._last_reference_image_rels = []
+
+        # PR-34.8a: storyboard-first I2V defaults.
+        storyboard_ctx = self._quality_context.get("storyboard_i2v", {}) if isinstance(self._quality_context, dict) else {}
+        if isinstance(storyboard_ctx, dict):
+            seed_assets = storyboard_ctx.get("seed_frame_assets", [])
+            if isinstance(seed_assets, list):
+                for rel in seed_assets:
+                    if not isinstance(rel, str) or not rel.strip():
+                        continue
+                    p = _repo_root_path() / "sandbox" / rel.strip()
+                    if p.exists():
+                        refs.append(p)
+
+        # Honor explicit planner seed-frame contracts if present.
+        image_motion = job.get("image_motion", {})
+        if isinstance(image_motion, dict):
+            for rel in image_motion.get("seed_frames", []):
+                if not isinstance(rel, str) or not rel.strip():
+                    continue
+                p = _repo_root_path() / "sandbox" / rel.strip()
+                if p.exists():
+                    refs.append(p)
+
         if self._selected_hero:
             for rel in _hero_seed_frames(self._selected_hero):
                 p = _repo_root_path() / "sandbox" / rel
@@ -749,6 +778,11 @@ class VertexVeoProvider(_VertexBaseProvider):
                 b64 = base64.b64encode(p.read_bytes()).decode("ascii")
             except Exception:
                 continue
+            try:
+                rel = str(p.resolve().relative_to((_repo_root_path() / "sandbox").resolve())).replace("\\", "/")
+                self._last_reference_image_rels.append(rel)
+            except Exception:
+                pass
             out.append(
                 {
                     "image": {

@@ -320,6 +320,19 @@
         }
       }
     },
+    "captions_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relpath"
+      ],
+      "properties": {
+        "relpath": {
+          "type": "string",
+          "pattern": "^(repo/(canon|examples)/[a-zA-Z0-9._/-]+\\.json|sandbox/[a-zA-Z0-9._/-]+\\.json)$"
+        }
+      }
+    },
     "creativity": {
       "type": "object",
       "additionalProperties": false,

@@ -1,0 +1,8 @@
+{
+  "version": "captions_artifact.v1",
+  "job_id": "demo-dance-loop-v1",
+  "source": "whisper",
+  "language": "en",
+  "srt_relpath": "repo/examples/captions_artifact.v1.example.srt",
+  "notes": "Optional artifact example; worker may consume when present."
+}
