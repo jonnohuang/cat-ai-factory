@@ -484,6 +484,37 @@ Notes:
 
 ------------------------------------------------------------
 
+## Quality Control Operating Modes (PR-34.9 Foundation)
+
+CAF quality control now follows an explicit dual-mode model while preserving three-plane invariants:
+
+- LAB mode (OpenClaw):
+  - Runs experiment loops for quality improvement.
+  - Produces advisory artifacts (for example, route/policy suggestions).
+  - Is non-authoritative by default.
+
+- PRODUCTION mode (LangGraph planner + deterministic controller/worker):
+  - Uses explicit contracts for deterministic routing.
+  - Enforces retries/fallback/human-review gates from policy + measured QC results.
+
+Authoritative contracts:
+- Policy authority:
+  - `repo/shared/qc_policy.v1.json`
+- Attempt QC authority:
+  - `sandbox/logs/<job_id>/qc/qc_report.v1.json`
+
+Routing authority rule:
+- Controller routing must be deterministic from:
+  - policy contract
+  - normalized QC report
+  - retry budget/state
+- Planner/OpenClaw may propose improvements, but do not override production authority by default.
+
+Guarded authority trial rule:
+- Advisory-to-authority trials are allowed only when feature-flagged, default-off, and reversible.
+
+------------------------------------------------------------
+
 ## References
 
 - Invariants & rationale: docs/master.md

@@ -106,6 +106,9 @@ def main(argv: list[str]) -> int:
     if "QUALITY_RETRY_PLAN" not in names:
         print("ERROR: expected QUALITY_RETRY_PLAN event in controller loop", file=sys.stderr)
         return 1
+    if "QUALITY_ADVISORY" not in names:
+        print("ERROR: expected QUALITY_ADVISORY event in controller loop", file=sys.stderr)
+        return 1
     if not attempts_root.exists() or len([p for p in attempts_root.iterdir() if p.is_dir()]) == 0:
         print("ERROR: expected at least one retry attempt directory", file=sys.stderr)
         return 1

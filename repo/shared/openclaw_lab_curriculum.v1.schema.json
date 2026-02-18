@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/openclaw_lab_curriculum.v1.schema.json",
+  "title": "OpenClaw Lab Curriculum v1",
+  "description": "Lab-only quality experiment curriculum and expected gate behavior.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "curriculum_id",
+    "tracks"
+  ],
+  "properties": {
+    "version": {
+      "const": "openclaw_lab_curriculum.v1"
+    },
+    "curriculum_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tracks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "track_id",
+          "focus",
+          "expected_failed_gates",
+          "target_actions"
+        ],
+        "properties": {
+          "track_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "focus": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_failed_gates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+$"
+            }
+          },
+          "target_actions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "retry_motion",
+                "retry_recast",
+                "block_for_costume",
+                "escalate_hitl"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

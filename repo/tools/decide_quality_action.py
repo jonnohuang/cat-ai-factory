@@ -10,6 +10,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import subprocess
 import sys
 from typing import Any, Dict, Optional, Tuple
 
@@ -76,6 +77,90 @@ def _job_path_from_job_id(project_root: pathlib.Path, job_id: str) -> Optional[p
     if p.exists():
         return p
     return None
+
+
+def _load_qc_policy_from_job(
+    project_root: pathlib.Path,
+    job_id: str,
+) -> Tuple[str, Optional[pathlib.Path], Optional[str], str]:
+    default_relpath = "repo/shared/qc_policy.v1.json"
+    default_action = "escalate_hitl"
+    job_path = _job_path_from_job_id(project_root, job_id)
+    if job_path is None:
+        policy_path = project_root / default_relpath
+        return default_relpath, policy_path if policy_path.exists() else None, None, default_action
+    job = _load_json(job_path)
+    if not isinstance(job, dict):
+        policy_path = project_root / default_relpath
+        return default_relpath, policy_path if policy_path.exists() else None, "job contract unreadable", default_action
+    quality_policy = job.get("quality_policy")
+    relpath = default_relpath
+    if isinstance(quality_policy, dict):
+        rel = quality_policy.get("relpath")
+        if isinstance(rel, str) and rel.startswith("repo/"):
+            relpath = rel
+    policy_path = project_root / relpath
+    if not policy_path.exists():
+        return relpath, None, "qc policy contract missing", default_action
+    policy = _load_json(policy_path)
+    if not isinstance(policy, dict):
+        return relpath, policy_path, "qc policy contract unreadable", default_action
+    if policy.get("version") != "qc_policy.v1":
+        return relpath, policy_path, "qc policy contract version mismatch", default_action
+    default_action_value = policy.get("default_action_on_missing_report")
+    if isinstance(default_action_value, str):
+        default_action = default_action_value
+    return relpath, policy_path, None, default_action
+
+
+def _ensure_qc_report(
+    project_root: pathlib.Path,
+    job_id: str,
+    qc_policy_relpath: str,
+) -> Tuple[Optional[pathlib.Path], Optional[str]]:
+    cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.run_qc_runner",
+        "--job-id",
+        job_id,
+        "--qc-policy-relpath",
+        qc_policy_relpath,
+    ]
+    proc = subprocess.run(cmd, cwd=str(project_root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    report_path = project_root / "sandbox" / "logs" / job_id / "qc" / "qc_report.v1.json"
+    if proc.returncode != 0:
+        return None, "qc runner execution failed"
+    if not report_path.exists():
+        return None, "qc report missing after runner execution"
+    payload = _load_json(report_path)
+    if not isinstance(payload, dict) or payload.get("version") != "qc_report.v1":
+        return None, "qc report unreadable or version mismatch"
+    return report_path, None
+
+
+def _emit_qc_route_advice(project_root: pathlib.Path, job_id: str) -> None:
+    cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.generate_qc_route_advice",
+        "--job-id",
+        job_id,
+    ]
+    _ = subprocess.run(cmd, cwd=str(project_root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _load_qc_route_advice(
+    project_root: pathlib.Path,
+    job_id: str,
+) -> Tuple[Optional[pathlib.Path], Optional[Dict[str, Any]]]:
+    advice_path = project_root / "sandbox" / "logs" / job_id / "qc" / "qc_route_advice.v1.json"
+    payload = _load_json(advice_path)
+    if not isinstance(payload, dict):
+        return None, None
+    if payload.get("version") != "qc_route_advice.v1":
+        return None, None
+    return advice_path, payload
 
 
 def _load_quality_targets_from_job(
@@ -320,6 +405,14 @@ def main(argv: list[str]) -> int:
     costume = _load_json(costume_path)
     two_pass = _load_json(two_pass_path)
     segment_report = _load_segment_report(project_root, args.job_id)
+    qc_policy_relpath, qc_policy_path, qc_policy_error, qc_missing_report_action = _load_qc_policy_from_job(
+        project_root, args.job_id
+    )
+    qc_report_path, qc_report_error = _ensure_qc_report(project_root, args.job_id, qc_policy_relpath)
+    qc_report = _load_json(qc_report_path) if qc_report_path is not None else None
+    if qc_report_path is not None:
+        _emit_qc_route_advice(project_root, args.job_id)
+    advice_path, advice = _load_qc_route_advice(project_root, args.job_id)
     quality_targets, quality_target_path, quality_target_error = _load_quality_targets_from_job(project_root, args.job_id)
     continuity_pack, continuity_pack_path, continuity_pack_error = _load_continuity_pack_from_job(project_root, args.job_id)
     prior = _load_json(decision_path)
@@ -336,6 +429,15 @@ def main(argv: list[str]) -> int:
         failed_metrics = [str(x) for x in failed_metrics if isinstance(x, str)]
     tuned_failed = _collect_tuned_failed_metrics(quality, quality_targets)
     failed_metrics = sorted(set(failed_metrics + tuned_failed))
+    if isinstance(qc_report, dict):
+        gates = qc_report.get("gates", [])
+        if isinstance(gates, list):
+            for gate in gates:
+                if isinstance(gate, dict) and gate.get("status") == "fail":
+                    metric = gate.get("metric")
+                    if isinstance(metric, str):
+                        failed_metrics.append(metric)
+    failed_metrics = sorted(set(failed_metrics))
     segment_retry = _segment_retry_plan(segment_report, failed_metrics)
 
     action = "proceed_finalize"
@@ -350,6 +452,12 @@ def main(argv: list[str]) -> int:
     if quality_target_error is not None:
         action = "escalate_hitl"
         reason = f"Quality target contract invalid: {quality_target_error}"
+    elif qc_policy_error is not None:
+        action = "escalate_hitl"
+        reason = f"QC policy invalid: {qc_policy_error}"
+    elif qc_report_error is not None:
+        action = qc_missing_report_action
+        reason = f"QC report unavailable: {qc_report_error}"
     elif continuity_pack_error is not None:
         action = "escalate_hitl"
         reason = f"Continuity pack invalid: {continuity_pack_error}"
@@ -387,22 +495,68 @@ def main(argv: list[str]) -> int:
     elif costume_fail:
         action = "block_for_costume"
         reason = "Costume fidelity gate failed; require corrected recast input."
-    elif action == "proceed_finalize" and isinstance(quality, dict):
-        overall_pass = bool(quality.get("overall", {}).get("pass"))
-        if not overall_pass or failed_metrics:
+    elif action == "proceed_finalize" and isinstance(qc_report, dict):
+        overall = qc_report.get("overall", {})
+        overall_pass = bool(isinstance(overall, dict) and overall.get("pass") is True)
+        recommended_action = (
+            str(overall.get("recommended_action"))
+            if isinstance(overall, dict) and isinstance(overall.get("recommended_action"), str)
+            else "retry_recast"
+        )
+        if not overall_pass:
             next_retry = retry_attempt + 1
             if next_retry <= max(0, args.max_retries):
-                if failed_metrics and set(failed_metrics).issubset(MOTION_METRICS):
-                    action = "retry_motion"
-                    reason = "Motion quality metrics failed within retry budget; deterministic motion retry requested."
+                if recommended_action in {"retry_motion", "retry_recast"}:
+                    action = recommended_action
+                    reason = f"QC policy route selected {recommended_action} within retry budget."
+                elif recommended_action == "block_for_costume":
+                    action = "block_for_costume"
+                    reason = "QC policy route blocked for costume fidelity."
                 else:
-                    action = "retry_recast"
-                    reason = "Quality metrics failed within retry budget; deterministic retry requested."
+                    action = "escalate_hitl"
+                    reason = "QC policy route escalated due to failed gates."
                 retry_attempt = next_retry
             else:
                 action = "escalate_hitl"
                 retry_attempt = next_retry
-                reason = "Quality metrics failed beyond retry budget; escalate to explicit HITL."
+                reason = "QC policy route exceeded retry budget; escalate to explicit HITL."
+
+    advisory_mode_cfg = {}
+    authority_cfg = {}
+    if qc_policy_path is not None:
+        qc_policy = _load_json(qc_policy_path)
+        if isinstance(qc_policy, dict):
+            if isinstance(qc_policy.get("advisory_mode"), dict):
+                advisory_mode_cfg = qc_policy.get("advisory_mode", {})
+            if isinstance(qc_policy.get("authority_trial"), dict):
+                authority_cfg = qc_policy.get("authority_trial", {})
+    authority_trial_env = os.getenv("CAF_QC_AUTHORITY_TRIAL", "0").strip().lower() in {"1", "true", "yes", "on"}
+    advisory_enabled = bool(isinstance(advisory_mode_cfg, dict) and advisory_mode_cfg.get("enabled") is True)
+    authority_enabled = (
+        bool(isinstance(authority_cfg, dict) and authority_cfg.get("enabled") is True) and authority_trial_env
+    )
+    authority_used = False
+    authority_rollback = False
+    advice_action = None
+    if advisory_enabled and isinstance(advice, dict):
+        raw = advice.get("advice")
+        if isinstance(raw, dict) and isinstance(raw.get("recommended_action"), str):
+            advice_action = str(raw.get("recommended_action"))
+    if authority_enabled and isinstance(advice_action, str):
+        allowed = authority_cfg.get("allowed_actions", [])
+        allowed_actions = {str(x) for x in allowed} if isinstance(allowed, list) else set()
+        rollback_action = str(authority_cfg.get("rollback_action", "escalate_hitl"))
+        if advice_action in allowed_actions:
+            if action != "proceed_finalize" and retry_attempt <= max(0, args.max_retries):
+                action = advice_action
+                reason = f"Authority-trial override accepted from advisory: {advice_action}."
+                authority_used = True
+            else:
+                action = rollback_action
+                reason = "Authority-trial advisory rejected by bounds; rolled back to deterministic policy action."
+                authority_rollback = True
+        else:
+            authority_rollback = True
 
     segment_plan_path = _find_segment_plan(project_root)
     payload: Dict[str, Any] = {
@@ -417,6 +571,13 @@ def main(argv: list[str]) -> int:
             if quality_target_path is not None and quality_target_path.exists()
             else None,
             "quality_target_contract_error": quality_target_error,
+            "qc_policy_relpath": _safe_rel(qc_policy_path, project_root)
+            if qc_policy_path is not None and qc_policy_path.exists()
+            else qc_policy_relpath,
+            "qc_policy_error": qc_policy_error,
+            "qc_report_relpath": _safe_rel(qc_report_path, project_root) if qc_report_path is not None else None,
+            "qc_report_error": qc_report_error,
+            "qc_route_advice_relpath": _safe_rel(advice_path, project_root) if advice_path is not None else None,
             "continuity_pack_relpath": _safe_rel(continuity_pack_path, project_root)
             if continuity_pack_path is not None and continuity_pack_path.exists()
             else None,
@@ -428,6 +589,10 @@ def main(argv: list[str]) -> int:
             "max_retries": max(0, args.max_retries),
             "retry_attempt": retry_attempt,
             "quality_targets": quality_targets,
+            "advisory_mode_enabled": advisory_enabled,
+            "authority_trial_enabled": authority_enabled,
+            "authority_trial_used": authority_used,
+            "authority_trial_rollback": authority_rollback,
         },
         "segment_retry": segment_retry,
         "passes": {

@@ -1,0 +1,8 @@
+{
+  "version": "qc_promotion_gate.v1",
+  "gate_id": "default-advisory-promotion-v1",
+  "thresholds": {
+    "min_alignment_lift": 0.0,
+    "max_negative_lift": -0.05
+  }
+}

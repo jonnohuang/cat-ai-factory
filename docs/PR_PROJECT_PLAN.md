@@ -1480,7 +1480,7 @@ Outcome:
 ---
 
 ### PR-34.8d — Analyzer reproducibility lockdown (pinned deps + tool version stamps)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Add a reproducible analyzer dependency lock set for CV/audio extraction tools.
@@ -1492,6 +1492,130 @@ Outcome:
 - Pose/model extraction drift risk is reduced through explicit dependency and artifact version control.
 
 ---
+
+### PR-34.9 — Policy-driven quality routing foundation (QC policy + QC runner + deterministic controller routing)
+Status: **IMPLEMENTED**
+
+Scope:
+- Introduce production-authoritative quality policy contract:
+  - `repo/shared/qc_policy.v1.json`
+- Introduce normalized deterministic QC report contract:
+  - `sandbox/logs/<job_id>/qc/qc_report.v1.json`
+- Add deterministic `qc_runner` that converts existing quality artifacts into gate-level policy outcomes.
+- Route controller actions from `qc_policy + qc_report` (pass/retry/fallback/escalate), preserving bounded retries and fail-loud behavior.
+- Keep Worker deterministic and unchanged in authority boundaries.
+
+Outcome:
+- Quality routing becomes explicit, auditable, and data-driven instead of scattered hardwired logic.
+
+Sub-PR plan:
+
+### PR-34.9a — OpenClaw lab curriculum + advisory contract
+Status: **IMPLEMENTED**
+
+Scope:
+- Add lab-only curriculum contract for quality diagnosis and expected gate behaviors.
+- Add `qc_route_advice.v1` contract for OpenClaw advisory output (non-authoritative).
+- Add validators ensuring advisory outputs remain within allowed action vocabulary and evidence requirements.
+
+Outcome:
+- OpenClaw can optimize quality decisions in lab mode without becoming production authority.
+
+---
+
+### PR-34.9b — Advisory mode integration in controller (policy remains authoritative)
+Status: **IMPLEMENTED**
+
+Scope:
+- Add optional controller advisory-consumption mode:
+  - read OpenClaw advice
+  - deterministically log accepted/rejected reason
+- Keep deterministic policy route as final authority.
+- Add bounded guardrails (retry/cost/time caps, fail-closed fallback).
+
+Outcome:
+- System gains “smarter” adaptive suggestions without losing deterministic runtime guarantees.
+
+---
+
+### PR-34.9c — Replay/benchmark harness for advisory lift
+Status: **IMPLEMENTED**
+
+Scope:
+- Add replay harness comparing:
+  - baseline deterministic route
+  - advisory-assisted route
+- Track measurable lift:
+  - pass rate
+  - retries per successful job
+  - score delta and regression risk
+- Emit deterministic benchmark artifacts for promotion decisions.
+
+Outcome:
+- Advisory quality gains are evidence-backed before promotion.
+
+---
+
+### PR-34.9d — Policy/advisory promotion gate
+Status: **IMPLEMENTED**
+
+Scope:
+- Add promotion contract + validator for policy/advisory updates:
+  - minimum lift thresholds
+  - max regression thresholds
+  - safety/guardrail compliance
+- Keep production promotion explicit and reviewable.
+
+Outcome:
+- Lab-to-production quality policy changes become controlled and safe.
+
+---
+
+### PR-34.9e — Guarded authority trial (feature-flagged)
+Status: **IMPLEMENTED**
+
+Scope:
+- Add optional guarded authority trial where advisory route may choose among pre-approved actions only.
+- Enforce hard fail-safe:
+  - bounded attempts
+  - deterministic rollback to policy route
+  - explicit audit artifacts
+- Disabled by default.
+
+Outcome:
+- Team can test stronger adaptive routing without risking uncontrolled behavior.
+
+---
+
+### PR-34.9f — End-to-end smoke suite + runbook updates
+Status: **IMPLEMENTED**
+
+Scope:
+- Add one-command deterministic smoke for:
+  - baseline policy route
+  - advisory route
+  - guarded authority rollback/fail-closed
+- Document operational playbook for enabling/disabling advisory and authority trial modes.
+
+Outcome:
+- PR-34.9 behavior is verifiable and operable in day-to-day workflows.
+
+---
+
+### PR-35 — Free-first engine adapter pack (generation/recast quality ceiling lift)
+Status: **PROPOSED**
+
+Scope:
+- Add free/open-source adapter track behind existing contracts:
+  - ComfyUI adapter lane (image-to-video/text-to-video where available)
+  - OpenPose-constrained segment generation path
+  - optional temporal/post passes (RIFE/FILM, selective ESRGAN)
+- Keep providers policy-driven and swappable; no paid-engine lock-in.
+- Add deterministic best-of-attempt selection by existing quality reports.
+- Preserve all CAF authority and write-boundary invariants.
+
+Outcome:
+- Increases practical quality ceiling and engine diversity while controlling cost and preserving deterministic operations.
 
 Defer note:
 - MoveNet integration is deferred until there is measured quality lift beyond current MediaPipe-based pose checkpoints.

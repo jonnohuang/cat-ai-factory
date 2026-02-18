@@ -589,6 +589,46 @@ The planner MUST deterministically select and wire quality artifacts so control-
   - no runtime mutation of `job.json` after planner write
   - Worker determinism/authority boundaries remain unchanged
 
+### FR-28.18 — QC policy contract + normalized QC report + deterministic routing
+The system MUST support policy-driven quality routing where controller decisions are derived from explicit quality policy and normalized QC reports.
+
+- Required behavior:
+  - production-authoritative policy contract at `repo/shared/qc_policy.v1.json`
+  - deterministic QC report artifact at `sandbox/logs/<job_id>/qc/qc_report.v1.json`
+  - deterministic QC runner that normalizes existing quality artifacts into gate-level pass/fail results
+  - controller routes pass/retry/fallback/escalate from policy + report under bounded retries
+- Hard constraints:
+  - planner remains nondeterministic contract generator, not runtime routing authority
+  - Worker remains deterministic and non-networked/non-LLM
+  - no mutation of `job.json` after planner write
+  - controller decisions remain auditable and replayable from artifacts
+
+### FR-28.19 — OpenClaw lab advisory mode and promotion governance
+The system MUST support OpenClaw as a lab-only quality optimizer that can propose routing/policy improvements without directly becoming production authority by default.
+
+- Required behavior:
+  - advisory contract artifact (`qc_route_advice.v1`) with deterministic validation
+  - optional controller advisory-consumption mode that logs accept/reject reasoning
+  - replay/benchmark harness measuring advisory lift vs baseline deterministic routing
+  - promotion gate contract enforcing minimum lift and regression/safety constraints
+  - guarded authority trial mode, feature-flagged and disabled by default
+- Hard constraints:
+  - default production authority remains deterministic policy routing
+  - advisory and trial modes must be bounded by explicit retry/cost/time guardrails
+  - fail-closed fallback to deterministic policy route is mandatory
+
+### FR-28.20 — Free-first engine adapter path for quality ceiling lift
+The system MUST support integrating free/open-source generation/recast adapters behind existing contracts and quality policy routing.
+
+- Required behavior:
+  - adapter lanes for ComfyUI/OpenPose-constrained generation and optional temporal/post passes
+  - policy-driven provider ordering and deterministic best-of-attempt selection by quality reports
+  - end-to-end smoke coverage proving adapter path compliance with controller policy routing
+- Hard constraints:
+  - no authority boundary changes (Planner/Control/Worker remain separated)
+  - Worker determinism and write boundaries remain unchanged
+  - paid engines remain optional adapters, not required dependencies
+
 Defer note:
 - MoveNet integration is deferred until measured quality gains exceed current MediaPipe-based pose extraction.
 

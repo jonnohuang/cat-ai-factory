@@ -31,7 +31,10 @@
       "required": [
         "quality_report_relpath",
         "costume_report_relpath",
-        "segment_stitch_plan_relpath"
+        "segment_stitch_plan_relpath",
+        "qc_policy_relpath",
+        "qc_report_relpath",
+        "qc_route_advice_relpath"
       ],
       "properties": {
         "quality_report_relpath": {
@@ -57,6 +60,26 @@
         "quality_target_contract_error": {
           "type": ["string", "null"],
           "maxLength": 240
+        },
+        "qc_policy_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(repo/.+\\.json)?$"
+        },
+        "qc_policy_error": {
+          "type": ["string", "null"],
+          "maxLength": 240
+        },
+        "qc_report_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "qc_report_error": {
+          "type": ["string", "null"],
+          "maxLength": 240
+        },
+        "qc_route_advice_relpath": {
+          "type": ["string", "null"],
+          "pattern": "^(sandbox/.+\\.json)?$"
         },
         "continuity_pack_relpath": {
           "type": ["string", "null"],
@@ -109,6 +132,18 @@
             "loop_seam": {"type": "number", "minimum": 0, "maximum": 1},
             "audio_video": {"type": "number", "minimum": 0, "maximum": 1}
           }
+        },
+        "advisory_mode_enabled": {
+          "type": "boolean"
+        },
+        "authority_trial_enabled": {
+          "type": "boolean"
+        },
+        "authority_trial_used": {
+          "type": "boolean"
+        },
+        "authority_trial_rollback": {
+          "type": "boolean"
         }
       }
     },

@@ -1,0 +1,20 @@
+{
+  "version": "qc_advisory_benchmark.v1",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "summary": {
+    "jobs_total": 1,
+    "baseline_alignment_rate": 1.0,
+    "advisory_alignment_rate": 1.0,
+    "alignment_lift": 0.0
+  },
+  "jobs": [
+    {
+      "job_id": "smoke-segment-stitch-runtime",
+      "baseline_action": "retry_motion",
+      "advisory_action": "retry_motion",
+      "policy_recommended_action": "retry_motion",
+      "baseline_aligned": true,
+      "advisory_aligned": true
+    }
+  ]
+}

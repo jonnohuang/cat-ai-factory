@@ -1396,3 +1396,88 @@ References:
 - docs/master.md
 - AGENTS.md
 - docs/decisions.md (ADR-0015, ADR-0026, ADR-0030)
+
+------------------------------------------------------------
+
+## ADR-0045 — QC policy/report contracts are production routing authority
+Date: 2026-02-18
+Status: Accepted
+
+Context:
+- CAF quality iteration needs explicit, reproducible routing decisions instead of ad-hoc tuning spread across Planner/Controller/Worker.
+- Existing quality artifacts are useful but not yet normalized into one deterministic routing contract.
+
+Decision:
+- Introduce a controller-consumed policy contract:
+  - `repo/shared/qc_policy.v1.json`
+- Introduce a normalized deterministic per-attempt report:
+  - `sandbox/logs/<job_id>/qc/qc_report.v1.json`
+- Controller routing decisions (`pass`, `retry`, `fallback`, `needs_human_review`) MUST be derived deterministically from:
+  - `qc_policy.v1`
+  - `qc_report.v1`
+  - explicit retry budget state
+- Planner and OpenClaw MAY propose changes, but MUST NOT bypass policy authority at runtime.
+
+Consequences:
+- Quality routing becomes auditable, replayable, and testable.
+- Threshold/policy updates become data changes instead of code-path drift.
+- Enables objective promotion gates from lab experiments into production policy.
+
+References:
+- docs/system-requirements.md (FR-28.18)
+- docs/PR_PROJECT_PLAN.md (PR-34.9, PR-34.9d)
+- docs/architecture.md
+
+------------------------------------------------------------
+
+## ADR-0046 — OpenClaw lab mode is advisory by default; authority trials are guarded and reversible
+Date: 2026-02-18
+Status: Accepted
+
+Context:
+- Better video quality requires agentic experimentation, but production reliability requires deterministic authority boundaries.
+- Allowing direct autonomous authority without safeguards risks policy drift and non-repeatable routing.
+
+Decision:
+- Establish two explicit quality operating modes:
+  - LAB mode: OpenClaw runs experiment loops and emits advisory artifacts
+  - PRODUCTION mode: controller enforces deterministic policy/routing
+- OpenClaw default output is advisory only (example contract family: `qc_route_advice.v1`).
+- Any advisory-to-authority path MUST be:
+  - feature-flagged
+  - default OFF
+  - bounded to approved experiments/cohorts
+  - reversible via one config switch
+- OpenClaw MUST NOT directly modify production code or bypass controller routing contracts.
+
+Consequences:
+- Preserves deterministic production behavior while enabling rapid quality discovery.
+- Creates a safe path to test smarter routing without permanent authority drift.
+
+References:
+- docs/system-requirements.md (FR-28.19)
+- docs/PR_PROJECT_PLAN.md (PR-34.9a, PR-34.9b, PR-34.9e)
+- docs/briefs/GUARDRAILS.md
+
+------------------------------------------------------------
+
+## ADR-0047 — Free-first engine posture with adapter-based escalation to paid engines
+Date: 2026-02-18
+Status: Accepted
+
+Context:
+- CAF needs higher quality ceilings while controlling operational cost and avoiding hard dependency lock-in.
+- Quality stacks span multiple engines (frame/motion/video/audio/editor), and providers will evolve.
+
+Decision:
+- Adopt a free/open-source-first default stack where practical, with adapter seams for optional paid engines.
+- Keep provider-specific logic behind explicit adapter contracts so planner/controller/worker contracts remain stable.
+- Paid engines may be enabled per policy/experiment; they are optional capabilities, not architectural authority.
+
+Consequences:
+- Improves sustainability and portability.
+- Preserves contract stability while allowing quality-focused engine upgrades.
+
+References:
+- docs/system-requirements.md (FR-28.20)
+- docs/PR_PROJECT_PLAN.md (PR-35)

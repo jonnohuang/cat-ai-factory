@@ -1,0 +1,13 @@
+{
+  "version": "qc_route_advice.v1",
+  "job_id": "smoke-segment-stitch-runtime",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "source": {
+    "mode": "lab_advisory",
+    "qc_report_relpath": "sandbox/logs/smoke-segment-stitch-runtime/qc/qc_report.v1.json"
+  },
+  "advice": {
+    "recommended_action": "retry_motion",
+    "reason": "motion gates dominate failures; retry motion recipe first"
+  }
+}

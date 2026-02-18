@@ -81,6 +81,18 @@ Planned planner-only artifacts:
 - QC MUST be deterministic and read-only.
 - QC MAY emit logs/results, but MUST NOT modify jobs/assets/outputs.
 - QC MUST NOT “fix” artifacts.
+- Production routing authority MUST come from explicit policy + QC report contracts, not ad-hoc agent judgment.
+
+### OpenClaw quality role (lab vs production)
+- OpenClaw LAB mode is allowed to run quality experiments and emit advisory artifacts.
+- OpenClaw MUST NOT directly modify production code paths or bypass controller routing authority.
+- Default posture: advisory-only.
+- Any advisory-to-authority trial MUST be feature-flagged, default-off, and reversible.
+
+### QC policy/report contract guardrails
+- Policy authority artifact: `repo/shared/qc_policy.v1.json`.
+- Per-attempt QC authority artifact: `sandbox/logs/<job_id>/qc/qc_report.v1.json`.
+- Controller pass/fail/retry/fallback routing MUST be deterministic from these artifacts + retry budget.
 
 ### Safety / social advisors
 - Advisory only.

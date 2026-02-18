@@ -14,6 +14,9 @@ def main(argv: list[str]) -> int:
     _ = argv
     root = _repo_root()
     steps = [
+        "repo.tools.smoke_qc_policy_report_contract",
+        "repo.tools.smoke_qc_benchmark_promotion",
+        "repo.tools.smoke_qc_authority_trial",
         "repo.tools.smoke_retry_plan_contract",
         "repo.tools.smoke_worker_retry_hooks",
         "repo.tools.smoke_controller_retry_execution",

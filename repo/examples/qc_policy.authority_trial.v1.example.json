@@ -1,0 +1,46 @@
+{
+  "version": "qc_policy.v1",
+  "policy_id": "authority-trial-smoke-v1",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "max_retries_default": 2,
+  "default_action_on_missing_report": "escalate_hitl",
+  "gates": [
+    {
+      "gate_id": "identity_consistency_gate",
+      "metric": "identity_consistency",
+      "dimension": "identity",
+      "threshold": 0.7,
+      "failure_action": "retry_recast"
+    },
+    {
+      "gate_id": "temporal_stability_gate",
+      "metric": "temporal_stability",
+      "dimension": "motion",
+      "threshold": 0.7,
+      "failure_action": "retry_motion"
+    }
+  ],
+  "routing": {
+    "failure_action_priority": [
+      "retry_motion",
+      "retry_recast",
+      "escalate_hitl"
+    ],
+    "fallback_action": "escalate_hitl"
+  },
+  "advisory_mode": {
+    "enabled": true,
+    "allowed_actions": [
+      "retry_motion",
+      "retry_recast",
+      "escalate_hitl"
+    ]
+  },
+  "authority_trial": {
+    "enabled": true,
+    "allowed_actions": [
+      "retry_recast"
+    ],
+    "rollback_action": "escalate_hitl"
+  }
+}

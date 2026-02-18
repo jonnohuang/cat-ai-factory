@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/qc_route_advice.v1.schema.json",
+  "title": "QC Route Advice v1",
+  "description": "Non-authoritative OpenClaw advisory routing suggestion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "generated_at",
+    "source",
+    "advice"
+  ],
+  "properties": {
+    "version": {
+      "const": "qc_route_advice.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "qc_report_relpath"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "lab_advisory"
+          ]
+        },
+        "qc_report_relpath": {
+          "type": "string",
+          "pattern": "^sandbox/.+\\.json$"
+        }
+      }
+    },
+    "advice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recommended_action",
+        "reason"
+      ],
+      "properties": {
+        "recommended_action": {
+          "type": "string",
+          "enum": [
+            "proceed_finalize",
+            "retry_motion",
+            "retry_recast",
+            "block_for_costume",
+            "escalate_hitl"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
+    }
+  }
+}
