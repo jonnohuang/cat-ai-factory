@@ -7,6 +7,12 @@ Key docs:
 - `docs/system-requirements.md` (what must be true)
 - `docs/PR_PROJECT_PLAN.md` (roadmap / PR sizing)
 - `docs/decisions.md` (binding ADRs)
+- `docs/lab-mode-runbook.md` (OpenClaw lab mode usage)
+- `docs/engine-adapters.md` (adapter/env matrix)
+- `docs/comfyui-workflows.md` (workflow_id registry pattern)
+- `docs/qc-pipeline-guide.md` (QC gates + artifacts + routing flow)
+- `docs/external-hitl-workflow.md` (default flow vs external HITL recast flow)
+- `docs/video-workflow-end-to-end.md` (single end-to-end multi-stage runbook)
 - `docs/briefs/MILESTONE-daily-v0.2.md` (daily output workflow)
 - `docs/now.md` (live PR status ledger; role sync)
 

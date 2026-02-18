@@ -621,7 +621,12 @@ The system MUST support OpenClaw as a lab-only quality optimizer that can propos
 The system MUST support integrating free/open-source generation/recast adapters behind existing contracts and quality policy routing.
 
 - Required behavior:
-  - adapter lanes for ComfyUI/OpenPose-constrained generation and optional temporal/post passes
+  - Veo3 remains baseline production video lane unless promotion policy explicitly changes default ordering
+  - adapter lanes for ComfyUI/OpenPose-constrained generation and temporal/post passes (RIFE/FILM, selective ESRGAN)
+  - add Wan API adapter lane via DashScope (region-configurable) under policy-gated challenger/fallback operation
+  - add Wan local adapter (default model version 2.6) as first free/open video adapter lane under policy-gated challenger/fallback operation
+  - add Grok image adapter lane for storyboard/seed/hero reference frame generation
+  - add Sora and Meta AI as OpenClaw LAB challengers only by default (budget-capped, advisory-first)
   - policy-driven provider ordering and deterministic best-of-attempt selection by quality reports
   - end-to-end smoke coverage proving adapter path compliance with controller policy routing
 - Hard constraints:
@@ -631,6 +636,33 @@ The system MUST support integrating free/open-source generation/recast adapters 
 
 Defer note:
 - MoveNet integration is deferred until measured quality gains exceed current MediaPipe-based pose extraction.
+
+### FR-28.21 — Autonomous lab-first sample onboarding and pointer resolver
+The system MUST support a low-manual-overhead path where high-level briefs can be executed without per-run manual contract pointer editing.
+
+- Required behavior:
+  - lab-first onboarding flow for new samples under a deterministic incoming path (for example `sandbox/assets/demo/incoming/**`)
+  - deterministic generation of sample asset manifests and candidate pointer contracts from lab analysis outputs
+  - planner-side deterministic pointer resolver:
+    - when user brief omits pointers, planner resolves best-available contracts/manifests from policy/canon rules
+    - resolved pointers are emitted explicitly in `job.json` (or referenced contracts)
+- Hard constraints:
+  - planner remains the only writer of `sandbox/jobs/*.job.json`
+  - no hidden mutable state outside file contracts
+  - production authority remains policy/report driven; no direct lab runtime bypass
+
+### FR-28.22 — Promotion queue contracts for non-CLI lab->production operations
+The system MUST support contract-driven promotion actions that can be triggered by adapters/UI without requiring direct CLI path editing by operators.
+
+- Required behavior:
+  - promotion candidate artifact(s) emitted from lab benchmarking outputs
+  - promotion approve/reject request artifacts accepted through ingress (`sandbox/inbox/*.json`)
+  - deterministic promotion processor that validates evidence thresholds before activating production-facing policy/workflow/manifest updates
+  - auditable promotion decision artifact recording accepted/rejected result and reasons
+- Hard constraints:
+  - adapter layer remains ingress/status only (no direct authority bypass)
+  - promotion decisions remain reproducible from explicit contracts and benchmark artifacts
+  - production mode consumes promoted artifacts/contracts only
 
 
 ------------------------------------------------------------

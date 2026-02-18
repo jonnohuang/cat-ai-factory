@@ -186,6 +186,31 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             elif not (relpath.startswith("repo/") or relpath.startswith("sandbox/")):
                 errors.append("captions_artifact.relpath must be repo-relative or sandbox-relative")
 
+    generation_policy = job.get("generation_policy")
+    if generation_policy is not None:
+        if not isinstance(generation_policy, dict):
+            errors.append("generation_policy must be an object when present")
+        else:
+            relpath = generation_policy.get("registry_relpath")
+            if not isinstance(relpath, str) or not relpath.strip():
+                errors.append("generation_policy.registry_relpath must be a non-empty string")
+            elif not relpath.startswith("repo/"):
+                errors.append("generation_policy.registry_relpath must be repo-relative (repo/...)")
+
+            video_order = generation_policy.get("video_provider_order")
+            frame_order = generation_policy.get("frame_provider_order")
+            if not isinstance(video_order, list) or not video_order or not all(
+                isinstance(x, str) and x.strip() for x in video_order
+            ):
+                errors.append("generation_policy.video_provider_order must be a non-empty array of strings")
+            if not isinstance(frame_order, list) or not frame_order or not all(
+                isinstance(x, str) and x.strip() for x in frame_order
+            ):
+                errors.append("generation_policy.frame_provider_order must be a non-empty array of strings")
+            route_mode = generation_policy.get("route_mode")
+            if route_mode is not None and route_mode not in ("production", "lab"):
+                errors.append("generation_policy.route_mode must be 'production' or 'lab' when present")
+
     return errors
 
 

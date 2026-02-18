@@ -93,6 +93,17 @@ Planned planner-only artifacts:
 - Policy authority artifact: `repo/shared/qc_policy.v1.json`.
 - Per-attempt QC authority artifact: `sandbox/logs/<job_id>/qc/qc_report.v1.json`.
 - Controller pass/fail/retry/fallback routing MUST be deterministic from these artifacts + retry budget.
+- For dance/motion-critical jobs, QC policy MUST include:
+  - identity-consistency thresholds
+  - pose/motion-similarity thresholds against deterministic dance-trace artifacts.
+- Multimodal diagnostics may suggest changes, but MUST NOT directly set pass/fail.
+
+### Motion-conditioned generation guardrails
+- Preferred path for choreography-sensitive content:
+  - sample dance -> pose/motion contract -> pose-conditioned keyframes -> animation -> deterministic assembly.
+- ComfyUI workflow authority MUST be repo-owned and versioned:
+  - `workflow_id -> repo/workflows/comfy/<workflow_id>.json`
+- External workflow IDs or UI state MUST NOT be authoritative.
 
 ### Safety / social advisors
 - Advisory only.

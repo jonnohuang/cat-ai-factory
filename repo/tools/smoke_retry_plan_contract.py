@@ -39,16 +39,25 @@ def main(argv: list[str]) -> int:
     retry_plan = _load(retry_plan_path)
     action = decision.get("decision", {}).get("action")
     retry_type = retry_plan.get("retry", {}).get("retry_type")
+    provider_switch = retry_plan.get("retry", {}).get("provider_switch")
     if action == "retry_motion" and retry_type != "motion":
         print(
             f"ERROR: expected retry_type motion for action retry_motion, got {retry_type!r}",
             file=sys.stderr,
         )
         return 1
+    if not isinstance(provider_switch, dict):
+        print("ERROR: retry.provider_switch missing", file=sys.stderr)
+        return 1
+    mode = provider_switch.get("mode")
+    if mode not in {"none", "video_provider", "frame_provider"}:
+        print(f"ERROR: retry.provider_switch.mode invalid: {mode!r}", file=sys.stderr)
+        return 1
 
     print("OK:", retry_plan_path)
     print("decision_action:", action)
     print("retry_type:", retry_type)
+    print("provider_switch_mode:", mode)
     return 0
 
 

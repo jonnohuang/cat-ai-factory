@@ -95,6 +95,32 @@ def safe_rel(path: pathlib.Path, root: pathlib.Path) -> Optional[str]:
         return None
 
 
+def provider_switch_env_from_retry_plan(retry_plan_path: pathlib.Path) -> Dict[str, str]:
+    payload = load_json_if_exists(retry_plan_path)
+    if not isinstance(payload, dict):
+        return {}
+    retry = payload.get("retry")
+    if not isinstance(retry, dict):
+        return {}
+    switch = retry.get("provider_switch")
+    if not isinstance(switch, dict):
+        return {}
+    mode = str(switch.get("mode", "none"))
+    next_provider = switch.get("next_provider")
+    current_provider = switch.get("current_provider")
+    if mode not in {"video_provider", "frame_provider"}:
+        return {}
+    if not isinstance(next_provider, str) or not next_provider:
+        return {}
+    out = {
+        "CAF_RETRY_PROVIDER_SWITCH_MODE": mode,
+        "CAF_RETRY_NEXT_PROVIDER": next_provider,
+    }
+    if isinstance(current_provider, str) and current_provider:
+        out["CAF_RETRY_CURRENT_PROVIDER"] = current_provider
+    return out
+
+
 def classify_action(action: str) -> str:
     if action in ("retry_recast", "retry_motion"):
         return "retry"
@@ -335,6 +361,23 @@ def main(argv: List[str]) -> int:
                 source_reason = str(source.get("reason", reason_s))
                 max_retries = retry.get("max_retries")
                 next_attempt = retry.get("next_attempt")
+                provider_switch = retry.get("provider_switch") if isinstance(retry, dict) else None
+                provider_mode = provider_switch.get("mode") if isinstance(provider_switch, dict) else "none"
+                provider_next = provider_switch.get("next_provider") if isinstance(provider_switch, dict) else None
+                if provider_mode in {"video_provider", "frame_provider"} and isinstance(provider_next, str):
+                    append_event(
+                        events_path,
+                        "QUALITY_PROVIDER_SWITCH",
+                        current_state,
+                        current_state,
+                        attempt_id,
+                        {
+                            "mode": provider_mode,
+                            "current_provider": provider_switch.get("current_provider"),
+                            "next_provider": provider_next,
+                            "artifact": str(retry_plan_path),
+                        },
+                    )
                 if (
                     enabled
                     and retry_type in {"motion", "recast"}
@@ -364,6 +407,7 @@ def main(argv: List[str]) -> int:
                         "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
                         "retry_type": retry_type,
                         "segment_retry": retry.get("segment_retry"),
+                        "provider_switch": provider_switch if isinstance(provider_switch, dict) else None,
                     }
                 terminal_state = str(retry_plan_payload.get("state", {}).get("terminal_state", "none"))
                 if terminal_state == "block_for_costume":
@@ -374,6 +418,7 @@ def main(argv: List[str]) -> int:
                         "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
                         "retry_type": "none",
                         "segment_retry": retry.get("segment_retry") if isinstance(retry, dict) else None,
+                        "provider_switch": provider_switch if isinstance(provider_switch, dict) else None,
                     }
                 if terminal_state == "escalate_hitl":
                     return "escalate_hitl", source_reason, {
@@ -383,6 +428,7 @@ def main(argv: List[str]) -> int:
                         "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
                         "retry_type": "none",
                         "segment_retry": retry.get("segment_retry") if isinstance(retry, dict) else None,
+                        "provider_switch": provider_switch if isinstance(provider_switch, dict) else None,
                     }
         decision_ctx = {
             "quality_decision_relpath": safe_rel(decision_path, repo_root),
@@ -391,6 +437,7 @@ def main(argv: List[str]) -> int:
             "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
             "retry_type": None,
             "segment_retry": None,
+            "provider_switch": None,
         }
         gate_payload = load_json_if_exists(finalize_gate_path)
         if isinstance(gate_payload, dict):
@@ -535,6 +582,7 @@ def main(argv: List[str]) -> int:
             worker_env: Dict[str, str] = {}
             if retry_plan_path.exists():
                 worker_env["CAF_RETRY_PLAN_PATH"] = str(retry_plan_path.resolve())
+                worker_env.update(provider_switch_env_from_retry_plan(retry_plan_path))
             worker_env["CAF_RETRY_ATTEMPT_ID"] = attempt_id
             rc = run_cmd(worker_cmd, worker_log, env_overrides=worker_env)
             if rc != 0:

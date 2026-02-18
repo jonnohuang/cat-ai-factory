@@ -37,7 +37,10 @@ Last Updated: 2026-02-18
   - guarded authority trial (feature-flagged): `CAF_QC_AUTHORITY_TRIAL=1` + policy `authority_trial` block
   - one-command closed-loop smoke now includes policy, advisory, benchmark/promotion, authority trial, retry/lineage/finalize checks
 - Planned and documented PR-35 follow-on quality-ceiling scope:
-  - free-first engine adapter pack (ComfyUI/OpenPose/temporal-post lanes) behind existing CAF contracts and quality policy.
+  - ComfyUI/OpenPose/temporal-post adapter track remains in-scope for PR-35.
+  - Veo3 baseline + Wan DashScope API lane (region-configurable) + Wan local (default 2.6) adapter lane.
+  - Grok image storyboard/seed/hero frame lane.
+  - Sora + Meta AI in OpenClaw LAB challenger mode only by default (budget-capped, advisory-first).
 - Added new requirements for PR-34.9/35 planning scope:
   - FR-28.18 policy contract + normalized QC report + deterministic routing
   - FR-28.19 OpenClaw lab advisory mode + promotion governance
