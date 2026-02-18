@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/qc_advisory_benchmark.v1.schema.json",
+  "title": "QC Advisory Benchmark v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "generated_at",
+    "summary",
+    "jobs"
+  ],
+  "properties": {
+    "version": {
+      "const": "qc_advisory_benchmark.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jobs_total",
+        "baseline_alignment_rate",
+        "advisory_alignment_rate",
+        "alignment_lift"
+      ],
+      "properties": {
+        "jobs_total": {"type": "integer", "minimum": 0},
+        "baseline_alignment_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "advisory_alignment_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "alignment_lift": {"type": "number", "minimum": -1, "maximum": 1}
+      }
+    },
+    "jobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "job_id",
+          "baseline_action",
+          "advisory_action",
+          "policy_recommended_action",
+          "baseline_aligned",
+          "advisory_aligned"
+        ],
+        "properties": {
+          "job_id": {"type": "string", "minLength": 1},
+          "baseline_action": {"type": "string", "minLength": 1},
+          "advisory_action": {"type": ["string", "null"]},
+          "policy_recommended_action": {"type": "string", "minLength": 1},
+          "baseline_aligned": {"type": "boolean"},
+          "advisory_aligned": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "version": "qc_policy.v1",
+  "policy_id": "default-motion-identity-v1",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "max_retries_default": 2,
+  "default_action_on_missing_report": "escalate_hitl",
+  "gates": [
+    {
+      "gate_id": "identity_consistency_gate",
+      "metric": "identity_consistency",
+      "dimension": "identity",
+      "threshold": 0.7,
+      "failure_action": "retry_recast"
+    },
+    {
+      "gate_id": "mask_edge_bleed_gate",
+      "metric": "mask_edge_bleed",
+      "dimension": "identity",
+      "threshold": 0.6,
+      "failure_action": "retry_recast"
+    },
+    {
+      "gate_id": "temporal_stability_gate",
+      "metric": "temporal_stability",
+      "dimension": "motion",
+      "threshold": 0.7,
+      "failure_action": "retry_motion"
+    },
+    {
+      "gate_id": "loop_seam_gate",
+      "metric": "loop_seam",
+      "dimension": "motion",
+      "threshold": 0.7,
+      "failure_action": "retry_motion"
+    },
+    {
+      "gate_id": "audio_video_gate",
+      "metric": "audio_video",
+      "dimension": "audio",
+      "threshold": 0.95,
+      "failure_action": "retry_recast"
+    },
+    {
+      "gate_id": "costume_fidelity_gate",
+      "metric": "costume_fidelity",
+      "dimension": "costume",
+      "threshold": 1.0,
+      "failure_action": "block_for_costume"
+    }
+  ],
+  "routing": {
+    "failure_action_priority": [
+      "block_for_costume",
+      "retry_motion",
+      "retry_recast",
+      "escalate_hitl"
+    ],
+    "fallback_action": "escalate_hitl"
+  },
+  "advisory_mode": {
+    "enabled": true,
+    "allowed_actions": [
+      "retry_motion",
+      "retry_recast",
+      "block_for_costume",
+      "escalate_hitl"
+    ]
+  },
+  "authority_trial": {
+    "enabled": false,
+    "allowed_actions": [
+      "retry_motion",
+      "retry_recast"
+    ],
+    "rollback_action": "escalate_hitl"
+  }
+}

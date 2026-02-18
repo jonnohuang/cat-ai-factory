@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/qc_promotion_gate.v1.schema.json",
+  "title": "QC Promotion Gate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "gate_id",
+    "thresholds"
+  ],
+  "properties": {
+    "version": {
+      "const": "qc_promotion_gate.v1"
+    },
+    "gate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min_alignment_lift",
+        "max_negative_lift"
+      ],
+      "properties": {
+        "min_alignment_lift": {"type": "number", "minimum": -1, "maximum": 1},
+        "max_negative_lift": {"type": "number", "minimum": -1, "maximum": 1}
+      }
+    }
+  }
+}

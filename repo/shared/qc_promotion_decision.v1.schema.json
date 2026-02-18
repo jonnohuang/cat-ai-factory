@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/qc_promotion_decision.v1.schema.json",
+  "title": "QC Promotion Decision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "generated_at",
+    "inputs",
+    "decision"
+  ],
+  "properties": {
+    "version": {
+      "const": "qc_promotion_decision.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "benchmark_relpath",
+        "promotion_gate_relpath",
+        "alignment_lift"
+      ],
+      "properties": {
+        "benchmark_relpath": {"type": "string", "pattern": "^sandbox/.+\\.json$"},
+        "promotion_gate_relpath": {"type": "string", "pattern": "^repo/.+\\.json$"},
+        "alignment_lift": {"type": "number", "minimum": -1, "maximum": 1}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "promote",
+        "reason"
+      ],
+      "properties": {
+        "promote": {"type": "boolean"},
+        "reason": {"type": "string", "maxLength": 240}
+      }
+    }
+  }
+}

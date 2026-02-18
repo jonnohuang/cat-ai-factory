@@ -8,6 +8,11 @@
     "two_pass_orchestration_relpath": "sandbox/logs/mochi-dino-replace-smoke-20240515/qc/two_pass_orchestration.v1.json",
     "quality_target_relpath": "repo/examples/quality_target.v1.example.json",
     "quality_target_contract_error": null,
+    "qc_policy_relpath": "repo/shared/qc_policy.v1.json",
+    "qc_policy_error": null,
+    "qc_report_relpath": "sandbox/logs/mochi-dino-replace-smoke-20240515/qc/qc_report.v1.json",
+    "qc_report_error": null,
+    "qc_route_advice_relpath": "sandbox/logs/mochi-dino-replace-smoke-20240515/qc/qc_route_advice.v1.json",
     "continuity_pack_relpath": "repo/examples/episode_continuity_pack.v1.example.json",
     "continuity_pack_error": null,
     "segment_stitch_plan_relpath": "repo/examples/segment_stitch_plan.v1.example.json",
@@ -25,7 +30,11 @@
       "temporal_stability": 0.7,
       "loop_seam": 0.7,
       "audio_video": 0.95
-    }
+    },
+    "advisory_mode_enabled": true,
+    "authority_trial_enabled": false,
+    "authority_trial_used": false,
+    "authority_trial_rollback": false
   },
   "segment_retry": {
     "mode": "none",

@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/qc_report.v1.schema.json",
+  "title": "QC Report v1",
+  "description": "Deterministic normalized quality report used for policy-driven routing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "generated_at",
+    "inputs",
+    "gates",
+    "overall"
+  ],
+  "properties": {
+    "version": {
+      "const": "qc_report.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "qc_policy_relpath",
+        "quality_report_relpath",
+        "costume_report_relpath",
+        "two_pass_orchestration_relpath"
+      ],
+      "properties": {
+        "qc_policy_relpath": {
+          "type": "string",
+          "pattern": "^repo/.+\\.json$"
+        },
+        "quality_report_relpath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "costume_report_relpath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        },
+        "two_pass_orchestration_relpath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(sandbox/.+\\.json)?$"
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gate_id",
+          "metric",
+          "dimension",
+          "status",
+          "failure_action"
+        ],
+        "properties": {
+          "gate_id": {
+            "type": "string"
+          },
+          "metric": {
+            "type": "string"
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail",
+              "unknown"
+            ]
+          },
+          "score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "threshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "failure_action": {
+            "type": "string",
+            "enum": [
+              "retry_motion",
+              "retry_recast",
+              "block_for_costume",
+              "escalate_hitl"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 240
+          }
+        }
+      }
+    },
+    "overall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pass",
+        "failed_gate_ids",
+        "recommended_action"
+      ],
+      "properties": {
+        "pass": {
+          "type": "boolean"
+        },
+        "failed_gate_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommended_action": {
+          "type": "string",
+          "enum": [
+            "proceed_finalize",
+            "retry_motion",
+            "retry_recast",
+            "block_for_costume",
+            "escalate_hitl"
+          ]
+        }
+      }
+    }
+  }
+}

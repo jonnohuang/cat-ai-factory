@@ -291,6 +291,7 @@ def main(argv: List[str]) -> int:
         decision_path = qc_dir / "quality_decision.v1.json"
         retry_plan_path = qc_dir / "retry_plan.v1.json"
         finalize_gate_path = qc_dir / "finalize_gate.v1.json"
+        advice_path = qc_dir / "qc_route_advice.v1.json"
         payload = load_json_if_exists(decision_path) or {}
         decision = payload.get("decision", {}) if isinstance(payload, dict) else {}
         action = decision.get("action") if isinstance(decision, dict) else None
@@ -305,6 +306,24 @@ def main(argv: List[str]) -> int:
             attempt_id,
             {"action": action_s, "reason": reason_s, "artifact": str(decision_path)},
         )
+        advice_payload = load_json_if_exists(advice_path)
+        if isinstance(advice_payload, dict) and advice_payload.get("version") == "qc_route_advice.v1":
+            advice_action = advice_payload.get("advice", {}).get("recommended_action")
+            advice_reason = advice_payload.get("advice", {}).get("reason")
+            append_event(
+                events_path,
+                "QUALITY_ADVISORY",
+                current_state,
+                current_state,
+                attempt_id,
+                {
+                    "advice_action": advice_action,
+                    "advice_reason": advice_reason,
+                    "authoritative_action": action_s,
+                    "authority_mode": "policy_authoritative",
+                    "artifact": str(advice_path),
+                },
+            )
         retry_plan_payload = load_json_if_exists(retry_plan_path)
         if isinstance(retry_plan_payload, dict):
             retry = retry_plan_payload.get("retry", {})
@@ -342,6 +361,7 @@ def main(argv: List[str]) -> int:
                         "quality_decision_relpath": safe_rel(decision_path, repo_root),
                         "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
                         "finalize_gate_relpath": safe_rel(finalize_gate_path, repo_root) if finalize_gate_path.exists() else None,
+                        "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
                         "retry_type": retry_type,
                         "segment_retry": retry.get("segment_retry"),
                     }
@@ -351,6 +371,7 @@ def main(argv: List[str]) -> int:
                         "quality_decision_relpath": safe_rel(decision_path, repo_root),
                         "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
                         "finalize_gate_relpath": safe_rel(finalize_gate_path, repo_root) if finalize_gate_path.exists() else None,
+                        "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
                         "retry_type": "none",
                         "segment_retry": retry.get("segment_retry") if isinstance(retry, dict) else None,
                     }
@@ -359,6 +380,7 @@ def main(argv: List[str]) -> int:
                         "quality_decision_relpath": safe_rel(decision_path, repo_root),
                         "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
                         "finalize_gate_relpath": safe_rel(finalize_gate_path, repo_root) if finalize_gate_path.exists() else None,
+                        "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
                         "retry_type": "none",
                         "segment_retry": retry.get("segment_retry") if isinstance(retry, dict) else None,
                     }
@@ -366,6 +388,7 @@ def main(argv: List[str]) -> int:
             "quality_decision_relpath": safe_rel(decision_path, repo_root),
             "retry_plan_relpath": safe_rel(retry_plan_path, repo_root) if retry_plan_path.exists() else None,
             "finalize_gate_relpath": safe_rel(finalize_gate_path, repo_root) if finalize_gate_path.exists() else None,
+            "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
             "retry_type": None,
             "segment_retry": None,
         }

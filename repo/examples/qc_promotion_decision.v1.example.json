@@ -1,0 +1,13 @@
+{
+  "version": "qc_promotion_decision.v1",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "inputs": {
+    "benchmark_relpath": "sandbox/logs/qc/benchmarks/qc_advisory_benchmark.v1.json",
+    "promotion_gate_relpath": "repo/shared/qc_promotion_gate.v1.json",
+    "alignment_lift": 0.0
+  },
+  "decision": {
+    "promote": true,
+    "reason": "Alignment lift meets configured threshold."
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "version": "openclaw_lab_curriculum.v1",
+  "curriculum_id": "quality-routing-baseline-v1",
+  "tracks": [
+    {
+      "track_id": "motion_recovery",
+      "focus": "temporal stability and loop seam drift",
+      "expected_failed_gates": [
+        "temporal_stability_gate",
+        "loop_seam_gate"
+      ],
+      "target_actions": [
+        "retry_motion",
+        "escalate_hitl"
+      ]
+    },
+    {
+      "track_id": "identity_recovery",
+      "focus": "hero identity and mask bleed",
+      "expected_failed_gates": [
+        "identity_consistency_gate",
+        "mask_edge_bleed_gate"
+      ],
+      "target_actions": [
+        "retry_recast",
+        "escalate_hitl"
+      ]
+    }
+  ]
+}

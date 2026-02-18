@@ -164,6 +164,17 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             elif not relpath.startswith("repo/"):
                 errors.append("continuity_pack.relpath must be repo-relative (repo/...)")
 
+    quality_policy = job.get("quality_policy")
+    if quality_policy is not None:
+        if not isinstance(quality_policy, dict):
+            errors.append("quality_policy must be an object when present")
+        else:
+            relpath = quality_policy.get("relpath")
+            if not isinstance(relpath, str) or not relpath.strip():
+                errors.append("quality_policy.relpath must be a non-empty string")
+            elif not relpath.startswith("repo/"):
+                errors.append("quality_policy.relpath must be repo-relative (repo/...)")
+
     captions_artifact = job.get("captions_artifact")
     if captions_artifact is not None:
         if not isinstance(captions_artifact, dict):

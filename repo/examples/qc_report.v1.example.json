@@ -1,0 +1,39 @@
+{
+  "version": "qc_report.v1",
+  "job_id": "smoke-segment-stitch-runtime",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "inputs": {
+    "qc_policy_relpath": "repo/shared/qc_policy.v1.json",
+    "quality_report_relpath": "sandbox/logs/smoke-segment-stitch-runtime/qc/recast_quality_report.v1.json",
+    "costume_report_relpath": "sandbox/logs/smoke-segment-stitch-runtime/qc/costume_fidelity.v1.json",
+    "two_pass_orchestration_relpath": "sandbox/logs/smoke-segment-stitch-runtime/qc/two_pass_orchestration.v1.json"
+  },
+  "gates": [
+    {
+      "gate_id": "identity_consistency_gate",
+      "metric": "identity_consistency",
+      "dimension": "identity",
+      "status": "pass",
+      "score": 0.81,
+      "threshold": 0.7,
+      "failure_action": "retry_recast"
+    },
+    {
+      "gate_id": "temporal_stability_gate",
+      "metric": "temporal_stability",
+      "dimension": "motion",
+      "status": "fail",
+      "score": 0.52,
+      "threshold": 0.7,
+      "failure_action": "retry_motion",
+      "reason": "score_below_threshold"
+    }
+  ],
+  "overall": {
+    "pass": false,
+    "failed_gate_ids": [
+      "temporal_stability_gate"
+    ],
+    "recommended_action": "retry_motion"
+  }
+}

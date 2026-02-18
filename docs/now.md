@@ -14,13 +14,13 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-34.8d — Analyzer reproducibility lockdown (pinned deps + tool version stamps)**
-Last Updated: 2026-02-17
+PR: **PR-34.9 — Policy-driven quality routing foundation (QC policy + QC runner + deterministic routing)**
+Last Updated: 2026-02-18
 
 ### Status by Role
-- ARCH: In Progress (PR-34.8d scope lock + acceptance criteria)
-- CODEX: In Progress (implementing analyzer lock + tool version stamps)
-- CLOUD-REVIEW: Not Required (PR-34.8 is non-cloud scope)
+- ARCH: Complete (PR-34.9 implemented; PR-35 queued)
+- CODEX: Complete (PR-34.9 pack implemented and smoke-validated)
+- CLOUD-REVIEW: Not Required (quality-track local/runtime scope)
 
 ### Decisions / ADRs Touched
 - ADR-0041 (Video Analyzer planner-side canon contracts)
@@ -30,6 +30,18 @@ Last Updated: 2026-02-17
 - ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
+- Implemented PR-34.9 parent + sub-PRs (`34.9a` to `34.9f`) with deterministic artifacts and tooling:
+  - production policy/report contracts: `qc_policy.v1`, `qc_report.v1`
+  - advisory contract + lab curriculum: `qc_route_advice.v1`, `openclaw_lab_curriculum.v1`
+  - replay benchmark + promotion gating: `qc_advisory_benchmark.v1`, `qc_promotion_gate.v1`, `qc_promotion_decision.v1`
+  - guarded authority trial (feature-flagged): `CAF_QC_AUTHORITY_TRIAL=1` + policy `authority_trial` block
+  - one-command closed-loop smoke now includes policy, advisory, benchmark/promotion, authority trial, retry/lineage/finalize checks
+- Planned and documented PR-35 follow-on quality-ceiling scope:
+  - free-first engine adapter pack (ComfyUI/OpenPose/temporal-post lanes) behind existing CAF contracts and quality policy.
+- Added new requirements for PR-34.9/35 planning scope:
+  - FR-28.18 policy contract + normalized QC report + deterministic routing
+  - FR-28.19 OpenClaw lab advisory mode + promotion governance
+  - FR-28.20 free-first engine adapter path for quality ceiling lift
 - Planner now uses quality artifacts by default (no manual job patching required):
   - `repo/services/planner/planner_cli.py` contract discovery now prefers `repo/canon/**` over `repo/examples/**`, then newest artifact first.
   - planner now auto-wires `job.quality_target.relpath` when missing, with strict-motion target preferred when segment-stitch context is active.
