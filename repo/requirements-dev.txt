@@ -5,6 +5,8 @@
 #
 # Install:
 #   pip install -r repo/requirements-dev.txt
+# Reproducible analyzer stack (recommended for quality pipeline):
+#   pip install -r repo/requirements-dev.txt -c repo/requirements-analyzer-lock.txt
 
 # --- Core validation ---
 jsonschema>=4.21.0

@@ -9,6 +9,7 @@
     "version",
     "analysis_id",
     "source_video_relpath",
+    "tool_versions",
     "truth",
     "prompt_packages",
     "confidence"
@@ -24,6 +25,9 @@
     "source_video_relpath": {
       "type": "string",
       "pattern": "^sandbox/.+\\.(mp4|mov|mkv|webm)$"
+    },
+    "tool_versions": {
+      "$ref": "#/definitions/tool_versions"
     },
     "truth": {
       "$ref": "#/definitions/truth"
@@ -42,6 +46,39 @@
     }
   },
   "definitions": {
+    "tool_versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python",
+        "opencv",
+        "mediapipe",
+        "librosa",
+        "scenedetect"
+      ],
+      "properties": {
+        "python": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "opencv": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "mediapipe": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "librosa": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "scenedetect": {
+          "type": "string",
+          "maxLength": 64
+        }
+      }
+    },
     "truth": {
       "type": "object",
       "additionalProperties": false,

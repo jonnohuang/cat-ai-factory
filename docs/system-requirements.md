@@ -562,8 +562,20 @@ The system MUST support optional subtitle/caption artifact ingestion from Whispe
   - optional captions artifact pointers are validated and auditable
 - Hard constraints:
   - captions extraction remains outside Worker runtime determinism requirements
-  - Worker network/LLM prohibitions remain unchanged
-  - no failure escalation solely due to optional captions unavailability
+- Worker network/LLM prohibitions remain unchanged
+- no failure escalation solely due to optional captions unavailability
+
+### FR-28.16 — Analyzer reproducibility lock + version stamps
+The system MUST reduce analyzer model/tool drift by pinning dependency versions and recording runtime tool versions in analyzer artifacts.
+
+- Required behavior:
+  - provide a reproducible analyzer constraints/lock file for CV/audio dependencies
+  - emit `tool_versions` metadata in analyzer-derived contracts (pose/reverse/frame-label lanes)
+  - enforce version stamp presence and cross-artifact consistency in deterministic validators
+- Hard constraints:
+  - lock metadata is advisory to install/runtime and must not become hidden mutable state
+  - analyzer artifact version stamps remain planner-side metadata only
+  - Worker authority and determinism boundaries remain unchanged
 
 Defer note:
 - MoveNet integration is deferred until measured quality gains exceed current MediaPipe-based pose extraction.

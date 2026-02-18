@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/frame_labels.v1.schema.json",
+  "title": "Frame Labels v1",
+  "description": "Planner-side frame labeling contract with analyzer facts as authority and constrained enrichment labels.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "analysis_id",
+    "source_video_relpath",
+    "tool_versions",
+    "authority",
+    "policy",
+    "frames"
+  ],
+  "properties": {
+    "version": {
+      "const": "frame_labels.v1"
+    },
+    "analysis_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "source_video_relpath": {
+      "type": "string",
+      "pattern": "^sandbox/.+\\.(mp4|mov|mkv|webm)$"
+    },
+    "tool_versions": {
+      "$ref": "#/definitions/tool_versions"
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reverse_prompt_ref",
+        "keyframe_checkpoints_ref"
+      ],
+      "properties": {
+        "reverse_prompt_ref": {
+          "type": "string",
+          "pattern": "^repo/(canon|examples)/[a-zA-Z0-9._/-]+\\.json$"
+        },
+        "keyframe_checkpoints_ref": {
+          "type": "string",
+          "pattern": "^repo/(canon|examples)/[a-zA-Z0-9._/-]+\\.json$"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "facts_only_or_unknown",
+        "enrichment_provider"
+      ],
+      "properties": {
+        "facts_only_or_unknown": {
+          "const": true
+        },
+        "enrichment_provider": {
+          "type": "string",
+          "enum": [
+            "none",
+            "gemini_vision",
+            "chatgpt_vision",
+            "rule_based"
+          ]
+        }
+      }
+    },
+    "frames": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/frame"
+      }
+    }
+  },
+  "definitions": {
+    "tool_versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python",
+        "opencv",
+        "mediapipe",
+        "librosa",
+        "scenedetect"
+      ],
+      "properties": {
+        "python": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "opencv": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "mediapipe": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "librosa": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "scenedetect": {
+          "type": "string",
+          "maxLength": 64
+        }
+      }
+    },
+    "frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frame_id",
+        "shot_id",
+        "t_sec",
+        "facts",
+        "labels",
+        "confidence"
+      ],
+      "properties": {
+        "frame_id": {
+          "type": "string",
+          "pattern": "^frame_[0-9]{3}$"
+        },
+        "shot_id": {
+          "type": "string",
+          "pattern": "^shot_[0-9]{3}$"
+        },
+        "t_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "facts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "camera_mode",
+            "brightness_bucket",
+            "palette_hint",
+            "motion_intensity"
+          ],
+          "properties": {
+            "camera_mode": {
+              "type": "string",
+              "enum": [
+                "locked",
+                "pan",
+                "tilt",
+                "push",
+                "pull",
+                "mixed",
+                "unknown"
+              ]
+            },
+            "brightness_bucket": {
+              "type": "string",
+              "enum": [
+                "dark",
+                "mid",
+                "bright",
+                "unknown"
+              ]
+            },
+            "palette_hint": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "motion_intensity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "subject_focus",
+            "motion_phase",
+            "composition",
+            "action_summary"
+          ],
+          "properties": {
+            "subject_focus": {
+              "type": "string",
+              "enum": [
+                "hero",
+                "group",
+                "background",
+                "unknown"
+              ]
+            },
+            "motion_phase": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "unknown"
+              ]
+            },
+            "composition": {
+              "type": "string",
+              "enum": [
+                "close",
+                "mid",
+                "wide",
+                "unknown"
+              ]
+            },
+            "action_summary": {
+              "type": "string",
+              "maxLength": 160
+            }
+          }
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "facts",
+            "enrichment"
+          ],
+          "properties": {
+            "facts": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "enrichment": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "uncertainty": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
+      }
+    }
+  }
+}

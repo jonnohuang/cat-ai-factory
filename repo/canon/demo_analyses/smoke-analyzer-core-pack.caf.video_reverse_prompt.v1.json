@@ -2,6 +2,13 @@
   "version": "caf.video_reverse_prompt.v1",
   "analysis_id": "smoke-analyzer-core-pack",
   "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
+  "tool_versions": {
+    "python": "3.12.8",
+    "opencv": "4.10.0",
+    "mediapipe": "unknown",
+    "librosa": "unknown",
+    "scenedetect": "unknown"
+  },
   "truth": {
     "beat_grid_ref": "repo/canon/demo_analyses/smoke-analyzer-core-pack.beat_grid.v1.json",
     "pose_checkpoints_ref": "repo/canon/demo_analyses/smoke-analyzer-core-pack.pose_checkpoints.v1.json",

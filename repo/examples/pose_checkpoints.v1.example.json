@@ -3,6 +3,13 @@
   "analysis_id": "demo-dance-loop-mochi-01",
   "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
   "model": "movenet-lightning",
+  "tool_versions": {
+    "python": "3.11.9",
+    "opencv": "4.10.0.84",
+    "mediapipe": "0.10.14",
+    "librosa": "0.10.2.post1",
+    "scenedetect": "0.6.3"
+  },
   "checkpoints": [
     {
       "t_sec": 0.20,

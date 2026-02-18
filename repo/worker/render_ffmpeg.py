@@ -65,6 +65,63 @@ def make_srt(captions, out_path: pathlib.Path) -> None:
     atomic_write_text(out_path, "\n".join(lines))
 
 
+def prepare_subtitles_file(job: dict, srt_path: pathlib.Path, sandbox_root: pathlib.Path) -> str:
+    """
+    Resolve subtitles deterministically from:
+    1) optional job.captions_artifact.relpath (captions_artifact.v1)
+    2) inline job.captions[]
+    3) empty fallback
+
+    Returns initial subtitles_status.
+    """
+    captions_artifact = job.get("captions_artifact")
+    if isinstance(captions_artifact, dict):
+        relpath = captions_artifact.get("relpath")
+        if isinstance(relpath, str) and relpath.strip():
+            try:
+                artifact_path = resolve_project_relpath(relpath.strip(), repo_root_from_here(), sandbox_root)
+            except Exception:
+                atomic_write_text(srt_path, "")
+                return "skipped_external_invalid_pointer"
+            if not artifact_path.exists():
+                atomic_write_text(srt_path, "")
+                return "skipped_external_missing"
+            try:
+                artifact = load_json_file(artifact_path)
+            except Exception:
+                atomic_write_text(srt_path, "")
+                return "skipped_external_invalid_json"
+            if artifact.get("version") != "captions_artifact.v1":
+                atomic_write_text(srt_path, "")
+                return "skipped_external_invalid_contract"
+            srt_relpath = artifact.get("srt_relpath")
+            if not isinstance(srt_relpath, str) or not srt_relpath.strip():
+                atomic_write_text(srt_path, "")
+                return "skipped_external_missing_srt_relpath"
+            try:
+                source_srt = resolve_project_relpath(srt_relpath.strip(), repo_root_from_here(), sandbox_root)
+            except Exception:
+                atomic_write_text(srt_path, "")
+                return "skipped_external_invalid_srt_pointer"
+            if (not source_srt.exists()) or (not source_srt.is_file()):
+                atomic_write_text(srt_path, "")
+                return "skipped_external_srt_missing"
+            content = source_srt.read_text(encoding="utf-8")
+            atomic_write_text(srt_path, content)
+            if srt_path.stat().st_size == 0:
+                return "skipped_empty"
+            return "ready_to_burn"
+
+    if "captions" in job and job["captions"]:
+        make_srt(job["captions"], srt_path)
+        if srt_path.stat().st_size == 0:
+            return "skipped_empty"
+        return "ready_to_burn"
+
+    atomic_write_text(srt_path, "")
+    return "skipped_no_captions"
+
+
 def load_job(jobs_dir: pathlib.Path, job_path: str | None = None):
     if job_path:
         job_file = pathlib.Path(job_path)
@@ -1236,18 +1293,9 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     out_mp4 = out_dir / "final.mp4"
     srt_path = out_dir / "final.srt"
     
-    if "captions" in job and job["captions"]:
-        make_srt(job["captions"], srt_path)
-    else:
-        atomic_write_text(srt_path, "")
+    subtitles_status = prepare_subtitles_file(job, srt_path, sandbox_root)
     
     current_bg_ref = "[bg]"
-    
-    subtitles_status = "ready_to_burn"
-    if "captions" not in job or not job["captions"]:
-        subtitles_status = "skipped_no_captions"
-    elif srt_path.exists() and srt_path.stat().st_size == 0:
-        subtitles_status = "skipped_empty"
     
     if subtitles_status == "ready_to_burn":
         try:
@@ -1371,12 +1419,7 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     out_mp4 = out_dir / "final.mp4"
     srt_path = out_dir / "final.srt"
     
-    # Create captions if present
-    if "captions" in job and job["captions"]:
-        make_srt(job["captions"], srt_path)
-    else:
-        # Create empty srt file to preserve invariant
-        atomic_write_text(srt_path, "")
+    subtitles_status = prepare_subtitles_file(job, srt_path, sandbox_root)
 
     # Get video dimensions (height unused but returned for completeness/logging if needed)
     video_w, _ = get_video_dims(bg)
@@ -1479,17 +1522,6 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     # Strategy: Try with subtitles first (if they exist). If that fails (e.g. no libass), 
     # fallback to just watermark.
     
-    # Default status if we declare we aren't burning (e.g. empty file)
-    # Default status logic
-    if "captions" not in job or not job["captions"]:
-        subtitles_status = "skipped_no_captions"
-    elif srt_path.exists() and srt_path.stat().st_size == 0:
-        subtitles_status = "skipped_empty"
-    else:
-        # If we have a file with content, we assume we might try to burn it.
-        # If we fail, we'll update this.
-        subtitles_status = "ready_to_burn"
-
     final_cmd_logical = []
     final_cmd_executed = []
     failed_cmd = None
@@ -1600,10 +1632,7 @@ def render_duet_overlay_mochi(job: dict, sandbox_root: pathlib.Path, out_dir: pa
 
     out_mp4 = out_dir / "final.mp4"
     srt_path = out_dir / "final.srt"
-    if "captions" in job and job["captions"]:
-        make_srt(job["captions"], srt_path)
-    else:
-        atomic_write_text(srt_path, "")
+    subtitles_status = prepare_subtitles_file(job, srt_path, sandbox_root)
 
     duration = str(job["video"]["length_seconds"])
     fps = str(job["video"]["fps"])
@@ -1657,13 +1686,6 @@ def render_duet_overlay_mochi(job: dict, sandbox_root: pathlib.Path, out_dir: pa
         f"[v_bg][v_fg]overlay=x={panel_x}:y={panel_y}:format=auto[v_duet];"
         f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
     )
-
-    if "captions" not in job or not job["captions"]:
-        subtitles_status = "skipped_no_captions"
-    elif srt_path.exists() and srt_path.stat().st_size == 0:
-        subtitles_status = "skipped_empty"
-    else:
-        subtitles_status = "ready_to_burn"
 
     if subtitles_status == "ready_to_burn" and not ffmpeg_has_subtitles_filter():
         subtitles_status = "skipped_missing_subtitles_filter"
@@ -1780,10 +1802,7 @@ def render_motion_source_overlay_mochi(
 
     out_mp4 = out_dir / "final.mp4"
     srt_path = out_dir / "final.srt"
-    if "captions" in job and job["captions"]:
-        make_srt(job["captions"], srt_path)
-    else:
-        atomic_write_text(srt_path, "")
+    subtitles_status = prepare_subtitles_file(job, srt_path, sandbox_root)
 
     duration = str(job["video"]["length_seconds"])
     fps = str(job["video"]["fps"])
@@ -1846,13 +1865,6 @@ def render_motion_source_overlay_mochi(
         f"[v_bg][v_fg]overlay=x={panel_x}:y={panel_y}:format=auto[v_mix];"
         f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
     )
-
-    if "captions" not in job or not job["captions"]:
-        subtitles_status = "skipped_no_captions"
-    elif srt_path.exists() and srt_path.stat().st_size == 0:
-        subtitles_status = "skipped_empty"
-    else:
-        subtitles_status = "ready_to_burn"
 
     if subtitles_status == "ready_to_burn" and not ffmpeg_has_subtitles_filter():
         subtitles_status = "skipped_missing_subtitles_filter"
@@ -1982,10 +1994,7 @@ def render_dance_loop_replace_dino_with_mochi(
 
     out_mp4 = out_dir / "final.mp4"
     srt_path = out_dir / "final.srt"
-    if "captions" in job and job["captions"]:
-        make_srt(job["captions"], srt_path)
-    else:
-        atomic_write_text(srt_path, "")
+    subtitles_status = prepare_subtitles_file(job, srt_path, sandbox_root)
 
     duration = str(job["video"]["length_seconds"])
     fps = str(job["video"]["fps"])
@@ -2119,13 +2128,6 @@ def render_dance_loop_replace_dino_with_mochi(
             f"[v_bg_mask][v_fg]overlay=x='{slot_x_expr}':y='{slot_y_expr}':format=auto:eval=frame[v_mix];"
             f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
         )
-
-    if "captions" not in job or not job["captions"]:
-        subtitles_status = "skipped_no_captions"
-    elif srt_path.exists() and srt_path.stat().st_size == 0:
-        subtitles_status = "skipped_empty"
-    else:
-        subtitles_status = "ready_to_burn"
 
     if subtitles_status == "ready_to_burn" and not ffmpeg_has_subtitles_filter():
         subtitles_status = "skipped_missing_subtitles_filter"

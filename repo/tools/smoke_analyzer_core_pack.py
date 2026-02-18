@@ -39,6 +39,7 @@ def main() -> int:
     )
 
     reverse = out_dir / f"{analysis_id}.caf.video_reverse_prompt.v1.json"
+    frame_labels = out_dir / f"{analysis_id}.frame_labels.v1.json"
     beat = out_dir / f"{analysis_id}.beat_grid.v1.json"
     pose = out_dir / f"{analysis_id}.pose_checkpoints.v1.json"
     keyframes = out_dir / f"{analysis_id}.keyframe_checkpoints.v1.json"
@@ -59,7 +60,21 @@ def main() -> int:
             str(keyframes),
         ]
     )
+    _run(
+        [
+            sys.executable,
+            "-m",
+            "repo.tools.validate_frame_labels",
+            "--frame-labels",
+            str(frame_labels),
+            "--reverse",
+            str(reverse),
+            "--keyframes",
+            str(keyframes),
+        ]
+    )
     _run([sys.executable, "-m", "repo.tools.validate_segment_stitch_plan", str(seg_plan)])
+    _run([sys.executable, "-m", "repo.tools.smoke_analyzer_tool_versions"])
 
     print("OK: analyzer core pack smoke")
     return 0

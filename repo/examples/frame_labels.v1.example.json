@@ -1,0 +1,68 @@
+{
+  "version": "frame_labels.v1",
+  "analysis_id": "demo-dance-loop-mochi-01",
+  "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
+  "tool_versions": {
+    "python": "3.11.9",
+    "opencv": "4.10.0.84",
+    "mediapipe": "0.10.14",
+    "librosa": "0.10.2.post1",
+    "scenedetect": "0.6.3"
+  },
+  "authority": {
+    "reverse_prompt_ref": "repo/examples/caf.video_reverse_prompt.v1.example.json",
+    "keyframe_checkpoints_ref": "repo/examples/keyframe_checkpoints.v1.example.json"
+  },
+  "policy": {
+    "facts_only_or_unknown": true,
+    "enrichment_provider": "rule_based"
+  },
+  "frames": [
+    {
+      "frame_id": "frame_001",
+      "shot_id": "shot_001",
+      "t_sec": 0.0,
+      "facts": {
+        "camera_mode": "locked",
+        "brightness_bucket": "mid",
+        "palette_hint": "#5F6A7A",
+        "motion_intensity": 0.72
+      },
+      "labels": {
+        "subject_focus": "group",
+        "motion_phase": "high",
+        "composition": "mid",
+        "action_summary": "Beat-locked dance pose; keep camera behavior unknown-or-fact-constrained."
+      },
+      "confidence": {
+        "facts": 0.93,
+        "enrichment": 0.65
+      },
+      "uncertainty": []
+    },
+    {
+      "frame_id": "frame_002",
+      "shot_id": "shot_002",
+      "t_sec": 0.9,
+      "facts": {
+        "camera_mode": "locked",
+        "brightness_bucket": "mid",
+        "palette_hint": "#AEB6C1",
+        "motion_intensity": 0.78
+      },
+      "labels": {
+        "subject_focus": "hero",
+        "motion_phase": "medium",
+        "composition": "close",
+        "action_summary": "unknown"
+      },
+      "confidence": {
+        "facts": 0.9,
+        "enrichment": 0.4
+      },
+      "uncertainty": [
+        "vision-summary-missing"
+      ]
+    }
+  ]
+}

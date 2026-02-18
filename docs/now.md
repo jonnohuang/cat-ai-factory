@@ -14,12 +14,12 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-34.8a — Storyboard-first I2V default routing (planner contracts + provider wiring)**
+PR: **PR-34.8d — Analyzer reproducibility lockdown (pinned deps + tool version stamps)**
 Last Updated: 2026-02-17
 
 ### Status by Role
-- ARCH: In Progress (PR-34.8 scope lock + acceptance criteria)
-- CODEX: Ready (implementation queued after docs approval)
+- ARCH: In Progress (PR-34.8d scope lock + acceptance criteria)
+- CODEX: In Progress (implementing analyzer lock + tool version stamps)
 - CLOUD-REVIEW: Not Required (PR-34.8 is non-cloud scope)
 
 ### Decisions / ADRs Touched
@@ -30,6 +30,83 @@ Last Updated: 2026-02-17
 - ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
+- Started PR-34.8d analyzer reproducibility lockdown:
+  - added analyzer constraints lock file:
+    - `repo/requirements-analyzer-lock.txt`
+  - added lockfile install guidance:
+    - `repo/requirements-dev.txt`
+  - added/required `tool_versions` metadata in analyzer contracts:
+    - `repo/shared/pose_checkpoints.v1.schema.json`
+    - `repo/shared/caf.video_reverse_prompt.v1.schema.json`
+    - `repo/shared/frame_labels.v1.schema.json`
+  - updated examples with explicit version stamps:
+    - `repo/examples/pose_checkpoints.v1.example.json`
+    - `repo/examples/caf.video_reverse_prompt.v1.example.json`
+    - `repo/examples/frame_labels.v1.example.json`
+  - analyzer builder now emits runtime version stamps:
+    - `repo/tools/build_analyzer_core_pack.py`
+  - validators now enforce cross-artifact version consistency:
+    - `repo/tools/validate_reverse_analysis_contracts.py`
+    - `repo/tools/validate_frame_labels.py`
+  - added deterministic smoke:
+    - `repo/tools/smoke_analyzer_tool_versions.py`
+    - `repo/tools/smoke_analyzer_core_pack.py` now runs this check
+- Validation run (Conda `cat-ai-factory`) passed:
+  - `python -m repo.tools.validate_reverse_analysis_contracts --reverse repo/examples/caf.video_reverse_prompt.v1.example.json --beat repo/examples/beat_grid.v1.example.json --pose repo/examples/pose_checkpoints.v1.example.json --keyframes repo/examples/keyframe_checkpoints.v1.example.json`
+  - `python -m repo.tools.validate_frame_labels --frame-labels repo/examples/frame_labels.v1.example.json --reverse repo/examples/caf.video_reverse_prompt.v1.example.json --keyframes repo/examples/keyframe_checkpoints.v1.example.json`
+  - `python -m repo.tools.smoke_analyzer_core_pack`
+- Completed PR-34.8c optional captions artifact lane (non-blocking):
+  - added optional captions contract + example:
+    - `repo/shared/captions_artifact.v1.schema.json`
+    - `repo/examples/captions_artifact.v1.example.json`
+    - `repo/examples/captions_artifact.v1.example.srt`
+  - added deterministic validator:
+    - `repo/tools/validate_captions_artifact.py`
+  - added optional job pointer field:
+    - `repo/shared/job.schema.json` (`captions_artifact.relpath`)
+    - `repo/tools/validate_job.py` minimal checks updated
+  - worker now supports non-blocking captions artifact ingestion:
+    - `repo/worker/render_ffmpeg.py`
+    - priority order: `captions_artifact` -> inline `captions[]` -> empty fallback
+    - missing/invalid external artifact does not fail render; emits skip statuses
+  - added deterministic smoke:
+    - `repo/tools/smoke_optional_captions_artifact.py`
+- Validation run (Conda `cat-ai-factory`) passed:
+  - `python -m py_compile repo/worker/render_ffmpeg.py repo/tools/validate_job.py repo/tools/validate_captions_artifact.py repo/tools/smoke_optional_captions_artifact.py`
+  - `python -m repo.tools.smoke_optional_captions_artifact`
+- Completed PR-34.8b frame-labeling contract lane:
+  - added canonical contract + example:
+    - `repo/shared/frame_labels.v1.schema.json`
+    - `repo/examples/frame_labels.v1.example.json`
+  - added deterministic validator with grounding checks:
+    - `repo/tools/validate_frame_labels.py`
+  - analyzer core pack now emits frame-label artifacts:
+    - `repo/tools/build_analyzer_core_pack.py`
+    - emits `repo/canon/demo_analyses/<analysis_id>.frame_labels.v1.json`
+  - analyzer core smoke now validates frame-label contract:
+    - `repo/tools/smoke_analyzer_core_pack.py`
+  - planner quality-context now loads `frame_labeling` lane for prompt-time enrichment context:
+    - `repo/services/planner/planner_cli.py`
+  - added dedicated smokes:
+    - `repo/tools/smoke_frame_labels_contract.py`
+    - `repo/tools/smoke_planner_frame_labeling.py`
+- Validation run (Conda `cat-ai-factory`) passed:
+  - `python -m py_compile repo/tools/build_analyzer_core_pack.py repo/tools/validate_frame_labels.py repo/tools/smoke_frame_labels_contract.py repo/tools/smoke_analyzer_core_pack.py repo/services/planner/planner_cli.py repo/tools/smoke_planner_frame_labeling.py`
+  - `python -m repo.tools.smoke_frame_labels_contract`
+  - `python -m repo.tools.smoke_analyzer_core_pack`
+  - `python -m repo.tools.smoke_planner_frame_labeling`
+- Completed PR-34.8a storyboard-first I2V routing wiring:
+  - planner quality context now loads optional storyboard contract lane:
+    - `repo/services/planner/planner_cli.py` (`storyboard_i2v` context block)
+  - Vertex Veo provider now prioritizes storyboard seed frames as reference images:
+    - `repo/services/planner/providers/vertex_ai.py`
+  - reference image trace preview logging added for auditability in planner logs.
+- Added deterministic smoke for storyboard-first routing:
+  - `repo/tools/smoke_storyboard_i2v_default.py`
+  - validates `storyboard_i2v` quality context and verifies selected Veo reference order is storyboard-first.
+- Validation run (Conda `cat-ai-factory`) passed:
+  - `python -m py_compile repo/services/planner/planner_cli.py repo/services/planner/providers/vertex_ai.py repo/tools/smoke_storyboard_i2v_default.py`
+  - `python -m repo.tools.smoke_storyboard_i2v_default`
 - Added new quality-path follow-on PR pack (PR-34.8) to planning docs:
   - `docs/PR_PROJECT_PLAN.md`
   - PR-34.8 (parent): storyboard-first deterministic generation path

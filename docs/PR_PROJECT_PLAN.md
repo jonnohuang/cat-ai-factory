@@ -1410,7 +1410,7 @@ Outcome:
 ---
 
 ### PR-34.8 — Storyboard-first deterministic generation path (I2V default + analyzer-grounded labeling)
-Status: **NEXT**
+Status: **COMPLETED**
 
 Scope:
 - Shift default generation planning for dance-quality paths from prompt-only to storyboard-first image-to-video (I2V).
@@ -1424,7 +1424,7 @@ Outcome:
 Sub-PR plan:
 
 ### PR-34.8a — Storyboard-first I2V default routing (planner contracts + provider wiring)
-Status: **NEXT**
+Status: **COMPLETED**
 
 Scope:
 - Add/extend planner contracts to make storyboard/frame references first-class for Veo generation.
@@ -1440,7 +1440,7 @@ Outcome:
 ---
 
 ### PR-34.8b — Frame labeling contract lane (analyzer facts + constrained vision enrichment)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add a versioned frame-labeling contract artifact (planner-side) for shot/frame semantic tags.
@@ -1458,7 +1458,7 @@ Outcome:
 ---
 
 ### PR-34.8c — Optional Whisper captions lane (non-blocking, deterministic integration)
-Status: **PLANNED**
+Status: **COMPLETED**
 
 Scope:
 - Add optional caption/subtitle extraction lane using Whisper-class tooling as planner/ops-side pre-processing.
@@ -1472,6 +1472,20 @@ Scope:
 
 Outcome:
 - Caption quality can improve while keeping runtime deterministic and failure-safe.
+
+---
+
+### PR-34.8d — Analyzer reproducibility lockdown (pinned deps + tool version stamps)
+Status: **ACTIVE**
+
+Scope:
+- Add a reproducible analyzer dependency lock set for CV/audio extraction tools.
+- Stamp analyzer artifacts with explicit tool/model/runtime versions.
+- Enforce version stamp presence/consistency in deterministic validators.
+- Add smoke checks proving version stamps are emitted and aligned across artifacts.
+
+Outcome:
+- Pose/model extraction drift risk is reduced through explicit dependency and artifact version control.
 
 ---
 

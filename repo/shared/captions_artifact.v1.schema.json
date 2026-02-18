@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/captions_artifact.v1.schema.json",
+  "title": "Captions Artifact v1",
+  "description": "Optional planner/ops-side captions contract for deterministic Worker subtitle burn input.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "source",
+    "srt_relpath"
+  ],
+  "properties": {
+    "version": {
+      "const": "captions_artifact.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "whisper",
+        "manual",
+        "external"
+      ]
+    },
+    "language": {
+      "type": "string",
+      "maxLength": 24
+    },
+    "srt_relpath": {
+      "type": "string",
+      "pattern": "^(sandbox|repo)/[a-zA-Z0-9._/-]+\\.srt$"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 240
+    }
+  }
+}

@@ -8,12 +8,14 @@ Generates planner-side artifacts:
 - pose_checkpoints.v1
 - keyframe_checkpoints.v1
 - caf.video_reverse_prompt.v1
+- frame_labels.v1
 - segment_stitch_plan.v1
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import importlib.metadata as importlib_metadata
 import json
 import pathlib
 import re
@@ -61,6 +63,23 @@ def _save_json(path: pathlib.Path, data: Any) -> None:
 
 def _safe_rel(path: pathlib.Path, root: pathlib.Path) -> str:
     return str(path.resolve().relative_to(root.resolve())).replace("\\", "/")
+
+
+def _pkg_version(pkg: str) -> str:
+    try:
+        return str(importlib_metadata.version(pkg))
+    except Exception:
+        return "unknown"
+
+
+def _collect_tool_versions() -> Dict[str, str]:
+    return {
+        "python": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        "opencv": _pkg_version("opencv-python-headless"),
+        "mediapipe": _pkg_version("mediapipe"),
+        "librosa": _pkg_version("librosa"),
+        "scenedetect": _pkg_version("scenedetect"),
+    }
 
 
 def _probe(path: pathlib.Path) -> Dict[str, Any]:
@@ -358,6 +377,24 @@ def _build_segments_from_shots(shots: List[Tuple[float, float]], max_len: float 
     return segs
 
 
+def _motion_phase(motion_intensity: float) -> str:
+    if motion_intensity >= 0.67:
+        return "high"
+    if motion_intensity >= 0.34:
+        return "medium"
+    return "low"
+
+
+def _composition_from_camera(camera_mode: str) -> str:
+    if camera_mode in {"push", "pull"}:
+        return "close"
+    if camera_mode in {"pan", "tilt", "mixed"}:
+        return "wide"
+    if camera_mode == "locked":
+        return "mid"
+    return "unknown"
+
+
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Build deterministic analyzer core pack")
     parser.add_argument("--input", required=True, help="Input video path")
@@ -380,9 +417,12 @@ def main(argv: List[str]) -> int:
     pose_path = out_dir / f"{analysis_id}.pose_checkpoints.v1.json"
     keyframe_path = out_dir / f"{analysis_id}.keyframe_checkpoints.v1.json"
     reverse_path = out_dir / f"{analysis_id}.caf.video_reverse_prompt.v1.json"
+    frame_labels_path = out_dir / f"{analysis_id}.frame_labels.v1.json"
     segment_plan_path = out_dir / f"{analysis_id}.segment_stitch_plan.v1.json"
 
-    if (not args.overwrite) and any(p.exists() for p in [beat_path, pose_path, keyframe_path, reverse_path, segment_plan_path]):
+    if (not args.overwrite) and any(
+        p.exists() for p in [beat_path, pose_path, keyframe_path, reverse_path, frame_labels_path, segment_plan_path]
+    ):
         eprint("ERROR: output files exist; use --overwrite")
         return 1
 
@@ -393,6 +433,7 @@ def main(argv: List[str]) -> int:
     bpm, beat_times, beat_source = _extract_audio_beats(in_path)
     motion_series, pose_rows, pose_source, visual_facts = _extract_video_signals(in_path, fps)
     scene_shots, scene_source = _scene_segments(in_path, duration)
+    tool_versions = _collect_tool_versions()
 
     if not beat_times:
         beat_times = _pick_motion_peaks(motion_series, duration, limit=12)
@@ -423,6 +464,7 @@ def main(argv: List[str]) -> int:
         "analysis_id": analysis_id,
         "source_video_relpath": _safe_rel(in_path, root),
         "model": pose_source,
+        "tool_versions": tool_versions,
         "checkpoints": pose_doc_rows,
     }
 
@@ -488,6 +530,7 @@ def main(argv: List[str]) -> int:
         "version": "caf.video_reverse_prompt.v1",
         "analysis_id": analysis_id,
         "source_video_relpath": _safe_rel(in_path, root),
+        "tool_versions": tool_versions,
         "truth": {
             "beat_grid_ref": rel_beat,
             "pose_checkpoints_ref": rel_pose,
@@ -520,6 +563,57 @@ def main(argv: List[str]) -> int:
             "inferred_semantics": 0.6,
             "notes": f"beat={beat_source}; scene={scene_source}; pose={pose_source}",
         },
+    }
+
+    frame_rows: List[Dict[str, Any]] = []
+    for i, shot in enumerate(shot_docs, start=1):
+        motion_intensity = float(shot.get("motion_intensity", 0.0))
+        camera_mode = str(shot.get("camera") or "unknown")
+        brightness_bucket = str(visual_facts.get("brightness_bucket") or "unknown")
+        palette_hint = str(shot.get("palette_hint") or "#808080")
+        action_summary = (
+            f"{_motion_phase(motion_intensity)} motion dance beat; "
+            f"camera {camera_mode if camera_mode in {'locked', 'pan', 'tilt', 'push', 'pull', 'mixed'} else 'unknown'}."
+        )
+        frame_rows.append(
+            {
+                "frame_id": f"frame_{i:03d}",
+                "shot_id": shot.get("shot_id"),
+                "t_sec": shot.get("start_sec"),
+                "facts": {
+                    "camera_mode": camera_mode,
+                    "brightness_bucket": brightness_bucket,
+                    "palette_hint": palette_hint,
+                    "motion_intensity": motion_intensity,
+                },
+                "labels": {
+                    "subject_focus": "group" if motion_intensity >= 0.6 else "hero",
+                    "motion_phase": _motion_phase(motion_intensity),
+                    "composition": _composition_from_camera(camera_mode),
+                    "action_summary": action_summary[:160],
+                },
+                "confidence": {
+                    "facts": 0.92,
+                    "enrichment": 0.58,
+                },
+                "uncertainty": [],
+            }
+        )
+
+    frame_labels_doc = {
+        "version": "frame_labels.v1",
+        "analysis_id": analysis_id,
+        "source_video_relpath": _safe_rel(in_path, root),
+        "tool_versions": tool_versions,
+        "authority": {
+            "reverse_prompt_ref": _safe_rel(reverse_path, root),
+            "keyframe_checkpoints_ref": rel_key,
+        },
+        "policy": {
+            "facts_only_or_unknown": True,
+            "enrichment_provider": "rule_based",
+        },
+        "frames": frame_rows,
     }
 
     segment_ranges = _build_segments_from_shots(scene_shots, max_len=3.0)
@@ -561,12 +655,14 @@ def main(argv: List[str]) -> int:
     _save_json(pose_path, pose_doc)
     _save_json(keyframe_path, keyframe_doc)
     _save_json(reverse_path, reverse_doc)
+    _save_json(frame_labels_path, frame_labels_doc)
     _save_json(segment_plan_path, seg_plan)
 
     print(f"OK beat_grid: {beat_path}")
     print(f"OK pose_checkpoints: {pose_path}")
     print(f"OK keyframe_checkpoints: {keyframe_path}")
     print(f"OK reverse_prompt: {reverse_path}")
+    print(f"OK frame_labels: {frame_labels_path}")
     print(f"OK segment_plan: {segment_plan_path}")
     return 0
 

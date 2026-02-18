@@ -432,6 +432,22 @@ def _select_continuity_pack(project_root: str, analysis_id: Optional[str]) -> Op
     return {"relpath": _safe_rel(path, project_root), "data": doc}
 
 
+def _select_storyboard(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    rows = _find_contract_docs(project_root, "storyboard.v1", analysis_id)
+    if not rows:
+        return None
+    path, doc = rows[0]
+    return {"relpath": _safe_rel(path, project_root), "data": doc}
+
+
+def _select_frame_labels(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    rows = _find_contract_docs(project_root, "frame_labels.v1", analysis_id)
+    if not rows:
+        return None
+    path, doc = rows[0]
+    return {"relpath": _safe_rel(path, project_root), "data": doc}
+
+
 def _facts_only_enabled() -> bool:
     raw = os.environ.get("CAF_PLANNER_FACTS_ONLY", "1").strip().lower()
     return raw not in ("0", "false", "off", "no")
@@ -488,6 +504,17 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "visual_facts": visual_facts if isinstance(visual_facts, dict) else {},
             "facts_only_mode": _facts_only_enabled(),
         }
+    frame_labels = _select_frame_labels(project_root, reverse_contracts.get("analysis_id"))
+    if isinstance(frame_labels, dict):
+        fl_doc = frame_labels.get("data", {})
+        frames = fl_doc.get("frames", []) if isinstance(fl_doc, dict) else []
+        policy = fl_doc.get("policy", {}) if isinstance(fl_doc, dict) else {}
+        ctx["frame_labeling"] = {
+            "relpath": frame_labels.get("relpath"),
+            "frame_count": len(frames) if isinstance(frames, list) else 0,
+            "facts_only_or_unknown": bool(policy.get("facts_only_or_unknown")) if isinstance(policy, dict) else False,
+            "enrichment_provider": policy.get("enrichment_provider") if isinstance(policy, dict) else None,
+        }
     segment_plan = _select_segment_stitch_plan(project_root, reverse_contracts.get("analysis_id"))
     if isinstance(segment_plan, dict):
         segment_doc = segment_plan.get("data", {})
@@ -537,6 +564,31 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "style_id": style_id,
             "costume_profile_id": costume_id,
             "rules": rules,
+        }
+    storyboard = _select_storyboard(project_root, reverse_contracts.get("analysis_id"))
+    if isinstance(storyboard, dict):
+        sb_doc = storyboard.get("data", {})
+        frames = sb_doc.get("frames", []) if isinstance(sb_doc, dict) else []
+        seed_assets: List[str] = []
+        if isinstance(frames, list):
+            for frame in frames:
+                if not isinstance(frame, dict):
+                    continue
+                image_asset = frame.get("image_asset")
+                if isinstance(image_asset, str) and image_asset.strip():
+                    seed_assets.append(image_asset.strip())
+        deduped: List[str] = []
+        seen_assets = set()
+        for asset in seed_assets:
+            if asset in seen_assets:
+                continue
+            seen_assets.add(asset)
+            deduped.append(asset)
+        ctx["storyboard_i2v"] = {
+            "relpath": storyboard.get("relpath"),
+            "frame_count": len(frames) if isinstance(frames, list) else 0,
+            "seed_frame_assets": deduped[:3],
+            "strategy": "storyboard_first_i2v",
         }
 
     bench_report_path = os.path.join(
