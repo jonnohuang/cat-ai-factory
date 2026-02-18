@@ -30,6 +30,14 @@ Last Updated: 2026-02-17
 - ADR-0044 (External HITL recast boundary)
 
 ### What Changed (Diff Summary)
+- Planner now uses quality artifacts by default (no manual job patching required):
+  - `repo/services/planner/planner_cli.py` contract discovery now prefers `repo/canon/**` over `repo/examples/**`, then newest artifact first.
+  - planner now auto-wires `job.quality_target.relpath` when missing, with strict-motion target preferred when segment-stitch context is active.
+  - this ensures controller quality decisions (`decide_quality_action`) consume versioned threshold contracts on standard runs.
+- Validation:
+  - `python3 -m py_compile repo/services/planner/planner_cli.py` passed.
+  - `python3 -m repo.tools.smoke_planner_facts_only` passed.
+  - `python -m repo.tools.smoke_quality_controller_loop` passed in Conda env (`/opt/miniconda3/envs/cat-ai-factory/bin/python`).
 - Started PR-34.8d analyzer reproducibility lockdown:
   - added analyzer constraints lock file:
     - `repo/requirements-analyzer-lock.txt`

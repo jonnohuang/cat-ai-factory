@@ -574,8 +574,20 @@ The system MUST reduce analyzer model/tool drift by pinning dependency versions 
   - enforce version stamp presence and cross-artifact consistency in deterministic validators
 - Hard constraints:
   - lock metadata is advisory to install/runtime and must not become hidden mutable state
-  - analyzer artifact version stamps remain planner-side metadata only
-  - Worker authority and determinism boundaries remain unchanged
+- analyzer artifact version stamps remain planner-side metadata only
+- Worker authority and determinism boundaries remain unchanged
+
+### FR-28.17 — Deterministic planner artifact selection + quality target auto-wiring
+The planner MUST deterministically select and wire quality artifacts so control-plane quality policy is consistently applied without manual job edits.
+
+- Required behavior:
+  - when multiple contracts match a lane/version, prefer `repo/canon/**` over `repo/examples/**`
+  - within the same source bucket, prefer the newest artifact deterministically
+  - auto-populate `job.quality_target.relpath` when absent using available versioned quality-target contracts
+- Hard constraints:
+  - planner remains the only writer of `sandbox/jobs/*.job.json`
+  - no runtime mutation of `job.json` after planner write
+  - Worker determinism/authority boundaries remain unchanged
 
 Defer note:
 - MoveNet integration is deferred until measured quality gains exceed current MediaPipe-based pose extraction.
