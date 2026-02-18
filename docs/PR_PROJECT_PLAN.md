@@ -1431,6 +1431,10 @@ Scope:
 - Set default planner strategy for quality/dance contexts to:
   - segment/shot plan -> storyboard frames -> I2V generation
   - avoid prompt-only T2V fallback unless explicitly configured.
+- Make planner contract selection deterministic and quality-biased:
+  - prefer `repo/canon/**` artifacts over `repo/examples/**`
+  - prefer newest artifact when multiple contracts share the same version/analysis lane.
+- Auto-wire `job.quality_target.relpath` when absent so controller quality decisions consistently consume versioned thresholds.
 - Ensure controller/worker consume unchanged deterministic contracts and remain provider-agnostic.
 - Add deterministic smoke coverage proving route selection and artifact pointers.
 

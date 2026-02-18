@@ -322,7 +322,19 @@ def _find_contract_docs(
                     candidates.append((p, doc))
                 elif not analysis_id:
                     candidates.append((p, doc))
-    candidates.sort(key=lambda row: _safe_rel(row[0], project_root))
+    def _sort_key(row: Tuple[str, Dict[str, Any]]) -> Tuple[int, float, str]:
+        path = row[0]
+        rel = _safe_rel(path, project_root)
+        # Prefer canon artifacts over examples when both exist.
+        is_example = 1 if rel.startswith("repo/examples/") else 0
+        try:
+            mtime = os.path.getmtime(path)
+        except Exception:
+            mtime = 0.0
+        # Newer artifacts first within the same source bucket.
+        return (is_example, -mtime, rel)
+
+    candidates.sort(key=_sort_key)
     return candidates
 
 
@@ -448,6 +460,24 @@ def _select_frame_labels(project_root: str, analysis_id: Optional[str]) -> Optio
     return {"relpath": _safe_rel(path, project_root), "data": doc}
 
 
+def _select_quality_target_contract(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    rows = _find_contract_docs(project_root, "quality_target.v1", analysis_id)
+    if rows:
+        path, doc = rows[0]
+        return {"relpath": _safe_rel(path, project_root), "data": doc}
+
+    # Deterministic fallback to stable examples if no versioned contract is found.
+    for rel in (
+        "repo/examples/quality_target.motion_strict.v1.example.json",
+        "repo/examples/quality_target.v1.example.json",
+    ):
+        abs_p = os.path.join(project_root, rel)
+        doc = _load_json_if_exists(abs_p)
+        if isinstance(doc, dict) and doc.get("version") == "quality_target.v1":
+            return {"relpath": rel, "data": doc}
+    return None
+
+
 def _facts_only_enabled() -> bool:
     raw = os.environ.get("CAF_PLANNER_FACTS_ONLY", "1").strip().lower()
     return raw not in ("0", "false", "off", "no")
@@ -564,6 +594,17 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "style_id": style_id,
             "costume_profile_id": costume_id,
             "rules": rules,
+        }
+    quality_target = _select_quality_target_contract(project_root, reverse_contracts.get("analysis_id"))
+    if isinstance(quality_target, dict):
+        qt_doc = quality_target.get("data", {})
+        thresholds = qt_doc.get("thresholds", {}) if isinstance(qt_doc, dict) else {}
+        if not isinstance(thresholds, dict):
+            thresholds = {}
+        ctx["quality_target"] = {
+            "relpath": quality_target.get("relpath"),
+            "profile_name": qt_doc.get("profile_name") if isinstance(qt_doc, dict) else None,
+            "thresholds": thresholds,
         }
     storyboard = _select_storyboard(project_root, reverse_contracts.get("analysis_id"))
     if isinstance(storyboard, dict):
@@ -928,6 +969,32 @@ def _apply_continuity_pack_hints(job: Dict[str, Any], quality_context: Dict[str,
     return job
 
 
+def _apply_quality_target_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(job, dict) or not isinstance(quality_context, dict):
+        return job
+    existing = job.get("quality_target")
+    if isinstance(existing, dict) and isinstance(existing.get("relpath"), str) and existing.get("relpath"):
+        return job
+
+    quality_target = quality_context.get("quality_target")
+    if not isinstance(quality_target, dict):
+        return job
+    relpath = quality_target.get("relpath")
+    if not isinstance(relpath, str) or not relpath:
+        return job
+
+    # Prefer stricter motion profile by default when segment-stitch context is active.
+    seg_ctx = quality_context.get("segment_stitch_plan")
+    if isinstance(seg_ctx, dict):
+        strict_rel = "repo/examples/quality_target.motion_strict.v1.example.json"
+        strict_abs = os.path.join(_repo_root(), strict_rel)
+        if os.path.exists(strict_abs):
+            relpath = strict_rel
+
+    job["quality_target"] = {"relpath": relpath}
+    return job
+
+
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Cat AI Factory planner CLI")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -1015,6 +1082,7 @@ def main(argv: List[str]) -> int:
         job = _apply_reverse_analysis_hints(job, quality_context)
         job = _apply_segment_stitch_hints(job, quality_context, project_root)
         job = _apply_continuity_pack_hints(job, quality_context)
+        job = _apply_quality_target_hints(job, quality_context)
         job = _apply_quality_policy_hints(job, quality_context)
         job = _apply_facts_only_guard(job, quality_context)
         facts_errors = _validate_facts_only_guard(job, quality_context)
