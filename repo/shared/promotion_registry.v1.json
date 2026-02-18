@@ -1,0 +1,78 @@
+{
+  "version": "promotion_registry.v1",
+  "updated_at": "2026-02-18T07:20:34Z",
+  "approved": [
+    {
+      "candidate_id": "smoke-candidate",
+      "candidate_relpath": "sandbox/logs/lab/promotions/smoke-candidate.promotion_candidate.v1.json",
+      "applied_at": "2026-02-18T06:17:47Z",
+      "proposal": {
+        "contract_pointers": {
+          "motion_contract": {
+            "relpath": "repo/examples/pose_checkpoints.v1.example.json",
+            "contract_version": "pose_checkpoints.v1"
+          }
+        },
+        "workflow_preset": {
+          "workflow_id": "caf_dance_loop_v1",
+          "preset_id": "motion_safe_v1"
+        },
+        "qc_policy_relpath": "repo/shared/qc_policy.v1.json"
+      }
+    },
+    {
+      "candidate_id": "smoke-candidate",
+      "candidate_relpath": "sandbox/logs/lab/promotions/smoke-candidate.promotion_candidate.v1.json",
+      "applied_at": "2026-02-18T06:18:35Z",
+      "proposal": {
+        "contract_pointers": {
+          "motion_contract": {
+            "relpath": "repo/examples/pose_checkpoints.v1.example.json",
+            "contract_version": "pose_checkpoints.v1"
+          }
+        },
+        "workflow_preset": {
+          "workflow_id": "caf_dance_loop_v1",
+          "preset_id": "motion_safe_v1"
+        },
+        "qc_policy_relpath": "repo/shared/qc_policy.v1.json"
+      }
+    },
+    {
+      "candidate_id": "smoke-candidate",
+      "candidate_relpath": "sandbox/logs/lab/promotions/smoke-candidate.promotion_candidate.v1.json",
+      "applied_at": "2026-02-18T07:19:30Z",
+      "proposal": {
+        "contract_pointers": {
+          "motion_contract": {
+            "relpath": "repo/examples/pose_checkpoints.v1.example.json",
+            "contract_version": "pose_checkpoints.v1"
+          }
+        },
+        "workflow_preset": {
+          "workflow_id": "caf_dance_loop_v1",
+          "preset_id": "motion_safe_v1"
+        },
+        "qc_policy_relpath": "repo/shared/qc_policy.v1.json"
+      }
+    },
+    {
+      "candidate_id": "smoke-candidate",
+      "candidate_relpath": "sandbox/logs/lab/promotions/smoke-candidate.promotion_candidate.v1.json",
+      "applied_at": "2026-02-18T07:20:34Z",
+      "proposal": {
+        "contract_pointers": {
+          "motion_contract": {
+            "relpath": "repo/examples/pose_checkpoints.v1.example.json",
+            "contract_version": "pose_checkpoints.v1"
+          }
+        },
+        "workflow_preset": {
+          "workflow_id": "caf_dance_loop_v1",
+          "preset_id": "motion_safe_v1"
+        },
+        "qc_policy_relpath": "repo/shared/qc_policy.v1.json"
+      }
+    }
+  ]
+}

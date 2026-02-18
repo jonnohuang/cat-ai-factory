@@ -1,0 +1,56 @@
+{
+  "version": "beat_grid.v1",
+  "analysis_id": "fight-composite",
+  "source_video_relpath": "sandbox/assets/demo/incoming/fight_composite.mp4",
+  "bpm_estimate": 120.0,
+  "beats": [
+    {
+      "t_sec": 0.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 1.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 2.333,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 3.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 4.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 4.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 5.333,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 5.667,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 6.167,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 6.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 6.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 10.133,
+      "strength": 0.8
+    }
+  ]
+}

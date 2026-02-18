@@ -1,0 +1,40 @@
+{
+  "version": "sample_ingest_manifest.v1",
+  "sample_id": "dance-loop",
+  "analysis_id": "dance-loop",
+  "generated_at": "2026-02-18T06:50:17Z",
+  "source": {
+    "video_relpath": "sandbox/assets/demo/processed/dance_loop.mp4",
+    "reference_aliases": [
+      "dance loop",
+      "dance-loop"
+    ]
+  },
+  "contracts": {
+    "video_analysis_relpath": "repo/canon/demo_analyses/dance-loop.video_analysis.v1.json",
+    "reverse_prompt_relpath": "repo/canon/demo_analyses/dance-loop.caf.video_reverse_prompt.v1.json",
+    "beat_grid_relpath": "repo/canon/demo_analyses/dance-loop.beat_grid.v1.json",
+    "pose_checkpoints_relpath": "repo/canon/demo_analyses/dance-loop.pose_checkpoints.v1.json",
+    "keyframe_checkpoints_relpath": "repo/canon/demo_analyses/dance-loop.keyframe_checkpoints.v1.json",
+    "segment_stitch_plan_relpath": "repo/canon/demo_analyses/dance-loop.segment_stitch_plan.v1.json",
+    "quality_target_relpath": "repo/examples/quality_target.motion_strict.v1.example.json",
+    "continuity_pack_relpath": "repo/examples/episode_continuity_pack.v1.example.json",
+    "storyboard_relpath": "repo/examples/storyboard.v1.example.json",
+    "frame_labels_relpath": "repo/canon/demo_analyses/dance-loop.frame_labels.v1.json"
+  },
+  "assets": {
+    "hero_refs": [],
+    "costume_refs": [],
+    "background_refs": [],
+    "audio_refs": [],
+    "style_tone_refs": []
+  },
+  "provenance": {
+    "ingest_tool": "repo.tools.ingest_demo_samples",
+    "tool_versions": {
+      "analyze_video": "video_analysis.v1",
+      "analyzer_core_pack": "beat_grid.v1+pose_checkpoints.v1+keyframe_checkpoints.v1+segment_stitch_plan.v1"
+    },
+    "confidence": 0.8
+  }
+}

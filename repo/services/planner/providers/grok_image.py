@@ -78,10 +78,10 @@ class GrokImageProvider(BaseProvider):
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
         seeds = _seed_assets_from_context(quality_context)
         if not seeds:
-            seeds = ["assets/demo/flight_composite.mp4"]
+            seeds = ["assets/demo/fight_composite.mp4"]
         background_asset = seeds[0]
         if not (background_asset.startswith("assets/") or background_asset.startswith("sandbox/assets/")):
-            background_asset = "assets/demo/flight_composite.mp4"
+            background_asset = "assets/demo/fight_composite.mp4"
         job: Dict[str, Any] = {
             "job_id": f"{basename[:33]}-grokimg",
             "date": date,

@@ -1,0 +1,63 @@
+{
+  "version": "caf.video_reverse_prompt.v1",
+  "analysis_id": "cat-server-fight",
+  "source_video_relpath": "sandbox/assets/demo/incoming/cat-server-fight.mp4",
+  "tool_versions": {
+    "python": "3.12.8",
+    "opencv": "4.10.0",
+    "mediapipe": "unknown",
+    "librosa": "unknown",
+    "scenedetect": "unknown"
+  },
+  "truth": {
+    "beat_grid_ref": "repo/canon/demo_analyses/cat-server-fight.beat_grid.v1.json",
+    "pose_checkpoints_ref": "repo/canon/demo_analyses/cat-server-fight.pose_checkpoints.v1.json",
+    "keyframe_checkpoints_ref": "repo/canon/demo_analyses/cat-server-fight.keyframe_checkpoints.v1.json",
+    "visual_facts": {
+      "camera_movement_mode": "tilt",
+      "camera_movement_confidence": 0.814,
+      "brightness_bucket": "mid",
+      "luma_mean": 115.693,
+      "palette_top_hex": [
+        "#080808",
+        "#282828",
+        "#887868"
+      ]
+    },
+    "shots": [
+      {
+        "shot_id": "shot_001",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "camera": "tilt",
+        "camera_confidence": 0.814,
+        "motion_intensity": 0.18,
+        "brightness_luma_mean": 115.693,
+        "palette_hint": "#080808"
+      }
+    ]
+  },
+  "prompt_packages": {
+    "text2video": {
+      "prompt": "Locked-camera dance sequence with beat-aligned movement and stable temporal consistency.",
+      "negative": [
+        "flicker",
+        "identity drift",
+        "camera shake"
+      ]
+    },
+    "image2video": {
+      "prompt": "Preserve key poses at checkpoint timestamps and return to a loop-safe end pose.",
+      "negative": [
+        "hard jump cuts",
+        "background drift",
+        "costume mismatch"
+      ]
+    }
+  },
+  "confidence": {
+    "measured_truth": 0.85,
+    "inferred_semantics": 0.6,
+    "notes": "beat=librosa_unavailable; scene=scenedetect_unavailable; pose=cv_fallback"
+  }
+}

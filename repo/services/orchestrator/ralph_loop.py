@@ -10,7 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -69,14 +69,35 @@ def write_state(
     atomic_write_json(state_path, payload)
 
 
-def run_cmd(cmd: List[str], log_path: pathlib.Path, env_overrides: Optional[Dict[str, str]] = None) -> int:
+def run_cmd(
+    cmd: List[str],
+    log_path: pathlib.Path,
+    env_overrides: Optional[Dict[str, str]] = None,
+    timeout_sec: Optional[int] = None,
+) -> Tuple[int, bool]:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     if env_overrides:
         env.update(env_overrides)
     with log_path.open("wb") as f:
-        proc = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, env=env)
-    return proc.returncode
+        try:
+            proc = subprocess.run(
+                cmd,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                env=env,
+                timeout=timeout_sec if isinstance(timeout_sec, int) and timeout_sec > 0 else None,
+            )
+            return proc.returncode, False
+        except subprocess.TimeoutExpired:
+            f.write(
+                (
+                    f"\n\n[ralph_loop] command timeout after {timeout_sec}s: "
+                    + " ".join(cmd)
+                    + "\n"
+                ).encode("utf-8")
+            )
+            return 124, True
 
 
 def load_json_if_exists(path: pathlib.Path) -> Optional[Dict[str, Any]]:
@@ -220,6 +241,12 @@ def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Ralph Loop single-job orchestrator.")
     parser.add_argument("--job", required=True, help="Path to a job.json file")
     parser.add_argument("--max-retries", type=int, default=2, help="Max retries (default: 2)")
+    parser.add_argument(
+        "--worker-timeout-sec",
+        type=int,
+        default=900,
+        help="Per-attempt worker timeout in seconds (default: 900)",
+    )
     args = parser.parse_args(argv)
 
     repo_root = repo_root_from_here()
@@ -229,12 +256,9 @@ def main(argv: List[str]) -> int:
     filename_job_id = job_id_from_filename(job_path)
 
     staging_log = pathlib.Path("/tmp") / f"ralph-validate-{os.getpid()}.log"
-    validate_cmd = [
-        "python3",
-        "repo/tools/validate_job.py",
-        str(job_path),
-    ]
-    rc = run_cmd(validate_cmd, staging_log)
+    py_exec = sys.executable or "python3"
+    validate_cmd = [py_exec, "repo/tools/validate_job.py", str(job_path)]
+    rc, _timed_out = run_cmd(validate_cmd, staging_log)
     if rc != 0:
         return 1
 
@@ -292,24 +316,19 @@ def main(argv: List[str]) -> int:
         qc_dir.mkdir(parents=True, exist_ok=True)
         decision_log = qc_dir / "quality_decision.log"
         pass_log = qc_dir / "two_pass_orchestration.log"
-        pass_cmd = [
-            "python3",
-            "repo/tools/derive_two_pass_orchestration.py",
-            "--job-id",
-            canonical_job_id,
-        ]
-        pass_rc = run_cmd(pass_cmd, pass_log)
+        pass_cmd = [py_exec, "repo/tools/derive_two_pass_orchestration.py", "--job-id", canonical_job_id]
+        pass_rc, _ = run_cmd(pass_cmd, pass_log)
         if pass_rc != 0:
             warn("TWO_PASS_ORCHESTRATION_FAILED", {"exit_code": pass_rc})
         decision_cmd = [
-            "python3",
+            py_exec,
             "repo/tools/decide_quality_action.py",
             "--job-id",
             canonical_job_id,
             "--max-retries",
             str(max(0, args.max_retries)),
         ]
-        rc = run_cmd(decision_cmd, decision_log)
+        rc, _ = run_cmd(decision_cmd, decision_log)
         if rc != 0:
             warn("QUALITY_DECISION_FAILED", {"exit_code": rc})
             return "escalate_hitl", "quality decision tool failed; finalize gate is fail-closed", {}
@@ -489,12 +508,8 @@ def main(argv: List[str]) -> int:
             transition("LINEAGE_READY", "LINEAGE_READY")
             lineage_log = logs_dir / "lineage_verify.log"
             pointers["lineage_log"] = str(lineage_log)
-            lineage_cmd = [
-                "python3",
-                "repo/tools/lineage_verify.py",
-                str(job_path),
-            ]
-            rc = run_cmd(lineage_cmd, lineage_log)
+            lineage_cmd = [py_exec, "repo/tools/lineage_verify.py", str(job_path)]
+            rc, _ = run_cmd(lineage_cmd, lineage_log)
             if rc == 0:
                 transition("VERIFIED", "LINEAGE_OK")
                 action, reason, decision_ctx = quality_decision()
@@ -577,22 +592,36 @@ def main(argv: List[str]) -> int:
 
             worker_log = attempt_dir / "worker.log"
             pointers["worker_log"] = str(worker_log)
-            worker_cmd = ["python3", "repo/worker/render_ffmpeg.py", "--job", str(job_path)]
+            worker_cmd = [py_exec, "repo/worker/render_ffmpeg.py", "--job", str(job_path)]
             retry_plan_path = logs_dir / "qc" / "retry_plan.v1.json"
             worker_env: Dict[str, str] = {}
             if retry_plan_path.exists():
                 worker_env["CAF_RETRY_PLAN_PATH"] = str(retry_plan_path.resolve())
                 worker_env.update(provider_switch_env_from_retry_plan(retry_plan_path))
             worker_env["CAF_RETRY_ATTEMPT_ID"] = attempt_id
-            rc = run_cmd(worker_cmd, worker_log, env_overrides=worker_env)
+            rc, timed_out = run_cmd(
+                worker_cmd,
+                worker_log,
+                env_overrides=worker_env,
+                timeout_sec=max(1, int(args.worker_timeout_sec)),
+            )
             if rc != 0:
-                transition(
-                    "FAIL_WORKER",
-                    "WORKER_FAILED",
-                    attempt_id=attempt_id,
-                    reason="worker failed",
-                    details={"exit_code": rc},
-                )
+                if timed_out:
+                    transition(
+                        "FAIL_WORKER",
+                        "WORKER_TIMEOUT",
+                        attempt_id=attempt_id,
+                        reason=f"worker timed out after {int(args.worker_timeout_sec)}s",
+                        details={"timeout_sec": int(args.worker_timeout_sec)},
+                    )
+                else:
+                    transition(
+                        "FAIL_WORKER",
+                        "WORKER_FAILED",
+                        attempt_id=attempt_id,
+                        reason="worker failed",
+                        details={"exit_code": rc},
+                    )
                 if attempt_index < total_attempts - 1:
                     continue
                 return 1
@@ -615,12 +644,8 @@ def main(argv: List[str]) -> int:
 
             lineage_log = attempt_dir / "lineage_verify.log"
             pointers["lineage_log"] = str(lineage_log)
-            lineage_cmd = [
-                "python3",
-                "repo/tools/lineage_verify.py",
-                str(job_path),
-            ]
-            rc = run_cmd(lineage_cmd, lineage_log)
+            lineage_cmd = [py_exec, "repo/tools/lineage_verify.py", str(job_path)]
+            rc, _ = run_cmd(lineage_cmd, lineage_log)
             if rc == 0:
                 transition("VERIFIED", "LINEAGE_OK", attempt_id=attempt_id)
                 action, reason, decision_ctx = quality_decision(attempt_id=attempt_id)

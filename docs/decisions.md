@@ -1553,3 +1553,36 @@ References:
 - docs/PR_PROJECT_PLAN.md (PR-35g)
 - docs/system-requirements.md (FR-28.21, FR-28.22)
 - docs/telegram-commands.md
+
+------------------------------------------------------------
+
+## ADR-0050 — Planner intelligence + lab bootstrap are required for practical brief-first autonomy
+Date: 2026-02-18
+Status: Proposed
+
+Context:
+- Users can provide high-level creative briefs, but current operation still often needs manual analysis/pointer selection.
+- Quality iteration remains too manual when sample-derived assets are missing or incomplete.
+- CAF must improve practical autonomy without breaking deterministic production authority.
+
+Decision:
+- Add a planner intelligence graph for brief->contract resolution:
+  - structured brief slot extraction
+  - candidate contract retrieval from canon/lab manifests
+  - deterministic ranking/selection and explicit resolution artifact output.
+- Require lab bootstrap extraction completeness for production-consumable sample packs:
+  - identity, costume/style, stage/setting, framing/edit metadata, motion trace, audio/beat metadata.
+- Add one-command autonomous run path:
+  - brief -> resolve/bootstrap -> `job.json` -> deterministic controller/worker -> QC decision artifacts.
+
+Consequences:
+- Reduces manual CLI/path burden for repeated creative workflows (e.g., dance-loop recreation with hero substitution).
+- Keeps runtime authority boundaries intact:
+  - planner improves contract quality
+  - controller remains routing authority
+  - promotion contracts govern adoption into production defaults.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-35h, PR-35i, PR-35j)
+- docs/system-requirements.md (FR-28.23, FR-28.24, FR-28.25)
+- docs/architecture.md

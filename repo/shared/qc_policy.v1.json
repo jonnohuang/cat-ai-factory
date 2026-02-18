@@ -57,6 +57,74 @@
     ],
     "fallback_action": "escalate_hitl"
   },
+  "failure_classification": {
+    "classes": [
+      {
+        "class_id": "identity_drift",
+        "metrics": [
+          "identity_consistency",
+          "mask_edge_bleed"
+        ],
+        "action": "retry_recast"
+      },
+      {
+        "class_id": "pose_mismatch",
+        "metrics": [
+          "temporal_stability"
+        ],
+        "action": "retry_motion"
+      },
+      {
+        "class_id": "seam_artifact",
+        "metrics": [
+          "loop_seam"
+        ],
+        "action": "retry_motion"
+      },
+      {
+        "class_id": "audio_sync",
+        "metrics": [
+          "audio_video"
+        ],
+        "action": "retry_recast"
+      },
+      {
+        "class_id": "costume_mismatch",
+        "metrics": [
+          "costume_fidelity"
+        ],
+        "action": "block_for_costume"
+      }
+    ]
+  },
+  "workflow_presets": {
+    "class_to_preset": [
+      {
+        "class_id": "identity_drift",
+        "preset_id": "identity_safe_v1",
+        "workflow_id": "caf_dance_loop_v1",
+        "parameter_overrides": {
+          "identity_weight": 0.9
+        }
+      },
+      {
+        "class_id": "pose_mismatch",
+        "preset_id": "motion_safe_v1",
+        "workflow_id": "caf_dance_loop_v1",
+        "parameter_overrides": {
+          "pose_weight": 0.95
+        }
+      },
+      {
+        "class_id": "seam_artifact",
+        "preset_id": "seam_safe_v1",
+        "workflow_id": "caf_dance_loop_v1",
+        "parameter_overrides": {
+          "temporal_smoothing": 0.85
+        }
+      }
+    ]
+  },
   "advisory_mode": {
     "enabled": true,
     "allowed_actions": [

@@ -78,7 +78,7 @@ class SoraLabProvider(BaseProvider):
             "captions": ["Mochi", "On beat", "Sora lab lane", "Loop"],
             "hashtags": ["#cat", "#shorts", "#dance"],
             "render": {
-                "background_asset": "assets/demo/flight_composite.mp4",
+                "background_asset": "assets/demo/fight_composite.mp4",
                 "subtitle_style": "big_bottom",
                 "output_basename": f"{basename}-soralab",
             },

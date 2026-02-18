@@ -36,13 +36,20 @@ Depending on lane and enabled features, QC runner/decision engine may consume:
 
 - `qc_report.v1.json`:
   - gate-level statuses (`pass/fail/unknown`)
+  - gate-level `failure_class` tags (for class-driven routing)
   - score + threshold per gate
+  - `overall.failed_failure_classes`
   - `overall.recommended_action`
 
 - `quality_decision.v1.json`:
   - normalized action used by controller
   - input contract pointers/errors
+  - `inputs.failed_failure_classes`
   - retry/fallback metadata
+
+- `retry_plan.v1.json`:
+  - `retry.provider_switch` (engine provider switching)
+  - `retry.workflow_preset` (failure-class -> ComfyUI preset mapping)
 
 - optional lab artifacts:
   - `qc_route_advice.v1.json` (advisory)
@@ -68,6 +75,28 @@ python3 -m repo.tools.validate_qc_policy repo/shared/qc_policy.v1.json
 python3 -m repo.tools.validate_qc_report sandbox/logs/<job_id>/qc/qc_report.v1.json
 python3 -m repo.tools.validate_quality_decision sandbox/logs/<job_id>/qc/quality_decision.v1.json
 ```
+
+## Runtime Prereqs For QC-Meaningful Signals
+
+If these are missing, QC can still run but artifacts may degrade to `unknown`/fallback signals.
+
+Install:
+
+```bash
+pip install -r repo/requirements-dev.txt
+pip install jsonschema librosa scenedetect soundfile tensorflow
+```
+
+Configure:
+
+```bash
+# MoveNet fallback for analyzer pose extraction
+CAF_MOVENET_MODEL_PATH=sandbox/models/movenet_singlepose_lightning_4.tflite
+```
+
+Notes:
+- MediaPipe is currently Python-version constrained in this repo (`<3.12` marker).
+- On Python `3.12+`, expect MoveNet fallback or `mediapipe=unknown` in analyzer tool versions.
 
 ## Smoke Commands
 

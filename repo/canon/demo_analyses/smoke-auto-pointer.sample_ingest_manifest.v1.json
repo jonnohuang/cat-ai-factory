@@ -1,0 +1,41 @@
+{
+  "version": "sample_ingest_manifest.v1",
+  "sample_id": "smoke-auto-pointer",
+  "analysis_id": "smoke-auto-pointer",
+  "generated_at": "2026-02-18T00:00:00Z",
+  "source": {
+    "video_relpath": "sandbox/assets/demo/processed/smoke-auto-pointer.mp4",
+    "reference_aliases": [
+      "smoke auto pointer",
+      "mochi dance loop"
+    ]
+  },
+  "contracts": {
+    "video_analysis_relpath": "repo/examples/video_analysis.v1.example.json",
+    "reverse_prompt_relpath": null,
+    "beat_grid_relpath": null,
+    "pose_checkpoints_relpath": "repo/examples/pose_checkpoints.v1.example.json",
+    "keyframe_checkpoints_relpath": null,
+    "segment_stitch_plan_relpath": "repo/examples/segment_stitch_plan.v1.example.json",
+    "quality_target_relpath": "repo/examples/quality_target.motion_strict.v1.example.json",
+    "continuity_pack_relpath": "repo/examples/episode_continuity_pack.v1.example.json",
+    "storyboard_relpath": "repo/examples/storyboard.v1.example.json",
+    "frame_labels_relpath": null
+  },
+  "assets": {
+    "hero_refs": [
+      "mochi"
+    ],
+    "costume_refs": [],
+    "background_refs": [],
+    "audio_refs": [],
+    "style_tone_refs": []
+  },
+  "provenance": {
+    "ingest_tool": "smoke",
+    "tool_versions": {
+      "smoke": "v1"
+    },
+    "confidence": 1.0
+  }
+}

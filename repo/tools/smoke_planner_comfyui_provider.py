@@ -26,6 +26,7 @@ def main(argv: list[str]) -> int:
     _ = argv
     env = dict(os.environ)
     env["CAF_ENGINE_ROUTE_MODE"] = "production"
+    env["COMFYUI_BASE_URL"] = "http://127.0.0.1:8188"
     env["COMFYUI_WORKFLOW_ID"] = "caf_dance_loop_v1"
     cmd = [
         sys.executable,
@@ -35,6 +36,9 @@ def main(argv: list[str]) -> int:
         "Mochi comfyui provider smoke",
         "--provider",
         "comfyui_video",
+        "--analysis-id",
+        "dance-loop",
+        "--ignore-inbox",
         "--inbox",
         "sandbox/inbox",
         "--out",

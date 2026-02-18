@@ -17,6 +17,7 @@ import argparse
 import datetime as dt
 import importlib.metadata as importlib_metadata
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -77,9 +78,64 @@ def _collect_tool_versions() -> Dict[str, str]:
         "python": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
         "opencv": _pkg_version("opencv-python-headless"),
         "mediapipe": _pkg_version("mediapipe"),
+        "movenet": _pkg_version("tensorflow"),
         "librosa": _pkg_version("librosa"),
         "scenedetect": _pkg_version("scenedetect"),
     }
+
+
+def _load_movenet_interpreter() -> tuple[Any, Any, Any] | tuple[None, None, None]:
+    """Best-effort MoveNet loader (optional)."""
+    model_path = os.environ.get("CAF_MOVENET_MODEL_PATH", "").strip()
+    if not model_path:
+        return None, None, None
+    p = pathlib.Path(model_path)
+    if not p.exists():
+        return None, None, None
+    try:
+        import tensorflow as tf  # type: ignore
+
+        interp = tf.lite.Interpreter(model_path=str(p))
+        interp.allocate_tensors()
+        in_details = interp.get_input_details()
+        out_details = interp.get_output_details()
+        return interp, in_details, out_details
+    except Exception:
+        return None, None, None
+
+
+def _infer_movenet_signature(
+    frame_bgr: Any,
+    interp: Any,
+    in_details: Any,
+    out_details: Any,
+) -> tuple[list[float], float]:
+    import cv2  # type: ignore
+    import numpy as np  # type: ignore
+
+    # MoveNet single-pose expects 192x192 RGB tensor.
+    rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    inp = cv2.resize(rgb, (192, 192), interpolation=cv2.INTER_AREA)
+    inp = np.expand_dims(inp, axis=0)
+    in_dtype = in_details[0]["dtype"]
+    if in_dtype == np.float32:
+        inp = inp.astype(np.float32)
+    else:
+        inp = inp.astype(in_dtype)
+    interp.set_tensor(in_details[0]["index"], inp)
+    interp.invoke()
+    out = interp.get_tensor(out_details[0]["index"])
+    # Shape usually [1,1,17,3] => (y, x, score)
+    kp = out[0, 0]
+    idxs = [0, 5, 6, 11, 12, 9, 10]  # nose, shoulders, hips, wrists
+    sig: list[float] = []
+    vis: list[float] = []
+    for i in idxs:
+        y, x, score = kp[i]
+        sig.extend([round(float(x), 4), round(float(y), 4)])
+        vis.append(float(score))
+    conf = round(sum(vis) / max(1, len(vis)), 3)
+    return sig, conf
 
 
 def _probe(path: pathlib.Path) -> Dict[str, Any]:
@@ -220,6 +276,13 @@ def _extract_video_signals(
         pose_mode = "mediapipe_pose"
     except Exception:
         pose_engine = None
+    movenet_interp = None
+    movenet_in = None
+    movenet_out = None
+    if pose_engine is None:
+        movenet_interp, movenet_in, movenet_out = _load_movenet_interpreter()
+        if movenet_interp is not None:
+            pose_mode = "movenet"
 
     try:
         while True:
@@ -279,6 +342,12 @@ def _extract_video_signals(
                     conf = round(sum(vis) / max(1, len(vis)), 3)
                     pose_rows.append((t, sig, conf))
                 else:
+                    pose_rows.append((t, [0.0] * 14, 0.0))
+            elif movenet_interp is not None:
+                try:
+                    sig, conf = _infer_movenet_signature(frame, movenet_interp, movenet_in, movenet_out)
+                    pose_rows.append((t, sig, conf))
+                except Exception:
                     pose_rows.append((t, [0.0] * 14, 0.0))
             else:
                 vec = cv2.resize(gray, (8, 8), interpolation=cv2.INTER_AREA).flatten().astype("float32")

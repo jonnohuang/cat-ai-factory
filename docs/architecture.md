@@ -522,6 +522,31 @@ Motion/identity gate rule:
 Guarded authority trial rule:
 - Advisory-to-authority trials are allowed only when feature-flagged, default-off, and reversible.
 
+## Autonomous Brief Resolution and Lab Bootstrap (PR-35h/35i/35j direction)
+
+Goal:
+- Reduce manual operator steps while preserving deterministic production authority.
+
+Flow:
+1. User provides high-level brief.
+2. Planner intelligence graph resolves required pointers/contracts:
+   - parse brief slots (hero/costume/motion/setting/tone)
+   - retrieve candidate contracts from canon + lab manifests
+   - deterministically select pointers and emit resolution artifact.
+3. If required artifacts are missing, run lab bootstrap extraction:
+   - produce reusable sample asset pack (identity, costume/style, stage/setting, framing, motion, audio).
+4. Planner writes `job.json` with explicit pointers.
+5. Controller/worker run deterministic production route using policy + QC report authority.
+
+Authority boundaries:
+- Planner/OpenClaw may increase selection quality, but do not become runtime routing authority by default.
+- Controller remains pass/fail/retry/fallback authority in production mode.
+- Promotion contracts remain the only path for lab outputs to become production-authoritative defaults.
+
+Operator experience target:
+- One-command brief-to-output execution for known workflow classes.
+- All auto-selections and fallbacks remain auditable via explicit artifacts.
+
 ------------------------------------------------------------
 
 ## References

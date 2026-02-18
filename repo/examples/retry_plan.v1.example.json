@@ -29,6 +29,15 @@
       "next_provider": "wan_local",
       "provider_order_index": 1
     },
+    "workflow_preset": {
+      "mode": "comfyui_preset",
+      "preset_id": "motion_safe_v1",
+      "workflow_id": "caf_dance_loop_v1",
+      "failure_class": "pose_mismatch",
+      "parameter_overrides": {
+        "pose_weight": 0.95
+      }
+    },
     "pass_target": "motion"
   },
   "state": {

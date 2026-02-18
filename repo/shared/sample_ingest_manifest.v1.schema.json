@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/sample_ingest_manifest.v1.schema.json",
+  "title": "Sample Ingest Manifest v1",
+  "description": "Lab-first onboarding manifest for incoming sample videos and extracted contract pointers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "sample_id",
+    "analysis_id",
+    "generated_at",
+    "source",
+    "contracts",
+    "assets",
+    "provenance"
+  ],
+  "properties": {
+    "version": {"const": "sample_ingest_manifest.v1"},
+    "sample_id": {"type": "string", "minLength": 1},
+    "analysis_id": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["video_relpath", "reference_aliases"],
+      "properties": {
+        "video_relpath": {"type": "string", "pattern": "^sandbox/assets/demo/(incoming|processed)/.+\\.(mp4|mov|mkv|webm)$"},
+        "reference_aliases": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["video_analysis_relpath"],
+      "properties": {
+        "video_analysis_relpath": {"type": "string", "pattern": "^repo/canon/demo_analyses/.+\\.json$"},
+        "reverse_prompt_relpath": {"type": ["string", "null"], "pattern": "^(repo/canon/demo_analyses/.+\\.json)?$"},
+        "beat_grid_relpath": {"type": ["string", "null"], "pattern": "^(repo/canon/demo_analyses/.+\\.json)?$"},
+        "pose_checkpoints_relpath": {"type": ["string", "null"], "pattern": "^(repo/canon/demo_analyses/.+\\.json)?$"},
+        "keyframe_checkpoints_relpath": {"type": ["string", "null"], "pattern": "^(repo/canon/demo_analyses/.+\\.json)?$"},
+        "segment_stitch_plan_relpath": {"type": ["string", "null"], "pattern": "^(repo/canon/demo_analyses/.+\\.json|repo/examples/.+\\.json)?$"},
+        "quality_target_relpath": {"type": ["string", "null"], "pattern": "^(repo/(canon|examples)/.+\\.json)?$"},
+        "continuity_pack_relpath": {"type": ["string", "null"], "pattern": "^(repo/(canon|examples)/.+\\.json)?$"},
+        "storyboard_relpath": {"type": ["string", "null"], "pattern": "^(repo/(canon|examples)/.+\\.json)?$"},
+        "frame_labels_relpath": {"type": ["string", "null"], "pattern": "^(repo/(canon|examples)/.+\\.json)?$"}
+      }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hero_refs",
+        "costume_refs",
+        "background_refs",
+        "audio_refs",
+        "style_tone_refs"
+      ],
+      "properties": {
+        "hero_refs": {"type": "array", "items": {"type": "string"}},
+        "costume_refs": {"type": "array", "items": {"type": "string"}},
+        "background_refs": {"type": "array", "items": {"type": "string"}},
+        "audio_refs": {"type": "array", "items": {"type": "string"}},
+        "style_tone_refs": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ingest_tool", "tool_versions"],
+      "properties": {
+        "ingest_tool": {"type": "string", "minLength": 1},
+        "tool_versions": {"type": "object"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    }
+  }
+}

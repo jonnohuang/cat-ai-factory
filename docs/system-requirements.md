@@ -662,7 +662,47 @@ The system MUST support contract-driven promotion actions that can be triggered 
 - Hard constraints:
   - adapter layer remains ingress/status only (no direct authority bypass)
   - promotion decisions remain reproducible from explicit contracts and benchmark artifacts
-  - production mode consumes promoted artifacts/contracts only
+- production mode consumes promoted artifacts/contracts only
+
+### FR-28.23 — Planner intelligence graph for deterministic contract pointer resolution
+The system MUST support a planner intelligence step that maps high-level briefs to concrete contract pointers with deterministic final selection.
+
+- Required behavior:
+  - parse brief intent into structured slots (hero, costume/style, choreography/motion source, setting, tone)
+  - retrieve candidate contracts from canon/lab manifests
+  - deterministically rank/select pointers according to policy and artifact quality/provenance rules
+  - emit a resolution artifact with selected pointers and rejection reasons
+- Hard constraints:
+  - planner remains contract author only; runtime routing authority remains controller policy + QC report
+  - no hidden mutable memory authority outside explicit artifacts
+
+### FR-28.24 — Lab bootstrap extractor completeness for production-consumable assets
+The system MUST support extracting and validating a minimum reusable asset/contract pack from sample video onboarding.
+
+- Required behavior:
+  - emit versioned artifacts for at least:
+    - hero/identity anchors
+    - costume/style references
+    - background/stage/setting references
+    - framing/camera/edit metadata
+    - motion trace + segment plan
+    - audio/beat metadata
+  - include consumer mapping metadata (which lane consumes each artifact, required vs optional)
+  - fail-loud when required classes are missing
+- Hard constraints:
+  - extraction artifacts remain planner/control references only unless promoted
+  - worker runtime determinism and authority boundaries remain unchanged
+
+### FR-28.25 — One-command autonomous brief run with lab bootstrap fallback
+The system MUST support an end-to-end operator path where a high-level brief can run without manual pointer editing.
+
+- Required behavior:
+  - single run path: brief -> planner resolve -> controller execute -> QC decision artifacts
+  - if required sample contracts are missing, trigger deterministic lab bootstrap before production execution
+  - persist lifecycle/state artifacts for adapter/UI status visibility
+- Hard constraints:
+  - no bypass of promotion policy for production authority
+  - all transitions must remain artifact-driven and replayable
 
 
 ------------------------------------------------------------

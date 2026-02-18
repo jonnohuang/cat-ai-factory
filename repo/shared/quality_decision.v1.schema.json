@@ -94,6 +94,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "failed_failure_classes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          }
         }
       }
     },

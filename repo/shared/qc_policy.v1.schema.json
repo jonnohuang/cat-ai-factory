@@ -119,6 +119,89 @@
         }
       }
     },
+    "failure_classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classes"
+      ],
+      "properties": {
+        "classes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "class_id",
+              "metrics",
+              "action"
+            ],
+            "properties": {
+              "class_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9_]+$"
+              },
+              "metrics": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "retry_motion",
+                  "retry_recast",
+                  "block_for_costume",
+                  "escalate_hitl"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "workflow_presets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class_to_preset"
+      ],
+      "properties": {
+        "class_to_preset": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "class_id",
+              "preset_id",
+              "workflow_id"
+            ],
+            "properties": {
+              "class_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9_]+$"
+              },
+              "preset_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "workflow_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parameter_overrides": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
     "advisory_mode": {
       "type": "object",
       "additionalProperties": false,

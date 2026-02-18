@@ -1,0 +1,16 @@
+{
+  "version": "keyframe_checkpoints.v1",
+  "analysis_id": "cat-blame1",
+  "source_video_relpath": "sandbox/assets/demo/incoming/cat-blame1.mp4",
+  "keyframes": [
+    {
+      "t_sec": 0.0,
+      "label": "scene-001-start",
+      "tags": [
+        "scene",
+        "segment",
+        "dance"
+      ]
+    }
+  ]
+}

@@ -16,7 +16,8 @@
       "status": "pass",
       "score": 0.81,
       "threshold": 0.7,
-      "failure_action": "retry_recast"
+      "failure_action": "retry_recast",
+      "failure_class": null
     },
     {
       "gate_id": "temporal_stability_gate",
@@ -26,6 +27,7 @@
       "score": 0.52,
       "threshold": 0.7,
       "failure_action": "retry_motion",
+      "failure_class": "pose_mismatch",
       "reason": "score_below_threshold"
     }
   ],
@@ -33,6 +35,9 @@
     "pass": false,
     "failed_gate_ids": [
       "temporal_stability_gate"
+    ],
+    "failed_failure_classes": [
+      "pose_mismatch"
     ],
     "recommended_action": "retry_motion"
   }

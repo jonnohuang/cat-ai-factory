@@ -1,0 +1,60 @@
+{
+  "version": "beat_grid.v1",
+  "analysis_id": "cat-construction-fight",
+  "source_video_relpath": "sandbox/assets/demo/incoming/cat-construction-fight.mp4",
+  "bpm_estimate": 120.0,
+  "beats": [
+    {
+      "t_sec": 0.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 6.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 7.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 16.167,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 16.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 16.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 20.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 25.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 25.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 27.333,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 29.167,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 30.333,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 40.333,
+      "strength": 0.8
+    }
+  ]
+}

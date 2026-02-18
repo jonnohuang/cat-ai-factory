@@ -44,7 +44,7 @@ def main(argv: list[str]) -> int:
         "captions": ["one", "two", "three", "four"],
         "hashtags": ["#cat", "#shorts", "#pets"],
         "render": {
-            "background_asset": "assets/demo/flight_composite.mp4",
+            "background_asset": "assets/demo/fight_composite.mp4",
             "subtitle_style": "big_bottom",
             "output_basename": "smoke-engine-adapter-policy"
         }

@@ -1,0 +1,64 @@
+{
+  "version": "beat_grid.v1",
+  "analysis_id": "cat-blame1",
+  "source_video_relpath": "sandbox/assets/demo/incoming/cat-blame1.mp4",
+  "bpm_estimate": 120.0,
+  "beats": [
+    {
+      "t_sec": 0.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 10.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 20.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 27.333,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 32.667,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 33.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 37.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 41.0,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 43.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 44.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 54.5,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 54.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 55.833,
+      "strength": 0.8
+    },
+    {
+      "t_sec": 65.8,
+      "strength": 0.8
+    }
+  ]
+}

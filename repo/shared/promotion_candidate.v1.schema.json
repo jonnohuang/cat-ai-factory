@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/promotion_candidate.v1.schema.json",
+  "title": "Promotion Candidate v1",
+  "description": "Lab-evidence-backed promotion candidate for production pointer/policy adoption.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "candidate_id",
+    "generated_at",
+    "source",
+    "proposal",
+    "evidence"
+  ],
+  "properties": {
+    "version": {"const": "promotion_candidate.v1"},
+    "candidate_id": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id", "summary_relpath"],
+      "properties": {
+        "job_id": {"type": "string", "minLength": 1},
+        "summary_relpath": {"type": "string", "pattern": "^sandbox/logs/.+\\.json$"}
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_pointers"],
+      "properties": {
+        "contract_pointers": {"type": "object"},
+        "workflow_preset": {"type": "object"},
+        "qc_policy_relpath": {"type": ["string", "null"], "pattern": "^(repo/.+\\.json)?$"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quality_lift"],
+      "properties": {
+        "quality_lift": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pass_rate_delta", "retry_count_delta"],
+          "properties": {
+            "pass_rate_delta": {"type": "number"},
+            "retry_count_delta": {"type": "number"}
+          }
+        }
+      }
+    }
+  }
+}

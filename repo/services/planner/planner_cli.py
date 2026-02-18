@@ -150,7 +150,12 @@ def _kebab(value: str) -> str:
     return value
 
 
-def _load_video_analysis_selection(project_root: str, prd: Dict[str, Any], inbox_list: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _load_video_analysis_selection(
+    project_root: str,
+    prd: Dict[str, Any],
+    inbox_list: List[Dict[str, Any]],
+    forced_analysis_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     index_path = os.path.join(project_root, "repo", "canon", "demo_analyses", "video_analysis_index.v1.json")
     if not os.path.exists(index_path):
         return None
@@ -159,6 +164,25 @@ def _load_video_analysis_selection(project_root: str, prd: Dict[str, Any], inbox
         analyses = index_data.get("analyses", [])
         if not isinstance(analyses, list) or not analyses:
             return None
+
+        if isinstance(forced_analysis_id, str) and forced_analysis_id.strip():
+            target_id = forced_analysis_id.strip()
+            for item in analyses:
+                if not isinstance(item, dict):
+                    continue
+                if str(item.get("analysis_id", "")).strip() != target_id:
+                    continue
+                relpath = item.get("relpath")
+                if not isinstance(relpath, str) or not relpath:
+                    raise RuntimeError(f"analysis_id={target_id} missing relpath in index")
+                analysis_path = os.path.join(project_root, relpath)
+                if not os.path.exists(analysis_path):
+                    raise RuntimeError(f"analysis_id={target_id} relpath not found: {relpath}")
+                analysis_data = _load_json(analysis_path)
+                if not isinstance(analysis_data, dict):
+                    raise RuntimeError(f"analysis_id={target_id} relpath unreadable JSON: {relpath}")
+                return analysis_data
+            raise RuntimeError(f"analysis_id not found in index: {target_id}")
 
         context_blob = json.dumps({"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True).lower()
         is_dance_context = any(tok in context_blob for tok in ("dance", "loop", "choreo", "groove", "beat"))
@@ -510,6 +534,103 @@ def _select_engine_adapter_registry(project_root: str) -> Optional[Dict[str, Any
     return None
 
 
+def _collect_terms(prd: Dict[str, Any], inbox_list: List[Dict[str, Any]]) -> set[str]:
+    blob = json.dumps({"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True).lower()
+    parts = re.split(r"[^a-z0-9]+", blob)
+    return {p for p in parts if len(p) >= 3}
+
+
+def _select_sample_ingest_manifest(
+    project_root: str,
+    prd: Dict[str, Any],
+    inbox_list: List[Dict[str, Any]],
+    analysis_id: Optional[str],
+) -> Optional[Dict[str, Any]]:
+    base = os.path.join(project_root, "repo", "canon", "demo_analyses")
+    if not os.path.isdir(base):
+        return None
+    rows: List[Tuple[int, str, Dict[str, Any]]] = []
+    terms = _collect_terms(prd, inbox_list)
+    context_blob = json.dumps({"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True).lower()
+    for root, _dirs, files in os.walk(base):
+        for name in sorted(files):
+            if not name.endswith(".sample_ingest_manifest.v1.json"):
+                continue
+            p = os.path.join(root, name)
+            doc = _load_json_if_exists(p)
+            if not isinstance(doc, dict) or doc.get("version") != "sample_ingest_manifest.v1":
+                continue
+            score = 0
+            doc_analysis_id = doc.get("analysis_id")
+            if isinstance(analysis_id, str) and analysis_id and doc_analysis_id == analysis_id:
+                score += 100
+            source = doc.get("source", {})
+            aliases = source.get("reference_aliases", []) if isinstance(source, dict) else []
+            if isinstance(aliases, list):
+                for alias in aliases:
+                    if not isinstance(alias, str):
+                        continue
+                    alias_norm = " ".join([t for t in re.split(r"[^a-z0-9]+", alias.lower()) if t])
+                    if alias_norm and alias_norm in context_blob:
+                        score += 200
+                    tokens = [t for t in re.split(r"[^a-z0-9]+", alias.lower()) if t]
+                    if tokens and all(t in terms for t in tokens):
+                        score += 10
+                    score += sum(1 for t in tokens if t in terms)
+            rows.append((score, p, doc))
+    if not rows:
+        return None
+    rows.sort(key=lambda x: (-x[0], x[1]))
+    best = rows[0]
+    if best[0] <= 0 and not (isinstance(analysis_id, str) and analysis_id):
+        return None
+    return {"relpath": _safe_rel(best[1], project_root), "data": best[2]}
+
+
+def _load_promotion_registry(project_root: str) -> Optional[Dict[str, Any]]:
+    p = os.path.join(project_root, "repo", "shared", "promotion_registry.v1.json")
+    doc = _load_json_if_exists(p)
+    if isinstance(doc, dict) and doc.get("version") == "promotion_registry.v1":
+        return doc
+    return None
+
+
+def _resolve_pointer_overrides(
+    project_root: str,
+    prd: Dict[str, Any],
+    inbox_list: List[Dict[str, Any]],
+    selected_analysis: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    analysis_id = None
+    if isinstance(selected_analysis, dict):
+        raw_id = selected_analysis.get("analysis_id")
+        if isinstance(raw_id, str) and raw_id:
+            analysis_id = raw_id
+
+    out: Dict[str, Any] = {}
+    manifest = _select_sample_ingest_manifest(project_root, prd, inbox_list, analysis_id)
+    if isinstance(manifest, dict):
+        data = manifest.get("data", {})
+        contracts = data.get("contracts", {}) if isinstance(data, dict) else {}
+        if isinstance(contracts, dict):
+            out["sample_ingest_manifest_relpath"] = manifest.get("relpath")
+            out["contracts"] = contracts
+
+    registry = _load_promotion_registry(project_root)
+    if isinstance(registry, dict):
+        approved = registry.get("approved", [])
+        if isinstance(approved, list):
+            for row in reversed(approved):
+                if not isinstance(row, dict):
+                    continue
+                proposal = row.get("proposal", {})
+                pointers = proposal.get("contract_pointers", {}) if isinstance(proposal, dict) else {}
+                if isinstance(pointers, dict) and pointers:
+                    out["promoted_contract_pointers"] = pointers
+                    break
+    return out
+
+
 def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     ctx: Dict[str, Any] = {}
 
@@ -733,20 +854,6 @@ def _apply_quality_policy_hints(job: Dict[str, Any], quality_context: Dict[str, 
     if all_pass is False and job.get("lane") == "dance_swap":
         job.pop("lane", None)
         job.pop("dance_swap", None)
-        script = job.get("script")
-        if isinstance(script, dict):
-            ending = str(script.get("ending", "")).strip()
-            suffix = " (external recast HITL recommended)."
-            if ending:
-                if ending.endswith("."):
-                    ending = ending[:-1]
-                max_base = max(0, 120 - len(suffix))
-                ending = ending[:max_base].rstrip()
-                script["ending"] = f"{ending}{suffix}" if ending else "External recast HITL recommended."
-            else:
-                script["ending"] = "External recast HITL recommended."
-            if len(script["ending"]) > 120:
-                script["ending"] = script["ending"][:120].rstrip()
     return job
 
 
@@ -772,6 +879,17 @@ def _apply_engine_adapter_hints(job: Dict[str, Any], quality_context: Dict[str, 
         return job
     if not isinstance(frame_order, list) or not frame_order:
         return job
+    motion_contract_relpath: Optional[str] = None
+    mc = job.get("motion_contract")
+    if isinstance(mc, dict):
+        rel = mc.get("relpath")
+        if isinstance(rel, str) and rel:
+            motion_contract_relpath = rel
+    motion_constraints_list = [str(x) for x in (motion_constraints or []) if isinstance(x, str)]
+    if motion_contract_relpath:
+        token = f"pose_contract:{motion_contract_relpath}"
+        if token not in motion_constraints_list:
+            motion_constraints_list.append(token)
     job["generation_policy"] = {
         "registry_relpath": policy.get("relpath"),
         "baseline_video_provider": policy.get("baseline_video_provider"),
@@ -782,7 +900,7 @@ def _apply_engine_adapter_hints(job: Dict[str, Any], quality_context: Dict[str, 
         "video_provider_order": [str(x) for x in route.get("video_candidates", []) if isinstance(x, str)],
         "frame_provider_order": [str(x) for x in route.get("frame_candidates", []) if isinstance(x, str)],
         "lab_challenger_order": [str(x) for x in (lab_order or []) if isinstance(x, str)],
-        "motion_constraints": [str(x) for x in (motion_constraints or []) if isinstance(x, str)],
+        "motion_constraints": motion_constraints_list,
         "post_process_order": [str(x) for x in (post_process or []) if isinstance(x, str)],
     }
     return job
@@ -1064,6 +1182,82 @@ def _apply_quality_target_hints(job: Dict[str, Any], quality_context: Dict[str, 
     return job
 
 
+def _apply_motion_contract_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(job, dict) or not isinstance(quality_context, dict):
+        return job
+    existing = job.get("motion_contract")
+    if isinstance(existing, dict) and isinstance(existing.get("relpath"), str) and existing.get("relpath"):
+        return job
+
+    relpath: Optional[str] = None
+    reverse = quality_context.get("reverse_analysis")
+    if isinstance(reverse, dict):
+        candidate = reverse.get("pose_checkpoints_relpath")
+        if isinstance(candidate, str) and candidate:
+            relpath = candidate
+    if not relpath:
+        fallback_rel = "repo/examples/pose_checkpoints.v1.example.json"
+        fallback_abs = os.path.join(_repo_root(), fallback_rel)
+        if os.path.exists(fallback_abs):
+            relpath = fallback_rel
+    if not relpath:
+        return job
+    job["motion_contract"] = {
+        "relpath": relpath,
+        "contract_version": "pose_checkpoints.v1",
+    }
+    return job
+
+
+def _apply_pointer_resolver_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(job, dict) or not isinstance(quality_context, dict):
+        return job
+    resolver = quality_context.get("pointer_resolver")
+    if not isinstance(resolver, dict):
+        return job
+    contracts = resolver.get("contracts", {})
+    if isinstance(contracts, dict):
+        # Manifest-derived pointers are explicit operator/promoted intent.
+        # They should take precedence over provider defaults or generic fallbacks.
+        rel = contracts.get("quality_target_relpath")
+        if isinstance(rel, str) and rel:
+            job["quality_target"] = {"relpath": rel}
+        rel = contracts.get("continuity_pack_relpath")
+        if isinstance(rel, str) and rel and not isinstance(job.get("continuity_pack"), dict):
+            job["continuity_pack"] = {"relpath": rel}
+        rel = contracts.get("pose_checkpoints_relpath")
+        if isinstance(rel, str) and rel:
+            job["motion_contract"] = {"relpath": rel, "contract_version": "pose_checkpoints.v1"}
+        rel = contracts.get("segment_stitch_plan_relpath")
+        if isinstance(rel, str) and rel:
+            job["segment_stitch"] = {"plan_relpath": rel, "enabled": True}
+    promoted = resolver.get("promoted_contract_pointers", {})
+    if isinstance(promoted, dict):
+        if not isinstance(job.get("motion_contract"), dict):
+            mc = promoted.get("motion_contract")
+            if isinstance(mc, dict) and isinstance(mc.get("relpath"), str):
+                job["motion_contract"] = {
+                    "relpath": mc.get("relpath"),
+                    "contract_version": str(mc.get("contract_version", "pose_checkpoints.v1")),
+                }
+        if not isinstance(job.get("quality_target"), dict):
+            qt = promoted.get("quality_target")
+            if isinstance(qt, dict) and isinstance(qt.get("relpath"), str):
+                job["quality_target"] = {"relpath": qt.get("relpath")}
+        if not isinstance(job.get("continuity_pack"), dict):
+            cp = promoted.get("continuity_pack")
+            if isinstance(cp, dict) and isinstance(cp.get("relpath"), str):
+                job["continuity_pack"] = {"relpath": cp.get("relpath")}
+        if not isinstance(job.get("segment_stitch"), dict):
+            seg = promoted.get("segment_stitch")
+            if isinstance(seg, dict) and isinstance(seg.get("plan_relpath"), str):
+                job["segment_stitch"] = {
+                    "plan_relpath": seg.get("plan_relpath"),
+                    "enabled": bool(seg.get("enabled", True)),
+                }
+    return job
+
+
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Cat AI Factory planner CLI")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -1074,6 +1268,16 @@ def main(argv: List[str]) -> int:
     parser.add_argument("--out", default="sandbox/jobs", help="Output directory for job.json")
     parser.add_argument("--provider", default="ai_studio", choices=list_providers(), help="Planner provider")
     parser.add_argument("--job-id", default=None, help="Optional job_id override")
+    parser.add_argument(
+        "--analysis-id",
+        default=None,
+        help="Optional deterministic analysis_id override from repo/canon/demo_analyses/video_analysis_index.v1.json",
+    )
+    parser.add_argument(
+        "--ignore-inbox",
+        action="store_true",
+        help="Ignore inbox artifacts for planner selection/generation context (prevents stale inbox influence).",
+    )
     parser.add_argument("--debug", action="store_true", help="Print safe debug info")
 
     args = parser.parse_args(argv)
@@ -1086,6 +1290,9 @@ def main(argv: List[str]) -> int:
             prd = _load_json(args.prd)
 
         inbox_list, inbox_with_names = _load_inbox(args.inbox)
+        if args.ignore_inbox:
+            inbox_list, inbox_with_names = [], []
+            print("INFO planner ignore_inbox=true", file=sys.stderr)
 
         # PR21: Load hero registry (reference only)
         hero_registry = None
@@ -1131,8 +1338,14 @@ def main(argv: List[str]) -> int:
                 print(f"WARNING: Failed to load/validate hero registry: {ex}", file=sys.stderr)
 
         provider = get_provider(args.provider)
-        video_analysis = _load_video_analysis_selection(project_root, prd, inbox_list)
+        video_analysis = _load_video_analysis_selection(
+            project_root,
+            prd,
+            inbox_list,
+            forced_analysis_id=args.analysis_id,
+        )
         quality_context = _load_quality_context(project_root, video_analysis)
+        quality_context["pointer_resolver"] = _resolve_pointer_overrides(project_root, prd, inbox_list, video_analysis)
 
         job = provider.generate_job(
             prd,
@@ -1149,9 +1362,11 @@ def main(argv: List[str]) -> int:
             if isinstance(selected_id, str) and selected_id:
                 print(f"INFO planner video_analysis_applied={selected_id}", file=sys.stderr)
         job = _apply_reverse_analysis_hints(job, quality_context)
+        job = _apply_pointer_resolver_hints(job, quality_context)
         job = _apply_segment_stitch_hints(job, quality_context, project_root)
         job = _apply_continuity_pack_hints(job, quality_context)
         job = _apply_quality_target_hints(job, quality_context)
+        job = _apply_motion_contract_hints(job, quality_context)
         job = _apply_engine_adapter_hints(job, quality_context)
         job = _apply_quality_policy_hints(job, quality_context)
         job = _apply_facts_only_guard(job, quality_context)

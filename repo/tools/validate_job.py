@@ -153,6 +153,17 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             elif not relpath.startswith("repo/"):
                 errors.append("quality_target.relpath must be repo-relative (repo/...)")
 
+    motion_contract = job.get("motion_contract")
+    if motion_contract is not None:
+        if not isinstance(motion_contract, dict):
+            errors.append("motion_contract must be an object when present")
+        else:
+            relpath = motion_contract.get("relpath")
+            if not isinstance(relpath, str) or not relpath.strip():
+                errors.append("motion_contract.relpath must be a non-empty string")
+            elif not relpath.startswith("repo/"):
+                errors.append("motion_contract.relpath must be repo-relative (repo/...)")
+
     continuity_pack = job.get("continuity_pack")
     if continuity_pack is not None:
         if not isinstance(continuity_pack, dict):

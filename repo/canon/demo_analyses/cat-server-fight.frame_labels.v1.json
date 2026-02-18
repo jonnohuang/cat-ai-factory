@@ -1,0 +1,44 @@
+{
+  "version": "frame_labels.v1",
+  "analysis_id": "cat-server-fight",
+  "source_video_relpath": "sandbox/assets/demo/incoming/cat-server-fight.mp4",
+  "tool_versions": {
+    "python": "3.12.8",
+    "opencv": "4.10.0",
+    "mediapipe": "unknown",
+    "librosa": "unknown",
+    "scenedetect": "unknown"
+  },
+  "authority": {
+    "reverse_prompt_ref": "repo/canon/demo_analyses/cat-server-fight.caf.video_reverse_prompt.v1.json",
+    "keyframe_checkpoints_ref": "repo/canon/demo_analyses/cat-server-fight.keyframe_checkpoints.v1.json"
+  },
+  "policy": {
+    "facts_only_or_unknown": true,
+    "enrichment_provider": "rule_based"
+  },
+  "frames": [
+    {
+      "frame_id": "frame_001",
+      "shot_id": "shot_001",
+      "t_sec": 0.0,
+      "facts": {
+        "camera_mode": "tilt",
+        "brightness_bucket": "mid",
+        "palette_hint": "#080808",
+        "motion_intensity": 0.18
+      },
+      "labels": {
+        "subject_focus": "hero",
+        "motion_phase": "low",
+        "composition": "wide",
+        "action_summary": "low motion dance beat; camera tilt."
+      },
+      "confidence": {
+        "facts": 0.92,
+        "enrichment": 0.58
+      },
+      "uncertainty": []
+    }
+  ]
+}

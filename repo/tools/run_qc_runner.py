@@ -118,6 +118,41 @@ def _choose_recommended_action(
     return fallback_action
 
 
+def _build_failure_class_map(policy: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    out: Dict[str, Dict[str, Any]] = {}
+    cfg = policy.get("failure_classification")
+    if not isinstance(cfg, dict):
+        return out
+    classes = cfg.get("classes")
+    if not isinstance(classes, list):
+        return out
+    for row in classes:
+        if not isinstance(row, dict):
+            continue
+        class_id = row.get("class_id")
+        action = row.get("action")
+        metrics = row.get("metrics")
+        if not isinstance(class_id, str) or not class_id:
+            continue
+        if not isinstance(action, str) or not action:
+            continue
+        if not isinstance(metrics, list) or not metrics:
+            continue
+        metric_set = {str(m) for m in metrics if isinstance(m, str) and m}
+        if not metric_set:
+            continue
+        out[class_id] = {"action": action, "metrics": metric_set}
+    return out
+
+
+def _classify_failure(metric: str, class_map: Dict[str, Dict[str, Any]]) -> Optional[str]:
+    for class_id, row in class_map.items():
+        metrics = row.get("metrics")
+        if isinstance(metrics, set) and metric in metrics:
+            return class_id
+    return None
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Build deterministic qc_report.v1 from policy + measured artifacts")
     parser.add_argument("--job-id", required=True)
@@ -149,6 +184,8 @@ def main(argv: list[str]) -> int:
     gates: List[Dict[str, Any]] = []
     failed_gate_ids: List[str] = []
     failed_actions: List[str] = []
+    failed_failure_classes: List[str] = []
+    failure_class_map = _build_failure_class_map(policy)
 
     metrics = quality.get("metrics", {}) if isinstance(quality, dict) else {}
 
@@ -190,6 +227,7 @@ def main(argv: list[str]) -> int:
             "score": score,
             "threshold": threshold,
             "failure_action": failure_action,
+            "failure_class": None,
         }
         if reason:
             gate_entry["reason"] = reason
@@ -197,6 +235,14 @@ def main(argv: list[str]) -> int:
 
         if status == "fail":
             failed_gate_ids.append(gate_id)
+            failure_class = _classify_failure(metric, failure_class_map)
+            if failure_class:
+                gate_entry["failure_class"] = failure_class
+                failed_failure_classes.append(failure_class)
+                mapped = failure_class_map.get(failure_class, {}).get("action")
+                if isinstance(mapped, str) and mapped:
+                    failed_actions.append(mapped)
+                    continue
             failed_actions.append(failure_action)
 
     recommended_action = _choose_recommended_action(failed_actions, priorities, fallback_action)
@@ -214,6 +260,7 @@ def main(argv: list[str]) -> int:
         "overall": {
             "pass": len(failed_gate_ids) == 0,
             "failed_gate_ids": failed_gate_ids,
+            "failed_failure_classes": sorted(set(failed_failure_classes)),
             "recommended_action": recommended_action,
         },
     }

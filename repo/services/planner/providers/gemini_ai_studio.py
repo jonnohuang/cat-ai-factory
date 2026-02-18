@@ -180,7 +180,7 @@ def _build_prompt(
         '"script":{"hook":"...","voiceover":"...","ending":"..."},'
         '"shots":[{"t":0,"visual":"...","action":"...","caption":"..."}],'
         '"captions":["..."],"hashtags":["#cat","#shorts","#pets"],'
-        '"render":{"background_asset":"assets/demo/flight_composite.mp4",'
+        '"render":{"background_asset":"assets/demo/fight_composite.mp4",'
         '"subtitle_style":"big_bottom","output_basename":"..."}}'
     )
     rules = (
