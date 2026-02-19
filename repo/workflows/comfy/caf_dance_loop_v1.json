@@ -115,10 +115,10 @@
           0
         ],
         "seed": 123456,
-        "steps": 14,
+        "steps": 20,
         "cfg": 7.2,
-        "sampler_name": "euler",
-        "scheduler": "normal",
+        "sampler_name": "dpmpp_2m",
+        "scheduler": "karras",
         "denoise": 0.56,
         "positive": [
           "positive_blend",
