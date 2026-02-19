@@ -155,8 +155,17 @@ def _build_prompt(
     registry_context = ""
     if hero_registry:
         # PR21: Compact JSON to save tokens
-        # TODO: If registry grows large, pass a reduced view (ids + names + tags) to save tokens.
-        registry_json = json.dumps(hero_registry, indent=None, separators=(",", ":"), ensure_ascii=True)
+        # Reduced view (ids + names + tags) to save tokens.
+        reduced_heroes = []
+        for hero in hero_registry.get("heroes", []):
+            if not isinstance(hero, dict):
+                continue
+            reduced_heroes.append({
+                "id": hero.get("hero_id"),
+                "name": hero.get("name"),
+                "tags": hero.get("series_tags"),
+            })
+        registry_json = json.dumps({"heroes": reduced_heroes}, indent=None, separators=(",", ":"), ensure_ascii=True)
         registry_context = (
             f"Hero Registry (Reference Material):\n"
             f"{registry_json}\n"
