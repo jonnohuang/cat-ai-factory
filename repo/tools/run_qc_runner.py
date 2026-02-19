@@ -118,6 +118,13 @@ def _choose_recommended_action(
     return fallback_action
 
 
+def _normalize_missing_report_action(policy: Dict[str, Any], fallback_action: str) -> str:
+    raw = policy.get("default_action_on_missing_report")
+    if isinstance(raw, str) and raw in {"retry_motion", "retry_recast", "block_for_costume", "escalate_hitl"}:
+        return raw
+    return fallback_action
+
+
 def _build_failure_class_map(policy: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     out: Dict[str, Dict[str, Any]] = {}
     cfg = policy.get("failure_classification")
@@ -180,6 +187,7 @@ def main(argv: list[str]) -> int:
     policy_gates = policy.get("gates", [])
     priorities = [str(x) for x in policy.get("routing", {}).get("failure_action_priority", []) if isinstance(x, str)]
     fallback_action = str(policy.get("routing", {}).get("fallback_action", "escalate_hitl"))
+    missing_report_action = _normalize_missing_report_action(policy, fallback_action)
 
     gates: List[Dict[str, Any]] = []
     failed_gate_ids: List[str] = []
@@ -244,6 +252,9 @@ def main(argv: list[str]) -> int:
                     failed_actions.append(mapped)
                     continue
             failed_actions.append(failure_action)
+        elif status == "unknown":
+            failed_gate_ids.append(gate_id)
+            failed_actions.append(missing_report_action)
 
     recommended_action = _choose_recommended_action(failed_actions, priorities, fallback_action)
     payload: Dict[str, Any] = {

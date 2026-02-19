@@ -104,6 +104,97 @@ def _collect_sample_refs(analysis: Dict[str, Any]) -> Dict[str, List[str]]:
     return {k: sorted(set(v)) for k, v in hooks.items()}
 
 
+def _non_empty_str(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _build_artifact_classes(
+    contracts: Dict[str, Any],
+    refs: Dict[str, List[str]],
+) -> Dict[str, Dict[str, Any]]:
+    def _ev(*items: Any) -> List[str]:
+        out: List[str] = []
+        for item in items:
+            if _non_empty_str(item):
+                out.append(str(item).strip())
+        return out
+
+    identity_evidence = _ev(
+        contracts.get("frame_labels_relpath"),
+        contracts.get("keyframe_checkpoints_relpath"),
+    ) + [f"hero_ref:{x}" for x in refs.get("hero_refs", []) if _non_empty_str(x)]
+    costume_style_evidence = (
+        [f"costume_ref:{x}" for x in refs.get("costume_refs", []) if _non_empty_str(x)]
+        + [f"style_ref:{x}" for x in refs.get("style_tone_refs", []) if _non_empty_str(x)]
+        + _ev(contracts.get("continuity_pack_relpath"), contracts.get("storyboard_relpath"))
+    )
+    background_evidence = [f"background_ref:{x}" for x in refs.get("background_refs", []) if _non_empty_str(x)] + _ev(
+        contracts.get("video_analysis_relpath")
+    )
+    framing_evidence = _ev(
+        contracts.get("video_analysis_relpath"),
+        contracts.get("reverse_prompt_relpath"),
+        contracts.get("segment_stitch_plan_relpath"),
+    )
+    motion_evidence = _ev(
+        contracts.get("pose_checkpoints_relpath"),
+        contracts.get("segment_stitch_plan_relpath"),
+    )
+    audio_beat_evidence = _ev(contracts.get("beat_grid_relpath")) + [
+        f"audio_ref:{x}" for x in refs.get("audio_refs", []) if _non_empty_str(x)
+    ]
+
+    classes: Dict[str, Dict[str, Any]] = {
+        "identity_anchor": {
+            "required": True,
+            "present": bool(identity_evidence),
+            "consumers": ["planner", "provider", "qc"],
+            "evidence": identity_evidence,
+        },
+        "costume_style": {
+            "required": True,
+            "present": bool(costume_style_evidence),
+            "consumers": ["planner", "provider", "qc"],
+            "evidence": costume_style_evidence,
+        },
+        "background_setting": {
+            "required": True,
+            "present": bool(background_evidence),
+            "consumers": ["planner", "provider", "worker", "qc"],
+            "evidence": background_evidence,
+        },
+        "framing_edit": {
+            "required": True,
+            "present": bool(framing_evidence),
+            "consumers": ["planner", "provider", "worker", "qc"],
+            "evidence": framing_evidence,
+        },
+        "motion_trace": {
+            "required": True,
+            "present": bool(motion_evidence),
+            "consumers": ["planner", "provider", "controller", "worker", "qc"],
+            "evidence": motion_evidence,
+        },
+        "audio_beat": {
+            "required": True,
+            "present": bool(audio_beat_evidence),
+            "consumers": ["planner", "provider", "worker", "qc"],
+            "evidence": audio_beat_evidence,
+        },
+    }
+    return classes
+
+
+def _missing_required_artifact_classes(artifact_classes: Dict[str, Dict[str, Any]]) -> List[str]:
+    missing: List[str] = []
+    for name, row in artifact_classes.items():
+        if not isinstance(row, dict):
+            continue
+        if bool(row.get("required")) and not bool(row.get("present")):
+            missing.append(name)
+    return sorted(missing)
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Lab-first deterministic sample ingest for incoming demo videos.")
     parser.add_argument("--incoming-dir", default="sandbox/assets/demo/incoming")
@@ -187,6 +278,27 @@ def main(argv: list[str]) -> int:
         frame_labels = _find_core_contract(canon_dir, analysis_id, "frame_labels.v1")
         seg_plan = _find_core_contract(canon_dir, analysis_id, "segment_stitch_plan.v1")
 
+        contracts = {
+            "video_analysis_relpath": _safe_rel(analysis_out, root),
+            "reverse_prompt_relpath": _safe_rel(reverse, root) if reverse else None,
+            "beat_grid_relpath": _safe_rel(beat, root) if beat else None,
+            "pose_checkpoints_relpath": _safe_rel(pose, root) if pose else None,
+            "keyframe_checkpoints_relpath": _safe_rel(keyframe, root) if keyframe else None,
+            "segment_stitch_plan_relpath": _safe_rel(seg_plan, root) if seg_plan else None,
+            "quality_target_relpath": args.quality_target_relpath,
+            "continuity_pack_relpath": args.continuity_pack_relpath,
+            "storyboard_relpath": args.storyboard_relpath,
+            "frame_labels_relpath": _safe_rel(frame_labels, root) if frame_labels else None,
+        }
+        artifact_classes = _build_artifact_classes(contracts, refs)
+        missing_required = _missing_required_artifact_classes(artifact_classes)
+        if missing_required:
+            raise RuntimeError(
+                "sample ingest manifest missing required artifact classes: "
+                + ", ".join(missing_required)
+                + f" (analysis_id={analysis_id})"
+            )
+
         manifest = {
             "version": "sample_ingest_manifest.v1",
             "sample_id": analysis_id,
@@ -196,18 +308,7 @@ def main(argv: list[str]) -> int:
                 "video_relpath": _safe_rel(video_path, root),
                 "reference_aliases": _extract_aliases(video_path.name),
             },
-            "contracts": {
-                "video_analysis_relpath": _safe_rel(analysis_out, root),
-                "reverse_prompt_relpath": _safe_rel(reverse, root) if reverse else None,
-                "beat_grid_relpath": _safe_rel(beat, root) if beat else None,
-                "pose_checkpoints_relpath": _safe_rel(pose, root) if pose else None,
-                "keyframe_checkpoints_relpath": _safe_rel(keyframe, root) if keyframe else None,
-                "segment_stitch_plan_relpath": _safe_rel(seg_plan, root) if seg_plan else None,
-                "quality_target_relpath": args.quality_target_relpath,
-                "continuity_pack_relpath": args.continuity_pack_relpath,
-                "storyboard_relpath": args.storyboard_relpath,
-                "frame_labels_relpath": _safe_rel(frame_labels, root) if frame_labels else None,
-            },
+            "contracts": contracts,
             "assets": {
                 "hero_refs": refs.get("hero_refs", []),
                 "costume_refs": refs.get("costume_refs", []),
@@ -215,6 +316,7 @@ def main(argv: list[str]) -> int:
                 "audio_refs": refs.get("audio_refs", []),
                 "style_tone_refs": refs.get("style_tone_refs", []),
             },
+            "artifact_classes": artifact_classes,
             "provenance": {
                 "ingest_tool": "repo.tools.ingest_demo_samples",
                 "tool_versions": {

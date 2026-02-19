@@ -438,6 +438,147 @@
         }
       }
     },
+    "pointer_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "required",
+        "selection_policy",
+        "selected",
+        "rejected",
+        "fallback_used"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "const": "pointer_resolution.v1"
+        },
+        "analysis_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "motion_contract",
+              "quality_target",
+              "segment_stitch",
+              "continuity_pack"
+            ]
+          }
+        },
+        "selection_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_precedence",
+            "tie_break"
+          ],
+          "properties": {
+            "source_precedence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "tie_break": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "selected": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "relpath",
+              "source",
+              "priority",
+              "exists"
+            ],
+            "properties": {
+              "relpath": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "priority": {
+                "type": "integer"
+              },
+              "exists": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pointer",
+              "relpath",
+              "source",
+              "priority",
+              "reason"
+            ],
+            "properties": {
+              "pointer": {
+                "type": "string",
+                "enum": [
+                  "motion_contract",
+                  "quality_target",
+                  "segment_stitch",
+                  "continuity_pack"
+                ]
+              },
+              "relpath": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "priority": {
+                "type": "integer"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "lower_priority_than_selected",
+                  "path_not_found"
+                ]
+              }
+            }
+          }
+        },
+        "fallback_used": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "motion_contract",
+              "quality_target",
+              "segment_stitch",
+              "continuity_pack"
+            ]
+          }
+        }
+      }
+    },
     "comfyui": {
       "type": "object",
       "additionalProperties": false,

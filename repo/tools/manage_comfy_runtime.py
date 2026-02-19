@@ -92,6 +92,21 @@ def _listener_pid(host: str, port: int) -> Optional[int]:
     return None
 
 
+def _pid_cmdline(pid: int) -> str:
+    try:
+        proc = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return proc.stdout.strip()
+
+
 def _install_comfy(comfy_home: pathlib.Path) -> int:
     comfy_home.parent.mkdir(parents=True, exist_ok=True)
     if comfy_home.exists():
@@ -156,21 +171,32 @@ def _setup_comfy(comfy_home: pathlib.Path, python_bin: str) -> int:
 
 
 def _status(root: pathlib.Path, host: str, port: int) -> int:
-    pid = _read_pid(_pid_path(root))
+    pid_file = _pid_path(root)
+    log_file = _log_path(root)
+    pid = _read_pid(pid_file)
     port_open = _is_port_open(host, port)
     listen_pid = _listener_pid(host, port) if port_open else None
+    pid_alive = _pid_alive(pid) if pid is not None else False
+    listener_cmd = _pid_cmdline(listen_pid) if listen_pid is not None else ""
+    managed = pid is not None and pid_alive and listen_pid is not None and int(pid) == int(listen_pid)
+    unmanaged_listener = listen_pid is not None and not managed
     print(f"comfy_host: {host}")
     print(f"comfy_port: {port}")
     print(f"port_open: {port_open}")
+    print(f"runtime_dir: {_runtime_dir(root)}")
     if pid is not None:
-        print(f"pid_file: {_pid_path(root)}")
+        print(f"pid_file: {pid_file}")
         print(f"pid: {pid}")
-        print(f"pid_alive: {_pid_alive(pid)}")
+        print(f"pid_alive: {pid_alive}")
     else:
-        print(f"pid_file: {_pid_path(root)} (missing)")
+        print(f"pid_file: {pid_file} (missing)")
     if listen_pid is not None:
         print(f"listener_pid: {listen_pid}")
-    print(f"log_path: {_log_path(root)}")
+        if listener_cmd:
+            print(f"listener_cmd: {listener_cmd}")
+    print(f"managed_listener: {managed}")
+    print(f"unmanaged_listener: {unmanaged_listener}")
+    print(f"log_path: {log_file}")
     return 0
 
 

@@ -13,6 +13,7 @@
     "source",
     "contracts",
     "assets",
+    "artifact_classes",
     "provenance"
   ],
   "properties": {
@@ -67,6 +68,26 @@
         "style_tone_refs": {"type": "array", "items": {"type": "string"}}
       }
     },
+    "artifact_classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_anchor",
+        "costume_style",
+        "background_setting",
+        "framing_edit",
+        "motion_trace",
+        "audio_beat"
+      ],
+      "properties": {
+        "identity_anchor": {"$ref": "#/definitions/artifactClass"},
+        "costume_style": {"$ref": "#/definitions/artifactClass"},
+        "background_setting": {"$ref": "#/definitions/artifactClass"},
+        "framing_edit": {"$ref": "#/definitions/artifactClass"},
+        "motion_trace": {"$ref": "#/definitions/artifactClass"},
+        "audio_beat": {"$ref": "#/definitions/artifactClass"}
+      }
+    },
     "provenance": {
       "type": "object",
       "additionalProperties": false,
@@ -75,6 +96,26 @@
         "ingest_tool": {"type": "string", "minLength": 1},
         "tool_versions": {"type": "object"},
         "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    }
+  },
+  "definitions": {
+    "artifactClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "present", "consumers", "evidence"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "present": {"type": "boolean"},
+        "consumers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "enum": ["planner", "provider", "controller", "worker", "qc"]}
+        },
+        "evidence": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
       }
     }
   }
