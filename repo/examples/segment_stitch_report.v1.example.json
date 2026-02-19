@@ -20,6 +20,7 @@
       "duration_sec": 2.0
     }
   ],
+  "skipped_segments": [],
   "seams": [
     {
       "from_segment": "seg_001",

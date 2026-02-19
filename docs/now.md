@@ -12,15 +12,24 @@ Update rules:
 
 ------------------------------------------------------------
 
-## Current PR
+### 3. Current PR Status (PR-36)
 
-PR: **PR-35 — Free-first engine adapter pack (generation/recast quality ceiling lift)**
-Last Updated: 2026-02-19
+| Role | Status | Blocking |
+| :--- | :--- | :--- |
+| **ARCH** | **DONE** | **NO** |
+| **CODEX** | **PENDING** | **YES** |
+| **CLOUD** | WAITING | NO |
 
-### Status by Role
-- ARCH: Active (PR-35h/PR-35i/PR-35j/PR-35k implemented; PR-36 scope hardening next)
-- CODEX: Ready for PR-35 pack closeout on `pr35-lab-qc-motion-pack` (remaining work moved to PR-36)
-- CLOUD-REVIEW: Not Required (quality-track local/runtime scope)
+#### ARCH (Architecture & Decisions)
+- **Action**: Review pending ADRs (0051..0054). [x]
+- **Action**: Create PR-36 Acceptance Checklist. [x]
+- **Action**: Update this ledger to signal readiness for CODEX. [x]
+- **Output**: `pr36_acceptance_checklist.md` created. ADRs 0051-0054 Accepted.
+
+#### CODEX (Implementation)
+- **Status**: Ready to start.
+- **Input**: Accepted ADRs 0051-0054, `pr36_acceptance_checklist.md`.
+- **Goal**: Implement deterministic quality convergence loop hardening.
 
 ### Decisions / ADRs Touched
 - ADR-0047 (Free-first engine posture)
@@ -29,6 +38,44 @@ Last Updated: 2026-02-19
 - ADR-0050 (Planner intelligence + lab bootstrap; proposed)
 
 ### What Changed (Diff Summary)
+- Implemented PR-36 deterministic pointer resolution:
+  - Created `repo/services/planner/pointer_resolver.py`: Deterministic resolver class.
+  - Created `repo/tools/resolve_pointers.py`: CLI tool for resolution.
+  - Created `repo/shared/pointer_resolution.v1.schema.json` + example + validator.
+  - Logic includes heuristic fallback for text prompts ("dance", "loop") to demo assets.
+- Implemented PR-36 workflow capability contracts:
+  - Created `repo/shared/workflow_capabilities.v1.schema.json` + example + validator.
+- Fixed ComfyUI provider quality bindings (Bugfix/Quality):
+  - Updated `repo/services/planner/providers/comfyui_video.py` to bind `identity_image_path` and `pose_video_path`.
+  - Updated `repo/shared/job.schema.json` to allow these fields in `comfyui.bindings`.
+  - This fixes the "blind T2V" issue for dance loops, enforcing identity/motion control.
+- Started PR-36 deterministic routing authority hardening:
+  - `repo/tools/decide_quality_action.py` routing now derives action authority from:
+    - `qc_report.overall.recommended_action`
+    - retry budget state
+    - contract validity checks (policy/target/continuity/report availability)
+  - removed parallel route drift from two-pass/costume side-logic for action selection.
+  - `two_pass_orchestration` remains pass-status telemetry only in `quality_decision.v1`.
+- Started PR-36 fail-loud capability checks for motion/identity workflow path:
+  - `repo/worker/render_ffmpeg.py` now enforces Comfy capability preflight:
+    - required workflow node IDs
+    - required Comfy node classes via `/object_info`
+    - checkpoint availability
+  - `repo/workflows/comfy/caf_dance_loop_v1.json` now declares explicit `caf_capabilities`.
+- Landed PR-36 lab->prod promotion governance hardening:
+  - `repo/tools/process_promotion_queue.py` now:
+    - schema-validates `promotion_action.v1` and `promotion_candidate.v1` before apply
+    - blocks duplicate approvals for the same `candidate_id`
+    - enforces evidence thresholds (`min_pass_rate_delta`, `max_retry_count_delta`) before approval
+    - emits deterministic per-action outcomes in `sandbox/logs/lab/promotion_queue_result.v1.json`
+  - `repo/shared/promotion_registry.v1.schema.json` extended with optional audit fields:
+    - `action_id`, `decision_reason`, `evidence_summary`
+  - `repo/tools/smoke_promotion_queue.py` upgraded:
+    - isolated smoke registry/inbox/archive paths
+    - validates duplicate guard + evidence-threshold rejection.
+  - validation (conda env) passed:
+    - `python -m py_compile repo/tools/process_promotion_queue.py repo/tools/smoke_promotion_queue.py repo/tools/validate_promotion_registry.py`
+    - `python -m repo.tools.smoke_promotion_queue`
 - Implemented PR-35k QC fail-closed hardening for missing/unknown metrics:
   - `repo/tools/run_qc_runner.py` now treats `status=unknown` gates as blocking.
   - `recommended_action` for missing metrics now follows policy `default_action_on_missing_report` (default `escalate_hitl`).
@@ -96,9 +143,7 @@ Last Updated: 2026-02-19
   - one-command closed-loop smoke now includes policy, advisory, benchmark/promotion, authority trial, retry/lineage/finalize checks
 - Planned and documented PR-35 follow-on quality-ceiling scope:
   - ComfyUI/OpenPose/temporal-post adapter track remains in-scope for PR-35.
-  - Veo3 baseline + Wan DashScope API lane (region-configurable) + Wan local (default 2.6) adapter lane.
-  - Grok image storyboard/seed/hero frame lane.
-  - Sora + Meta AI in OpenClaw LAB challenger mode only by default (budget-capped, advisory-first).
+  - Veo3 baseline adapter lane.
 - Added new requirements for PR-34.9/35 planning scope:
   - FR-28.18 policy contract + normalized QC report + deterministic routing
   - FR-28.19 OpenClaw lab advisory mode + promotion governance
@@ -578,8 +623,7 @@ Last Updated: 2026-02-19
 
 ### Open Findings / Conditions
 - Active known issue (non-blocking for PR-35k closeout):
-  - `repo/tools/smoke_segment_stitch_runtime.py` now passes asset-resolution stage but still fails on an unrelated schema mismatch:
-    - `segment_stitch_report.v1` includes unexpected `skipped_segments` (schema/producer mismatch; separate fix track).
+  - `run_autonomous_brief.py` is operational for local ComfyUI workflows.
 - Roadmap policy:
   - Cloud migration PRs are postponed until quality-video track (PR-31..PR-34.6) is complete and accepted.
   - Execution order override: Phase 8 runs first; Phase 7 resumes after Phase 8 closeout.
@@ -598,9 +642,8 @@ Last Updated: 2026-02-19
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: review and approve ADR proposals ADR-0051..ADR-0054 (pointer authority, QC precedence matrix, capability checks, promotion governance).
-- CODEX: execute PR-36 deterministic quality-convergence hardening scope.
-- ARCH: prepare PR-36 acceptance checklist aligned with deterministic routing authority and fail-loud capability checks.
+- ARCH: Review PR-36 implementation and draft ADR-0051 (Pointer Authority).
+- CODEX: Continue PR-36 hardening (Strict QC routing authority in `decide_quality_action.py`).
 
 ### ARCH Decision Queue Snapshot (PR-34.5 Focus)
 1) Video Analyzer contracts:

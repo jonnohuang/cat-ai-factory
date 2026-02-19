@@ -1,0 +1,13 @@
+{
+  "job_id": "veo-test-job",
+  "video": {
+    "script": {
+      "voiceover": "A cinematic shot of a cute grey tabby kitten in a green dinosaur costume, dancing joyfully in a studio setting, high quality, 4k."
+    }
+  },
+  "comfyui": {
+    "bindings": {
+      "negative_prompt": "blurry, low quality, deformed"
+    }
+  }
+}

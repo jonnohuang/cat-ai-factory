@@ -2,6 +2,29 @@
   "workflow_id": "caf_dance_loop_v1",
   "description": "CAF motion frame sequence workflow (source dance frames + Mochi dino anchor latent blend -> stitched video).",
   "caf_mode": "motion_frame_sequence",
+  "caf_capabilities": {
+    "required_node_ids": [
+      "checkpoint",
+      "motion_frame_input",
+      "anchor_input",
+      "input_prompt",
+      "identity_prompt",
+      "input_negative_prompt",
+      "sampler",
+      "save_output"
+    ],
+    "required_node_classes": [
+      "CheckpointLoaderSimple",
+      "LoadImage",
+      "CLIPTextEncode",
+      "ConditioningAverage",
+      "KSampler",
+      "VAEEncode",
+      "LatentBlend",
+      "VAEDecode",
+      "SaveImage"
+    ]
+  },
   "nodes": {
     "checkpoint": {
       "class_type": "CheckpointLoaderSimple",

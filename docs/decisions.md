@@ -1591,7 +1591,7 @@ References:
 
 ## ADR-0051 — Deterministic brief pointer resolution authority and tie-break rules
 Date: 2026-02-19
-Status: Proposed
+Status: Accepted
 
 Context:
 - Brief-first operation still requires manual pointer selection in too many runs.
@@ -1622,7 +1622,7 @@ References:
 
 ## ADR-0052 — QC gate authority precedence and deterministic retry matrix
 Date: 2026-02-19
-Status: Proposed
+Status: Accepted
 
 Context:
 - Quality routing decisions must be explicit and stable as adapter diversity increases.
@@ -1649,7 +1649,7 @@ References:
 
 ## ADR-0053 — Motion-conditioned workflow capability checks are mandatory and fail-loud
 Date: 2026-02-19
-Status: Proposed
+Status: Accepted
 
 Context:
 - Motion/identity quality depends on required workflow nodes/models being present.
@@ -1677,7 +1677,7 @@ References:
 
 ## ADR-0054 — Lab-to-production promotion governance is contract-only (no direct code mutation)
 Date: 2026-02-19
-Status: Proposed
+Status: Accepted
 
 Context:
 - Lab mode can produce strong candidates but must not become hidden production authority.

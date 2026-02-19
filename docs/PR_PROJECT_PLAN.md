@@ -1603,7 +1603,7 @@ Outcome:
 ---
 
 ### PR-35 — Free-first engine adapter pack (generation/recast quality ceiling lift)
-Status: **PROPOSED**
+Status: **COMPLETED**
 
 Scope:
 - Shift quality strategy from prompt-first generation to motion-conditioned, frame-first generation:
@@ -1623,11 +1623,6 @@ Scope:
 - Make pose-conditioned keyframe generation explicit:
   - ControlNet OpenPose-style conditioning for motion structure
   - IP-Adapter/identity anchor conditioning for hero stability.
-- Add Wan API adapter lane via Alibaba DashScope (region-configurable, defaulting to WAN 2.2 model IDs).
-- Add first new free/open video adapter lane: Wan local adapter (default model version 2.6; challenger/fallback, policy-gated).
-- Add Grok image lane for storyboard/seed/hero reference frame generation.
-- Add Sora challenger lane in OpenClaw LAB mode only (budget-capped; advisory-first).
-- Add Meta AI challenger lane in OpenClaw LAB mode only (budget-capped; advisory-first).
 - Add provider capability registry and policy-driven routing/fallback order.
 - Add deterministic best-of-attempt selection by existing quality reports.
 - Expand QC gates to include both identity and motion fidelity:
@@ -1848,7 +1843,7 @@ Acceptance criteria:
 ---
 
 ### PR-36 — Deterministic quality convergence loop hardening (ARCH scope lock)
-Status: **PROPOSED**
+Status: **ACTIVE**
 
 Scope:
 - Lock deterministic brief-to-pointer resolution authority:
@@ -1866,7 +1861,20 @@ Scope:
 - Lock lab->prod promotion governance:
   - promotion candidate -> approval -> policy/workflow update contracts
   - no direct code/path mutation by lab artifacts
+
+Implemented in current slice:
+- `decide_quality_action` now treats `qc_report + qc_policy + retry state` as routing authority path
+  (after deterministic contract validity checks), removing side-route drift.
+- Worker Comfy runtime now performs explicit capability preflight before generation:
+  - required node IDs/classes
+  - checkpoint availability
+  - fail-loud error behavior when capabilities are missing.
   - production consumes promoted contracts only
+- Promotion queue processing now enforces lab->prod governance checks before registry apply:
+  - schema-validated `promotion_action.v1` and `promotion_candidate.v1` payloads
+  - duplicate approval guard by `candidate_id`
+  - evidence threshold gate (`pass_rate_delta`, `retry_count_delta`) before approval
+  - deterministic action outcome audit in `promotion_queue_result.v1`
 
 Outcome:
 - Autonomous quality convergence path is explicit, bounded, and contract-governed.

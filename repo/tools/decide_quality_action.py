@@ -79,6 +79,75 @@ def _job_path_from_job_id(project_root: pathlib.Path, job_id: str) -> Optional[p
     return None
 
 
+def _job_pointer_value(job: Dict[str, Any], pointer_name: str) -> Optional[str]:
+    if pointer_name in {"motion_contract", "quality_target", "continuity_pack"}:
+        node = job.get(pointer_name)
+        if isinstance(node, dict):
+            rel = node.get("relpath")
+            if isinstance(rel, str) and rel:
+                return rel
+        return None
+    if pointer_name == "segment_stitch":
+        node = job.get("segment_stitch")
+        if isinstance(node, dict):
+            rel = node.get("plan_relpath")
+            if isinstance(rel, str) and rel:
+                return rel
+        return None
+    return None
+
+
+def _load_pointer_resolution_from_job(
+    project_root: pathlib.Path,
+    job_id: str,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str], Optional[str]]:
+    job_path = _job_path_from_job_id(project_root, job_id)
+    if job_path is None:
+        return None, None, None
+    job = _load_json(job_path)
+    if not isinstance(job, dict):
+        return None, None, "job contract unreadable"
+
+    pointer_names = ("motion_contract", "quality_target", "continuity_pack")
+    declared = [name for name in pointer_names if _job_pointer_value(job, name) is not None]
+    if not declared:
+        return None, None, None
+
+    resolution = job.get("pointer_resolution")
+    if not isinstance(resolution, dict):
+        return None, None, f"pointer_resolution missing for declared pointers: {declared}"
+    if resolution.get("version") != "pointer_resolution.v1":
+        return None, None, "pointer_resolution version mismatch"
+
+    selected = resolution.get("selected")
+    if not isinstance(selected, dict):
+        return resolution, None, "pointer_resolution.selected missing"
+
+    required = resolution.get("required")
+    required_set = set(required) if isinstance(required, list) else set()
+    for pointer_name in declared:
+        if pointer_name not in required_set:
+            return resolution, None, f"pointer_resolution.required missing '{pointer_name}'"
+        selected_row = selected.get(pointer_name)
+        if not isinstance(selected_row, dict):
+            return resolution, None, f"pointer_resolution.selected missing '{pointer_name}'"
+        selected_relpath = selected_row.get("relpath")
+        if not isinstance(selected_relpath, str) or not selected_relpath:
+            return resolution, None, f"pointer_resolution.selected.{pointer_name}.relpath missing"
+        effective_relpath = _job_pointer_value(job, pointer_name)
+        if effective_relpath is None:
+            return resolution, None, f"job pointer '{pointer_name}' missing while declared"
+        if selected_relpath != effective_relpath:
+            return (
+                resolution,
+                None,
+                f"pointer_resolution selected mismatch for '{pointer_name}': "
+                f"{selected_relpath!r} != {effective_relpath!r}",
+            )
+
+    return resolution, "embedded://job.pointer_resolution", None
+
+
 def _load_qc_policy_from_job(
     project_root: pathlib.Path,
     job_id: str,
@@ -562,35 +631,17 @@ def main(argv: list[str]) -> int:
     retry_plan_path = qc_dir / "retry_plan.v1.json"
     finalize_gate_path = qc_dir / "finalize_gate.v1.json"
 
-    quality = _load_json(quality_path)
-    costume = _load_json(costume_path)
-    two_pass = _load_json(two_pass_path)
-    segment_report = _load_segment_report(project_root, args.job_id)
-    qc_policy_relpath, qc_policy_path, qc_policy_error, qc_missing_report_action = _load_qc_policy_from_job(
-        project_root, args.job_id
-    )
-    qc_report_path, qc_report_error = _ensure_qc_report(project_root, args.job_id, qc_policy_relpath)
-    qc_report = _load_json(qc_report_path) if qc_report_path is not None else None
-    if qc_report_path is not None:
-        _emit_qc_route_advice(project_root, args.job_id)
-    advice_path, advice = _load_qc_route_advice(project_root, args.job_id)
-    quality_targets, quality_target_path, quality_target_error = _load_quality_targets_from_job(project_root, args.job_id)
-    continuity_pack, continuity_pack_path, continuity_pack_error = _load_continuity_pack_from_job(project_root, args.job_id)
-    prior = _load_json(decision_path)
-
-    retry_attempt = 0
-    if isinstance(prior, dict):
-        prev_retry = prior.get("policy", {}).get("retry_attempt")
-        if isinstance(prev_retry, int) and prev_retry >= 0:
-            retry_attempt = prev_retry
+    # --- Strict QC Policy Routing ---
+    # Authority derives ONLY from:
+    # 1. qc_report recommendations
+    # 2. Retry budget state
+    # 3. Contract validity checks
 
     failed_metrics: list[str] = []
-    if isinstance(quality, dict):
-        failed_metrics = quality.get("overall", {}).get("failed_metrics", []) or []
-        failed_metrics = [str(x) for x in failed_metrics if isinstance(x, str)]
-    tuned_failed = _collect_tuned_failed_metrics(quality, quality_targets)
-    failed_metrics = sorted(set(failed_metrics + tuned_failed))
+    failed_failure_classes: list[str] = []
+
     if isinstance(qc_report, dict):
+        # Extract failure signals strictly from report
         gates = qc_report.get("gates", [])
         if isinstance(gates, list):
             for gate in gates:
@@ -598,99 +649,81 @@ def main(argv: list[str]) -> int:
                     metric = gate.get("metric")
                     if isinstance(metric, str):
                         failed_metrics.append(metric)
-    failed_metrics = sorted(set(failed_metrics))
-    failed_failure_classes: list[str] = []
-    if isinstance(qc_report, dict):
-        overall = qc_report.get("overall")
+        
+        overall = qc_report.get("overall", {})
         if isinstance(overall, dict):
             failed_failure_classes = [
                 str(x)
                 for x in overall.get("failed_failure_classes", [])
                 if isinstance(x, str) and x
             ]
+
+    failed_metrics = sorted(set(failed_metrics))
     failed_failure_classes = sorted(set(failed_failure_classes))
     segment_retry = _segment_retry_plan(segment_report, failed_metrics)
+
+    # Derive pass/fail status from QC gates for retry context
+    motion_status = "unknown"
+    identity_status = "unknown"
+    if isinstance(qc_report, dict):
+        gates = qc_report.get("gates", [])
+        if isinstance(gates, list):
+            motion_gates = [g for g in gates if isinstance(g, dict) and g.get("dimension") == "motion"]
+            identity_gates = [g for g in gates if isinstance(g, dict) and g.get("dimension") == "identity"]
+            
+            if motion_gates:
+                motion_status = "fail" if any(g.get("status") == "fail" for g in motion_gates) else "pass"
+            if identity_gates:
+                identity_status = "fail" if any(g.get("status") == "fail" for g in identity_gates) else "pass"
 
     action = "proceed_finalize"
     reason = "No blocking quality findings."
 
-    costume_fail = False
-    if isinstance(costume, dict):
-        costume_fail = bool(costume.get("pass") is False)
-
-    motion_status = None
-    identity_status = None
+    # Priority 1: Contract/Policy Errors (Fail Closed)
     if quality_target_error is not None:
         action = "escalate_hitl"
         reason = f"Quality target contract invalid: {quality_target_error}"
+    elif pointer_resolution_error is not None:
+        action = "escalate_hitl"
+        reason = f"Pointer resolution contract invalid: {pointer_resolution_error}"
     elif qc_policy_error is not None:
         action = "escalate_hitl"
         reason = f"QC policy invalid: {qc_policy_error}"
-    elif qc_report_error is not None:
-        action = qc_missing_report_action
-        reason = f"QC report unavailable: {qc_report_error}"
     elif continuity_pack_error is not None:
         action = "escalate_hitl"
         reason = f"Continuity pack invalid: {continuity_pack_error}"
-    elif isinstance(two_pass, dict):
-        motion_status = two_pass.get("passes", {}).get("motion", {}).get("status")
-        identity_status = two_pass.get("passes", {}).get("identity", {}).get("status")
-        if identity_status == "fail":
-            next_retry = retry_attempt + 1
-            if next_retry <= max(0, args.max_retries):
-                action = "retry_recast"
-                retry_attempt = next_retry
-                reason = "Identity pass failed within retry budget; deterministic recast retry requested."
-            else:
-                action = "escalate_hitl"
-                retry_attempt = next_retry
-                reason = "Identity pass failed beyond retry budget; escalate to explicit HITL."
-        elif motion_status == "fail":
-            next_retry = retry_attempt + 1
-            if next_retry <= max(0, args.max_retries):
-                action = "retry_motion"
-                retry_attempt = next_retry
-                reason = "Motion pass failed within retry budget; deterministic motion retry requested."
-            else:
-                action = "escalate_hitl"
-                retry_attempt = next_retry
-                reason = "Motion pass failed beyond retry budget; escalate to explicit HITL."
+    elif qc_report_error is not None:
+        action = qc_missing_report_action
+        reason = f"QC report unavailable: {qc_report_error}"
 
-    continuity_rules = continuity_pack.get("rules", {}) if isinstance(continuity_pack, dict) else {}
-    continuity_requires_costume = bool(
-        isinstance(continuity_rules, dict) and continuity_rules.get("require_costume_fidelity") is True
-    )
-    if continuity_requires_costume and not isinstance(costume, dict):
-        action = "block_for_costume"
-        reason = "Continuity pack requires costume fidelity report; report is missing."
-    elif costume_fail:
-        action = "block_for_costume"
-        reason = "Costume fidelity gate failed; require corrected recast input."
-    elif action == "proceed_finalize" and isinstance(qc_report, dict):
+    # Priority 2: QC Report Recommendation
+    elif isinstance(qc_report, dict):
         overall = qc_report.get("overall", {})
-        overall_pass = bool(isinstance(overall, dict) and overall.get("pass") is True)
-        recommended_action = (
-            str(overall.get("recommended_action"))
-            if isinstance(overall, dict) and isinstance(overall.get("recommended_action"), str)
-            else "retry_recast"
-        )
-        if not overall_pass:
+        recommended = overall.get("recommended_action")
+        
+        if overall.get("pass") is True:
+            action = "proceed_finalize"
+            reason = "QC report passed all required gates."
+        elif isinstance(recommended, str):
+            # Evaluate retry budget
             next_retry = retry_attempt + 1
-            if next_retry <= max(0, args.max_retries):
-                if recommended_action in {"retry_motion", "retry_recast"}:
-                    action = recommended_action
-                    reason = f"QC policy route selected {recommended_action} within retry budget."
-                elif recommended_action == "block_for_costume":
-                    action = "block_for_costume"
-                    reason = "QC policy route blocked for costume fidelity."
+            if recommended in {"retry_motion", "retry_recast"}:
+                if next_retry <= max(0, args.max_retries):
+                    action = recommended
+                    reason = f"QC report recommended {recommended} within retry budget."
+                    retry_attempt = next_retry
                 else:
                     action = "escalate_hitl"
-                    reason = "QC policy route escalated due to failed gates."
-                retry_attempt = next_retry
+                    reason = "QC report recommended retry but budget exceeded; escalate to HITL."
+                    retry_attempt = next_retry
             else:
-                action = "escalate_hitl"
-                retry_attempt = next_retry
-                reason = "QC policy route exceeded retry budget; escalate to explicit HITL."
+                # Block/Escalate are terminal
+                action = recommended
+                reason = f"QC report recommended terminal action: {recommended}"
+        else:
+            # Fallback if report is malformed
+            action = "escalate_hitl"
+            reason = "QC report missing recommended_action; escalate to HITL."
 
     advisory_mode_cfg = {}
     authority_cfg = {}
@@ -753,6 +786,11 @@ def main(argv: list[str]) -> int:
             if continuity_pack_path is not None and continuity_pack_path.exists()
             else None,
             "continuity_pack_error": continuity_pack_error,
+            "pointer_resolution_relpath": pointer_resolution_relpath,
+            "pointer_resolution_error": pointer_resolution_error,
+            "pointer_resolution_version": pointer_resolution.get("version")
+            if isinstance(pointer_resolution, dict)
+            else None,
             "segment_stitch_plan_relpath": _safe_rel(segment_plan_path, project_root) if segment_plan_path else None,
             "failed_metrics": failed_metrics,
             "failed_failure_classes": failed_failure_classes,

@@ -117,6 +117,23 @@ class ComfyUIVideoProvider(BaseProvider):
             )
         return "assets/demo/fight_composite.mp4"
 
+    def _pick_identity_asset(self, quality_context: Optional[Dict[str, Any]]) -> str:
+        # Prefer sample-ingest identity anchor when available.
+        if isinstance(quality_context, dict):
+            resolver = quality_context.get("pointer_resolver")
+            if isinstance(resolver, dict):
+                manifest_rel = resolver.get("sample_ingest_manifest_relpath")
+                manifest = self._load_json_rel(str(manifest_rel)) if isinstance(manifest_rel, str) else None
+                if isinstance(manifest, dict):
+                    assets = manifest.get("assets", {})
+                    identity = assets.get("identity_anchor")
+                    if isinstance(identity, dict):
+                        rel = identity.get("relpath")
+                        if isinstance(rel, str) and rel.strip():
+                            return rel.strip()
+        # Fallback to demo Mochi anchor
+        return "sandbox/assets/demo/mochi_anchor.png"
+
     def generate_job(
         self,
         prd: Dict[str, Any],
@@ -144,7 +161,10 @@ class ComfyUIVideoProvider(BaseProvider):
         date = prd.get("date") if isinstance(prd.get("date"), str) else today_utc()
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
         workflow_tag = self.workflow_id.replace("_", "-")
-        background_asset = self._pick_background_asset(quality_context, dance_intent=_is_dance_loop_intent(prd))
+        is_dance = _is_dance_loop_intent(prd)
+        background_asset = self._pick_background_asset(quality_context, dance_intent=is_dance)
+        identity_asset = self._pick_identity_asset(quality_context)
+        pose_video_asset = background_asset if is_dance else "sandbox/assets/demo/dance_loop.mp4"
         comfy_positive = (
             f"{prompt}. "
             "single hero cat only, Mochi grey tabby kitten, feline face clearly visible, "
@@ -208,6 +228,8 @@ class ComfyUIVideoProvider(BaseProvider):
                     "positive_nodes": ["input_prompt", "identity_prompt"],
                     "negative_nodes": ["input_negative_prompt"],
                     "seed_nodes": ["sampler"],
+                    "identity_image_path": identity_asset,
+                    "pose_video_path": pose_video_asset,
                 },
                 "poll": {
                     "timeout_seconds": 900,

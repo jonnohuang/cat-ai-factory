@@ -188,8 +188,8 @@
                 "dry-humor"
             ],
             "costume": {
-                "id": "mochi-caf-badge",
-                "notes": "No onesie required for the photoreal demo set; optional small CAF badge or navy tie for later brand shots."
+                "id": "dinosaur-onesie-green",
+                "notes": "Green dino hoodie; same as dino-tabby for the demo loop."
             },
             "asset_hints": {
                 "seed_frames": [
