@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-import datetime as dt
 import os
 import re
 from typing import Any, Dict, List, Optional
 
-from .base import BaseProvider
-
-
-def _today_utc() -> str:
-    return dt.datetime.now(dt.timezone.utc).date().isoformat()
+from .base import BaseProvider, today_utc
 
 
 def _slug(text: str) -> str:
@@ -74,7 +69,7 @@ class GrokImageProvider(BaseProvider):
         if not self.api_key:
             print("WARNING planner provider=grok_image missing GROK_API_KEY (and OPENAI_API_KEY fallback)")
         basename = _slug(prompt)
-        date = prd.get("date") if isinstance(prd.get("date"), str) else _today_utc()
+        date = prd.get("date") if isinstance(prd.get("date"), str) else today_utc()
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
         seeds = _seed_assets_from_context(quality_context)
         if not seeds:

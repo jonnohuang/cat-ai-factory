@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import datetime as dt
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
+
+
+def today_utc() -> str:
+    """Returns the current UTC date in YYYY-MM-DD format."""
+    return dt.datetime.now(dt.timezone.utc).date().isoformat()
 
 
 def redact_debug(text: str) -> str:

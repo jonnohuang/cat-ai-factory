@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 import json
 import os
 import pathlib
@@ -10,11 +9,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
-from .base import BaseProvider
-
-
-def _today_utc() -> str:
-    return dt.datetime.now(dt.timezone.utc).date().isoformat()
+from .base import BaseProvider, today_utc
 
 
 def _repo_root_path() -> pathlib.Path:
@@ -154,7 +149,7 @@ class WanDashScopeProvider(BaseProvider):
         _ = inbox, hero_registry, quality_context
         prompt = _prompt_text(prd)
         basename = _safe_slug(prompt)
-        date = prd.get("date") if isinstance(prd.get("date"), str) else _today_utc()
+        date = prd.get("date") if isinstance(prd.get("date"), str) else today_utc()
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
         job: Dict[str, Any] = {
             "job_id": f"{basename[:36]}-wands",
