@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/pointer_resolution.v1.schema.json",
+  "title": "Pointer Resolution v1",
+  "description": "Deterministic record of brief-to-contract resolution decisions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "job_id",
+    "generated_at",
+    "brief_intent",
+    "pointers"
+  ],
+  "properties": {
+    "version": { "const": "pointer_resolution.v1" },
+    "job_id": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "brief_intent": {
+      "type": "object",
+      "properties": {
+        "hero": { "type": "string" },
+        "costume": { "type": "string" },
+        "motion": { "type": "string" },
+        "setting": { "type": "string" },
+        "tone": { "type": "string" }
+      }
+    },
+    "resolution_policy": { "type": "string" },
+    "pointers": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "rejected_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["candidate_relpath", "reason"],
+        "properties": {
+          "candidate_relpath": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "fallback_path_used": { "type": "boolean" }
+  }
+}

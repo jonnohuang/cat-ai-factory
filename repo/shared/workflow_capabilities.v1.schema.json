@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/workflow_capabilities.v1.schema.json",
+  "title": "Workflow Capabilities v1",
+  "description": "Declaration of required capabilities for a ComfyUI workflow preflight check.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "workflow_id"
+  ],
+  "properties": {
+    "version": { "const": "workflow_capabilities.v1" },
+    "workflow_id": { "type": "string" },
+    "required_nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "class_type"],
+        "properties": {
+          "id": { "type": ["string", "integer"] },
+          "class_type": { "type": "string" }
+        }
+      }
+    },
+    "required_models": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "required_custom_nodes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

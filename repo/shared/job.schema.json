@@ -658,6 +658,12 @@
                 "type": "string",
                 "minLength": 1
               }
+            },
+            "identity_image_path": {
+              "type": "string"
+            },
+            "pose_video_path": {
+              "type": "string"
             }
           }
         },

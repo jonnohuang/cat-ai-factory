@@ -1,0 +1,18 @@
+{
+  "version": "workflow_capabilities.v1",
+  "workflow_id": "caf_dance_loop_v1",
+  "required_nodes": [
+    {
+      "id": "10",
+      "class_type": "CheckpointLoaderSimple"
+    },
+    {
+      "id": "15",
+      "class_type": "IPAdapterApply"
+    }
+  ],
+  "required_models": [
+    "v1-5-pruned-emaonly.ckpt"
+  ],
+  "required_custom_nodes": []
+}

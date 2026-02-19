@@ -36,6 +36,27 @@
         }
       }
     },
+    "skipped_segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["segment_id", "reason", "start_sec", "end_sec"],
+        "properties": {
+          "segment_id": {"type": "string", "pattern": "^seg_[0-9]{3}$"},
+          "reason": {
+            "type": "string",
+            "enum": [
+              "out_of_source_range",
+              "too_short_after_clamp",
+              "empty_output"
+            ]
+          },
+          "start_sec": {"type": "number", "minimum": 0},
+          "end_sec": {"type": "number", "minimum": 0}
+        }
+      }
+    },
     "seams": {
       "type": "array",
       "items": {

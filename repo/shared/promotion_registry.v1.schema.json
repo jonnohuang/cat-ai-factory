@@ -5,21 +5,70 @@
   "description": "Deterministic registry of approved lab promotions available to production pointer resolver.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "updated_at", "approved"],
+  "required": [
+    "version",
+    "updated_at",
+    "approved"
+  ],
   "properties": {
-    "version": {"const": "promotion_registry.v1"},
-    "updated_at": {"type": "string", "format": "date-time"},
+    "version": {
+      "const": "promotion_registry.v1"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "approved": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["candidate_id", "candidate_relpath", "applied_at", "proposal"],
+        "required": [
+          "candidate_id",
+          "candidate_relpath",
+          "applied_at",
+          "proposal"
+        ],
         "properties": {
-          "candidate_id": {"type": "string", "minLength": 1},
-          "candidate_relpath": {"type": "string", "pattern": "^sandbox/logs/.+\\.json$"},
-          "applied_at": {"type": "string", "format": "date-time"},
-          "proposal": {"type": "object"}
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidate_relpath": {
+            "type": "string",
+            "pattern": "^(sandbox/logs/.+\\.json|embedded://.+)$"
+          },
+          "applied_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "proposal": {
+            "type": "object"
+          },
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision_reason": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "evidence_summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pass_rate_delta",
+              "retry_count_delta"
+            ],
+            "properties": {
+              "pass_rate_delta": {
+                "type": "number"
+              },
+              "retry_count_delta": {
+                "type": "number"
+              }
+            }
+          }
         }
       }
     }

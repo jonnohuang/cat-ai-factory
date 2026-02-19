@@ -38,7 +38,13 @@
         "ai_video",
         "dance_swap"
       ],
-      "notes": "Baseline production lane."
+      "notes": "Baseline production lane.",
+      "config": {
+        "model_family": "veo",
+        "model_version": "veo-003-001",
+        "worker_mode": "local",
+        "worker_script": "repo/worker/render_veo.py"
+      }
     },
     {
       "provider_id": "wan_dashscope",

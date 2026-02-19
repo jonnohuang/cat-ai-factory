@@ -88,22 +88,6 @@ This guide covers the full CAF media stack:
   - `VERTEX_LOCATION`
   - `VERTEX_ACCESS_TOKEN` (or ADC-compatible auth)
 
-### `wan_dashscope`
-- Type: video generation challenger/fallback
-- Typical mode: production or lab (policy-gated)
-- Required env:
-  - `DASHSCOPE_API_KEY`
-- Optional env:
-  - `WAN_DASHSCOPE_BASE_URL`
-  - `WAN_DASHSCOPE_MODEL`
-  - `WAN_DASHSCOPE_POLL_SECONDS`
-  - `WAN_DASHSCOPE_POLL_INTERVAL`
-
-### `wan_local` / `wan_2_2`
-- Type: local/open adapter lane
-- Typical mode: lab/challenger
-- Required env: runtime-specific local model setup
-
 ### `comfyui_video`
 - Type: workflow-driven generation lane
 - Typical mode: production or lab (policy-gated)
@@ -112,31 +96,6 @@ This guide covers the full CAF media stack:
   - `COMFYUI_WORKFLOW_ID`
 - Workflow authority:
   - `workflow_id -> repo/workflows/comfy/<workflow_id>.json`
-
-### `grok_image`
-- Type: storyboard/seed/hero-reference lane
-- Typical mode: planner support lane
-- Required env:
-  - `GROK_API_KEY`
-- Backward-compat fallback:
-  - `OPENAI_API_KEY`
-
-### `sora_lab`
-- Type: lab challenger adapter
-- Typical mode: lab only
-- Required env:
-  - `SORA_LAB_API_KEY`
-- Optional env:
-  - `SORA_LAB_MODEL`
-
-### `meta_ai_lab`
-- Type: lab challenger adapter
-- Typical mode: lab only
-- Required env:
-  - `META_AI_LAB_API_KEY`
-- Optional env:
-  - `META_AI_LAB_BASE_URL`
-  - `META_AI_LAB_MODEL`
 
 ## Route Mode
 
@@ -161,10 +120,7 @@ Keep `0` unless running explicit controlled trials.
 ## Quick Checks
 
 ```bash
-python3 -m repo.tools.smoke_planner_wan_dashscope
 python3 -m repo.tools.smoke_planner_comfyui_provider
-python3 -m repo.tools.smoke_planner_sora_lab
-python3 -m repo.tools.smoke_planner_meta_ai_lab
 python3 -m repo.tools.smoke_qc_policy_report_contract
 ```
 

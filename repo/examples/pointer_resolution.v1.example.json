@@ -1,0 +1,26 @@
+{
+  "version": "pointer_resolution.v1",
+  "job_id": "mochi-dance-loop-001",
+  "generated_at": "2026-02-18T12:00:00Z",
+  "brief_intent": {
+    "hero": "Mochi",
+    "costume": "dino onesie",
+    "motion": "dance loop",
+    "setting": "living room",
+    "tone": "cute"
+  },
+  "resolution_policy": "prefer_canon_strict_motion",
+  "pointers": {
+    "hero_registry": "repo/shared/hero_registry.v1.json",
+    "pose_checkpoint": "repo/canon/demo_analyses/dance_loop.pose_checkpoints.v1.json",
+    "beat_grid": "repo/canon/demo_analyses/dance_loop.beat_grid.v1.json",
+    "quality_target": "repo/examples/quality_target.motion_strict.v1.example.json"
+  },
+  "rejected_candidates": [
+    {
+      "candidate_relpath": "repo/examples/pose_checkpoints.v1.example.json",
+      "reason": "policy_preference_canon"
+    }
+  ],
+  "fallback_path_used": false
+}

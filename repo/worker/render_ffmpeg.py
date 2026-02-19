@@ -331,6 +331,62 @@ def _comfy_resolve_checkpoint(base_url: str) -> str:
     return names[0]
 
 
+def _comfy_required_node_ids(
+    workflow_doc: dict[str, Any],
+    prompt_graph: dict[str, Any],
+) -> set[str]:
+    caps = workflow_doc.get("caf_capabilities")
+    if isinstance(caps, dict) and isinstance(caps.get("required_node_ids"), list):
+        return {str(x) for x in caps["required_node_ids"] if isinstance(x, str) and x}
+    return {str(k) for k in prompt_graph.keys() if isinstance(k, str) and str(k)}
+
+
+def _comfy_required_node_classes(
+    workflow_doc: dict[str, Any],
+    prompt_graph: dict[str, Any],
+) -> set[str]:
+    caps = workflow_doc.get("caf_capabilities")
+    if isinstance(caps, dict) and isinstance(caps.get("required_node_classes"), list):
+        explicit = {str(x) for x in caps["required_node_classes"] if isinstance(x, str) and x}
+        if explicit:
+            return explicit
+    classes: set[str] = set()
+    for node in prompt_graph.values():
+        if isinstance(node, dict):
+            cls = node.get("class_type")
+            if isinstance(cls, str) and cls:
+                classes.add(cls)
+    return classes
+
+
+def _comfy_preflight_capabilities(
+    *,
+    base_url: str,
+    workflow_doc: dict[str, Any],
+    prompt_graph: dict[str, Any],
+) -> dict[str, Any]:
+    required_ids = _comfy_required_node_ids(workflow_doc, prompt_graph)
+    missing_ids = sorted([x for x in required_ids if x not in prompt_graph])
+    if missing_ids:
+        raise SystemExit(f"comfy workflow missing required node ids: {missing_ids}")
+
+    object_info = _comfy_object_info(base_url)
+    required_classes = _comfy_required_node_classes(workflow_doc, prompt_graph)
+    missing_classes = sorted([x for x in required_classes if x not in object_info])
+    if missing_classes:
+        raise SystemExit(
+            "comfy capability preflight failed; required node classes unavailable: "
+            f"{missing_classes}"
+        )
+
+    checkpoint_name = _comfy_resolve_checkpoint(base_url)
+    return {
+        "required_node_count": len(required_ids),
+        "required_class_count": len(required_classes),
+        "checkpoint_name": checkpoint_name,
+    }
+
+
 def _comfy_pick_media_item(history_obj: dict[str, Any]) -> dict[str, str] | None:
     # Comfy history schema has outputs by node; each node may include videos/images/gifs arrays.
     outputs = history_obj.get("outputs")
@@ -748,11 +804,14 @@ def _render_motion_sequence_via_comfy(
     bindings: dict[str, Any] | None,
     timeout_seconds: int,
     interval_seconds: int,
+    capability_preflight: dict[str, Any],
 ) -> dict[str, Any]:
     requires_checkpoint = "__CAF_CHECKPOINT__" in json.dumps(prompt_graph_template, sort_keys=True)
     checkpoint_name: str | None = None
     if requires_checkpoint:
-        checkpoint_name = _comfy_resolve_checkpoint(base_url)
+        checkpoint_name = str(capability_preflight.get("checkpoint_name") or "")
+        if not checkpoint_name:
+            raise SystemExit("comfy capability preflight missing checkpoint_name")
     motion_fps = int(os.environ.get("CAF_COMFY_MOTION_FPS", "2") or 2)
     motion_fps = max(1, min(8, motion_fps))
     max_frames = int(os.environ.get("CAF_COMFY_MOTION_MAX_FRAMES", "12") or 12)
@@ -921,6 +980,7 @@ def _render_motion_sequence_via_comfy(
     return {
         "provider": "comfyui_video",
         "mode": "motion_frame_sequence",
+        "capability_preflight": capability_preflight,
         "checkpoint_name": checkpoint_name,
         "frame_count": len(frame_names),
         "anchor_image": anchor_filename,
@@ -1019,6 +1079,11 @@ def generate_comfyui_video_asset(
         prompt_graph = workflow_doc["nodes"]
     if not isinstance(prompt_graph, dict) or not prompt_graph:
         raise SystemExit("comfy workflow must provide non-empty 'prompt_api' or 'nodes' map")
+    capability_preflight = _comfy_preflight_capabilities(
+        base_url=base_url,
+        workflow_doc=workflow_doc,
+        prompt_graph=prompt_graph,
+    )
 
     bindings = comfy.get("bindings")
     workflow_mode = str(workflow_doc.get("caf_mode", "")).strip().lower()
@@ -1035,6 +1100,7 @@ def generate_comfyui_video_asset(
             bindings=bindings if isinstance(bindings, dict) else None,
             timeout_seconds=int((comfy.get("poll") or {}).get("timeout_seconds", 900) or 900),
             interval_seconds=int((comfy.get("poll") or {}).get("interval_seconds", 2) or 2),
+            capability_preflight=capability_preflight,
         )
     if isinstance(bindings, dict):
         _apply_comfy_bindings(prompt_graph, bindings)
@@ -1132,6 +1198,7 @@ def generate_comfyui_video_asset(
     print(f"INFO worker comfy media_downloaded={relpath}")
     return {
         "provider": "comfyui_video",
+        "capability_preflight": capability_preflight,
         "prompt_id": prompt_id,
         "media_filename": filename,
         "media_subfolder": subfolder,

@@ -1,0 +1,51 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/promotion_queue.v1.schema.json",
+    "title": "Promotion Queue v1",
+    "description": "Queue of promotion candidates waiting for production approval.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "version",
+        "queue"
+    ],
+    "properties": {
+        "version": {
+            "const": "promotion_queue.v1"
+        },
+        "generated_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "queue": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "description": "A promotion candidate.",
+                "required": [
+                    "candidate_id",
+                    "source",
+                    "proposal"
+                ],
+                "properties": {
+                    "candidate_id": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "const": "promotion_candidate.v1"
+                    },
+                    "source": {
+                        "type": "object"
+                    },
+                    "proposal": {
+                        "type": "object"
+                    },
+                    "evidence": {
+                        "type": "object"
+                    }
+                },
+                "additionalProperties": true
+            }
+        }
+    }
+}
