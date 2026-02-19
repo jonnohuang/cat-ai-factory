@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 import json
 import os
 import pathlib
@@ -8,7 +7,7 @@ import re
 import uuid
 from typing import Any, Dict, List, Optional
 
-from .base import BaseProvider
+from .base import BaseProvider, today_utc
 from repo.shared.demo_asset_resolver import (
     DANCE_LOOP_CANDIDATES,
     GENERAL_BACKGROUND_CANDIDATES,
@@ -16,8 +15,6 @@ from repo.shared.demo_asset_resolver import (
 )
 
 
-def _today_utc() -> str:
-    return dt.datetime.now(dt.timezone.utc).date().isoformat()
 
 
 def _slug(text: str) -> str:
@@ -144,7 +141,7 @@ class ComfyUIVideoProvider(BaseProvider):
         )
         prompt = _prompt_text(prd)
         basename = _slug(prompt)
-        date = prd.get("date") if isinstance(prd.get("date"), str) else _today_utc()
+        date = prd.get("date") if isinstance(prd.get("date"), str) else today_utc()
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
         workflow_tag = self.workflow_id.replace("_", "-")
         background_asset = self._pick_background_asset(quality_context, dance_intent=_is_dance_loop_intent(prd))
