@@ -16,6 +16,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..util.json_extract import extract_json_object
 from ..util.redact import redact_text
+from ...budget.pricing import (
+    COST_GEMINI_PRO_INPUT_1M,
+    COST_GEMINI_PRO_OUTPUT_1M,
+    COST_VERTEX_IMAGEN_IMAGE,
+    COST_VERTEX_VEO_VIDEO_SEC,
+)
+from ...budget.tracker import BudgetTracker
 from .base import BaseProvider
 from .gemini_ai_studio import (
     GeminiAIStudioProvider,
@@ -57,6 +64,7 @@ class _VertexBaseProvider(BaseProvider):
         self._lane_a_error: str = ""
         self._quality_context: Optional[Dict[str, Any]] = None
         self._last_reference_image_rels: List[str] = []
+        self._budget = BudgetTracker()
 
     def generate_job(
         self,
@@ -315,6 +323,14 @@ class _VertexBaseProvider(BaseProvider):
     def _generate_image_batch(self, prompt: str, sample_count: int) -> List[bytes]:
         model = os.environ.get("VERTEX_IMAGEN_GEN_MODEL", "imagen-3.0-generate-001")
         count = max(1, min(6, sample_count))
+
+        est_cost = count * COST_VERTEX_IMAGEN_IMAGE
+        if not self._budget.check_budget(est_cost):
+            print(
+                f"WARNING planner provider={self.name} budget_exceeded for imagen batch (cost={est_cost:.4f})"
+            )
+            return []
+
         endpoint = (
             f"https://{self.location}-aiplatform.googleapis.com/v1/"
             f"projects/{self.project_id}/locations/{self.location}/"
@@ -356,9 +372,24 @@ class _VertexBaseProvider(BaseProvider):
                 out.append(base64.b64decode(b64))
             except Exception:
                 continue
+
+        if out:
+            import uuid
+
+            self._budget.record_spending(est_cost, f"vertex-imagen-{uuid.uuid4()}")
         return out
 
     def _generate_content(self, prompt: str) -> str:
+        # Budget check
+        est_input_tokens = len(prompt) // 4
+        est_output_tokens = 4096
+        est_cost = (
+            (est_input_tokens / 1_000_000) * COST_GEMINI_PRO_INPUT_1M
+            + (est_output_tokens / 1_000_000) * COST_GEMINI_PRO_OUTPUT_1M
+        )
+        if not self._budget.check_budget(est_cost):
+            raise RuntimeError(f"Budget exceeded (estimated cost: ${est_cost:.4f})")
+
         self._last_path = "vertex"
         endpoint = (
             f"https://{self.location}-aiplatform.googleapis.com/v1/"
@@ -399,6 +430,10 @@ class _VertexBaseProvider(BaseProvider):
             payload = json.loads(raw)
         except json.JSONDecodeError as ex:
             raise RuntimeError(f"Invalid Vertex JSON response: {ex}") from ex
+
+        import uuid
+
+        self._budget.record_spending(est_cost, f"vertex-text-{uuid.uuid4()}")
         return _extract_text_from_response(payload)
 
     def debug_snapshot(self) -> Dict[str, Any]:
@@ -529,6 +564,12 @@ class VertexVeoProvider(_VertexBaseProvider):
                 "INFO planner provider="
                 f"{self.name} veo_duration_normalized={duration_seconds}->{normalized_duration}"
             )
+
+        est_cost = normalized_duration * COST_VERTEX_VEO_VIDEO_SEC
+        if not self._budget.check_budget(est_cost):
+            self._lane_a_error = f"budget exceeded for veo video (cost={est_cost:.4f})"
+            return b""
+
         endpoint = (
             f"https://{self.location}-aiplatform.googleapis.com/v1/"
             f"projects/{self.project_id}/locations/{self.location}/"
@@ -590,10 +631,14 @@ class VertexVeoProvider(_VertexBaseProvider):
                 self._lane_a_error = "operation polling returned empty payload"
             return b""
 
+        import uuid
+
         b64 = _extract_first_base64_blob(data)
         if b64:
             try:
-                return base64.b64decode(b64)
+                res = base64.b64decode(b64)
+                self._budget.record_spending(est_cost, f"vertex-veo-{uuid.uuid4()}")
+                return res
             except Exception as ex:
                 self._lane_a_error = f"base64 decode failed: {type(ex).__name__}"
                 return b""
@@ -602,6 +647,7 @@ class VertexVeoProvider(_VertexBaseProvider):
         if media_uri:
             content = self._download_media_uri(media_uri)
             if content:
+                self._budget.record_spending(est_cost, f"vertex-veo-{uuid.uuid4()}")
                 return content
             if not self._lane_a_error:
                 self._lane_a_error = f"media uri download failed: {media_uri[:160]}"
