@@ -1763,7 +1763,7 @@ Acceptance criteria:
 ---
 
 ### PR-35h — Planner intelligence graph for brief->contract resolution
-Status: **PROPOSED**
+Status: **IMPLEMENTED**
 
 Scope:
 - Add a LangGraph planner step for brief understanding + contract retrieval/ranking:
@@ -1785,7 +1785,7 @@ Acceptance criteria:
 ---
 
 ### PR-35i — Lab bootstrap extractor pack (sample -> reusable production assets)
-Status: **PROPOSED**
+Status: **IMPLEMENTED**
 
 Scope:
 - Expand lab ingest extraction to output reusable asset/contract packs for production:
@@ -1808,7 +1808,7 @@ Acceptance criteria:
 ---
 
 ### PR-35j — One-command autonomous brief run (lab bootstrap + production execution)
-Status: **PROPOSED**
+Status: **IMPLEMENTED**
 
 Scope:
 - Add an end-to-end command path for:
@@ -1821,6 +1821,56 @@ Scope:
 Acceptance criteria:
 - User can run a single command for the Mochi dance-loop class workflow without manual pointer editing.
 - Output and routing lineage is fully auditable from artifacts.
+
+---
+
+### PR-35k — QC fail-closed hardening + demo asset alias resolver
+Status: **IMPLEMENTED**
+
+Scope:
+- Fail closed when required QC metrics are unknown/missing:
+  - treat `qc_report.gates[].status=unknown` as blocking for required gates
+  - route with `qc_policy.default_action_on_missing_report` instead of silently finalizing
+- Add shared demo asset alias resolver and migrate active call sites:
+  - canonical resolver for dance-loop + fight/flight composite aliases
+  - planner Comfy background selection uses shared resolver
+  - worker sandbox path normalization resolves known aliases
+  - active smoke runner paths use shared resolver
+- Preserve dance-loop intent authority:
+  - for dance-loop briefs, fail loud if dance-loop reference assets are missing
+  - do not silently fall back to fight-composite asset
+
+Acceptance criteria:
+- Missing/unknown QC metrics no longer produce `proceed_finalize`.
+- Existing `flight_composite` references can resolve to available `fight_composite` aliases deterministically.
+- Dance-loop E2E path cannot silently route to unrelated fight-composite fallback.
+
+---
+
+### PR-36 — Deterministic quality convergence loop hardening (ARCH scope lock)
+Status: **PROPOSED**
+
+Scope:
+- Lock deterministic brief-to-pointer resolution authority:
+  - explicit resolution artifact
+  - deterministic ranking/tie-break rules
+  - fail-loud behavior for unresolved required pointers
+- Lock strict QC gate authority for routing:
+  - controller routing authority derived only from `qc_policy + qc_report + retry state`
+  - explicit retry strategy matrix keyed by failure class
+  - preserve bounded retries + fail-loud escalation
+- Lock stronger motion/identity-conditioned workflow capability checks:
+  - explicit required workflow/node/model declarations
+  - deterministic preflight checks before run
+  - fail-loud when required capability is missing
+- Lock lab->prod promotion governance:
+  - promotion candidate -> approval -> policy/workflow update contracts
+  - no direct code/path mutation by lab artifacts
+  - production consumes promoted contracts only
+
+Outcome:
+- Autonomous quality convergence path is explicit, bounded, and contract-governed.
+- User expectations for brief->quality improvement align with deterministic production authority.
 
 
 ------------------------------------------------------------

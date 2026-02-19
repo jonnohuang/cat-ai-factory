@@ -14,22 +14,80 @@ Update rules:
 
 ## Current PR
 
-PR: **PR-34.9 — Policy-driven quality routing foundation (QC policy + QC runner + deterministic routing)**
-Last Updated: 2026-02-18
+PR: **PR-35 — Free-first engine adapter pack (generation/recast quality ceiling lift)**
+Last Updated: 2026-02-19
 
 ### Status by Role
-- ARCH: Complete (PR-34.9 implemented; PR-35 queued)
-- CODEX: Complete (PR-34.9 pack implemented and smoke-validated)
+- ARCH: Active (PR-35h/PR-35i/PR-35j/PR-35k implemented; PR-36 scope hardening next)
+- CODEX: Ready for PR-35 pack closeout on `pr35-lab-qc-motion-pack` (remaining work moved to PR-36)
 - CLOUD-REVIEW: Not Required (quality-track local/runtime scope)
 
 ### Decisions / ADRs Touched
-- ADR-0041 (Video Analyzer planner-side canon contracts)
-- ADR-0042 (Dance Swap v1 deterministic lane)
-- ADR-0040 (Media Stack v1 stage contracts)
-- ADR-0043 (Mode B default strategy)
-- ADR-0044 (External HITL recast boundary)
+- ADR-0047 (Free-first engine posture)
+- ADR-0048 (Motion-conditioned frame-first quality path)
+- ADR-0049 (Autonomous lab->prod bridge)
+- ADR-0050 (Planner intelligence + lab bootstrap; proposed)
 
 ### What Changed (Diff Summary)
+- Implemented PR-35k QC fail-closed hardening for missing/unknown metrics:
+  - `repo/tools/run_qc_runner.py` now treats `status=unknown` gates as blocking.
+  - `recommended_action` for missing metrics now follows policy `default_action_on_missing_report` (default `escalate_hitl`).
+  - added regression smoke:
+    - `repo/tools/smoke_qc_unknown_metrics_block.py`
+  - validated on live failing job:
+    - `have-mochi-in-dino-costume-doing-d-comfy-v3` now resolves to `decision.action=escalate_hitl` (no silent finalize).
+- Added shared deterministic demo asset alias resolver and migrated active paths:
+  - new shared module:
+    - `repo/shared/demo_asset_resolver.py`
+  - migrated call sites:
+    - `repo/services/planner/providers/comfyui_video.py`
+    - `repo/worker/render_ffmpeg.py`
+    - `repo/tools/smoke_segment_stitch_runtime.py`
+  - alias behavior:
+    - resolves known `flight_composite` references to existing `fight_composite` assets when needed.
+- Preserved dance-loop intent boundary (fail loud):
+  - `repo/services/planner/providers/comfyui_video.py` now fails loud for dance-loop briefs when dance-loop reference assets are missing.
+  - dance-loop intent no longer silently falls back to fight-composite.
+- Implemented PR-35j one-command autonomous brief runner with bootstrap fallback and lifecycle artifacts:
+  - added `repo/tools/run_autonomous_brief.py`
+  - flow:
+    - brief -> planner
+    - on pointer-resolution failure (optional flag) -> `ingest_demo_samples` bootstrap -> planner retry
+    - orchestrator run (or `--dry-run`)
+  - lifecycle/state artifact emitted to:
+    - `sandbox/logs/lab/autonomous_brief_runs/<run_id>.autonomous_brief_run.v1.json`
+  - lifecycle includes deterministic state transitions/events and resolved `job_relpath/job_id` for adapter/UI visibility.
+  - validation:
+    - `python -m py_compile repo/tools/run_autonomous_brief.py`
+    - dry-run execution validated with Comfy provider env set.
+- Implemented PR-35i lab bootstrap extractor completeness + consumer mapping metadata:
+  - `repo/tools/ingest_demo_samples.py` now emits `artifact_classes` with:
+    - required/present flags
+    - consumer mapping (`planner|provider|controller|worker|qc`)
+    - evidence pointers
+  - ingest now fails loud when required artifact classes are missing.
+- Updated sample ingest schema + validator:
+  - `repo/shared/sample_ingest_manifest.v1.schema.json` now requires `artifact_classes`.
+  - `repo/tools/validate_sample_ingest_manifest.py` now enforces required/present/evidence semantics.
+- Added deterministic smoke:
+  - `repo/tools/smoke_sample_ingest_manifest_completeness.py`
+  - validates pass case and fail-loud required-missing case.
+- Implemented PR-35h deterministic pointer-resolution authority behavior in planner:
+  - planner emits in-contract resolution artifact `pointer_resolution.v1` with:
+    - required pointer set
+    - deterministic selection policy/tie-break metadata
+    - selected pointers
+    - rejected candidates + reasons
+    - fallback usage list
+  - planner now fails loud when required pointers are unresolved in motion/identity-critical contexts.
+- Updated job contract schema for `pointer_resolution`:
+  - `repo/shared/job.schema.json`
+- Added/updated smoke coverage:
+  - updated `repo/tools/smoke_planner_pointer_resolver.py`
+  - added `repo/tools/smoke_planner_pointer_resolution_fail_loud.py`
+  - validated in conda env:
+    - `python -m repo.tools.smoke_planner_pointer_resolver`
+    - `python -m repo.tools.smoke_planner_pointer_resolution_fail_loud`
 - Implemented PR-34.9 parent + sub-PRs (`34.9a` to `34.9f`) with deterministic artifacts and tooling:
   - production policy/report contracts: `qc_policy.v1`, `qc_report.v1`
   - advisory contract + lab curriculum: `qc_route_advice.v1`, `openclaw_lab_curriculum.v1`
@@ -519,6 +577,9 @@ Last Updated: 2026-02-18
     - `sandbox/logs/benchmarks/recast-regression-smoke/recast_benchmark_report.v1.json`
 
 ### Open Findings / Conditions
+- Active known issue (non-blocking for PR-35k closeout):
+  - `repo/tools/smoke_segment_stitch_runtime.py` now passes asset-resolution stage but still fails on an unrelated schema mismatch:
+    - `segment_stitch_report.v1` includes unexpected `skipped_segments` (schema/producer mismatch; separate fix track).
 - Roadmap policy:
   - Cloud migration PRs are postponed until quality-video track (PR-31..PR-34.6) is complete and accepted.
   - Execution order override: Phase 8 runs first; Phase 7 resumes after Phase 8 closeout.
@@ -537,9 +598,9 @@ Last Updated: 2026-02-18
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: confirm PR-34.6a scope lock (decision->retry-plan mapping contract + validator + smoke).
-- CODEX: implement PR-34.6a.
-- ARCH: pre-approve PR-34.6b boundaries (bounded retries, deterministic terminal states).
+- ARCH: review and approve ADR proposals ADR-0051..ADR-0054 (pointer authority, QC precedence matrix, capability checks, promotion governance).
+- CODEX: execute PR-36 deterministic quality-convergence hardening scope.
+- ARCH: prepare PR-36 acceptance checklist aligned with deterministic routing authority and fail-loud capability checks.
 
 ### ARCH Decision Queue Snapshot (PR-34.5 Focus)
 1) Video Analyzer contracts:

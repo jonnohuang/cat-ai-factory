@@ -16,6 +16,12 @@ import urllib.request
 import uuid
 from typing import Any
 
+from repo.shared.demo_asset_resolver import (
+    DANCE_LOOP_CANDIDATES,
+    resolve_alias_for_existing,
+    resolve_first_existing,
+)
+
 try:
     import cv2  # type: ignore
     import numpy as np  # type: ignore
@@ -400,9 +406,12 @@ def _prepare_comfy_seed_image(
         except Exception:
             bg_path = None
     if bg_path is None or (not bg_path.exists()):
-        fallback = repo_root / "sandbox" / "assets" / "demo" / "processed" / "dance_loop.mp4"
-        if fallback.exists():
-            bg_path = fallback
+        fallback_rel = resolve_first_existing(
+            sandbox_root=sandbox_root,
+            candidates=DANCE_LOOP_CANDIDATES,
+        )
+        if fallback_rel:
+            bg_path = sandbox_root / fallback_rel
         else:
             raise SystemExit("Comfy seed image source is missing; set render.background_asset or provide demo source.")
 
@@ -1249,7 +1258,12 @@ def normalize_sandbox_path(rel_path_str: str, sandbox_root: pathlib.Path) -> pat
     parts = p.parts
     if parts and parts[0] == "sandbox":
         p = pathlib.Path(*parts[1:])
-        
+
+    # Resolve demo asset aliases (for example flight_composite <-> fight_composite).
+    alias_rel = resolve_alias_for_existing(sandbox_root=sandbox_root, relpath=str(p))
+    if isinstance(alias_rel, str) and alias_rel:
+        p = pathlib.Path(alias_rel)
+
     full_path = sandbox_root / p
     return full_path
 

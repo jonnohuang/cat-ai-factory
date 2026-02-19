@@ -112,8 +112,18 @@ def main() -> int:
         print("ERROR: missing job json", file=sys.stderr)
         return 1
     mc = job.get("motion_contract")
-    if not isinstance(mc, dict) or mc.get("relpath") != pose_rel:
-        print("ERROR: pointer resolver did not apply sample manifest motion contract", file=sys.stderr)
+    if not isinstance(mc, dict) or not isinstance(mc.get("relpath"), str) or not mc.get("relpath"):
+        print("ERROR: pointer resolver did not produce motion_contract pointer", file=sys.stderr)
+        return 1
+
+    resolution = job.get("pointer_resolution")
+    if not isinstance(resolution, dict) or resolution.get("version") != "pointer_resolution.v1":
+        print("ERROR: missing pointer_resolution.v1 artifact in job contract", file=sys.stderr)
+        return 1
+    selected = resolution.get("selected", {})
+    motion_selected = selected.get("motion_contract") if isinstance(selected, dict) else None
+    if not isinstance(motion_selected, dict) or motion_selected.get("relpath") != mc.get("relpath"):
+        print("ERROR: pointer_resolution selected.motion_contract does not match effective job pointer", file=sys.stderr)
         return 1
 
     print("OK: planner pointer resolver smoke")

@@ -1258,6 +1258,251 @@ def _apply_pointer_resolver_hints(job: Dict[str, Any], quality_context: Dict[str
     return job
 
 
+def _job_pointer_relpath(job: Dict[str, Any], pointer: str) -> Optional[str]:
+    if pointer == "motion_contract":
+        block = job.get("motion_contract")
+        if isinstance(block, dict):
+            rel = block.get("relpath")
+            if isinstance(rel, str) and rel:
+                return rel
+    elif pointer == "quality_target":
+        block = job.get("quality_target")
+        if isinstance(block, dict):
+            rel = block.get("relpath")
+            if isinstance(rel, str) and rel:
+                return rel
+    elif pointer == "segment_stitch":
+        block = job.get("segment_stitch")
+        if isinstance(block, dict):
+            rel = block.get("plan_relpath")
+            if isinstance(rel, str) and rel:
+                return rel
+    elif pointer == "continuity_pack":
+        block = job.get("continuity_pack")
+        if isinstance(block, dict):
+            rel = block.get("relpath")
+            if isinstance(rel, str) and rel:
+                return rel
+    return None
+
+
+def _is_existing_relpath(project_root: str, relpath: str) -> bool:
+    if not isinstance(relpath, str) or not relpath:
+        return False
+    abs_path = os.path.join(project_root, relpath)
+    return os.path.exists(abs_path)
+
+
+def _append_pointer_candidate(
+    candidates: Dict[str, List[Dict[str, Any]]],
+    pointer: str,
+    relpath: Any,
+    source: str,
+    priority: int,
+    project_root: str,
+) -> None:
+    if pointer not in candidates:
+        return
+    if not isinstance(relpath, str) or not relpath.strip():
+        return
+    rel = relpath.strip()
+    candidates[pointer].append(
+        {
+            "relpath": rel,
+            "source": source,
+            "priority": int(priority),
+            "exists": _is_existing_relpath(project_root, rel),
+        }
+    )
+
+
+def _required_pointer_keys(
+    prd: Dict[str, Any],
+    inbox_list: List[Dict[str, Any]],
+    job: Dict[str, Any],
+    quality_context: Dict[str, Any],
+) -> List[str]:
+    blob = json.dumps({"prd": prd, "inbox": inbox_list, "job": job}, sort_keys=True, ensure_ascii=True).lower()
+    is_motion_identity_context = any(
+        tok in blob
+        for tok in (
+            "dance",
+            "loop",
+            "choreo",
+            "choreography",
+            "pose",
+            "motion",
+            "mochi",
+            "costume",
+            "identity",
+        )
+    )
+
+    resolver = quality_context.get("pointer_resolver")
+    has_resolver_context = isinstance(resolver, dict) and (
+        isinstance(resolver.get("contracts"), dict) or isinstance(resolver.get("promoted_contract_pointers"), dict)
+    )
+    has_reverse = isinstance(quality_context.get("reverse_analysis"), dict)
+    if not is_motion_identity_context or not (has_resolver_context or has_reverse):
+        return []
+
+    required = ["motion_contract", "quality_target", "segment_stitch"]
+    if any(tok in blob for tok in ("continuity", "canon", "same")):
+        required.append("continuity_pack")
+    return required
+
+
+def _build_pointer_resolution_artifact(
+    job: Dict[str, Any],
+    prd: Dict[str, Any],
+    inbox_list: List[Dict[str, Any]],
+    quality_context: Dict[str, Any],
+    project_root: str,
+) -> Tuple[Dict[str, Any], List[str]]:
+    resolver = quality_context.get("pointer_resolver", {})
+    contracts = resolver.get("contracts", {}) if isinstance(resolver, dict) else {}
+    promoted = resolver.get("promoted_contract_pointers", {}) if isinstance(resolver, dict) else {}
+    reverse = quality_context.get("reverse_analysis", {}) if isinstance(quality_context, dict) else {}
+    segment = quality_context.get("segment_stitch_plan", {}) if isinstance(quality_context, dict) else {}
+    quality_target = quality_context.get("quality_target", {}) if isinstance(quality_context, dict) else {}
+    continuity = quality_context.get("continuity_pack", {}) if isinstance(quality_context, dict) else {}
+
+    candidates: Dict[str, List[Dict[str, Any]]] = {
+        "motion_contract": [],
+        "quality_target": [],
+        "segment_stitch": [],
+        "continuity_pack": [],
+    }
+    _append_pointer_candidate(candidates, "motion_contract", contracts.get("pose_checkpoints_relpath"), "sample_manifest", 300, project_root)
+    _append_pointer_candidate(candidates, "quality_target", contracts.get("quality_target_relpath"), "sample_manifest", 300, project_root)
+    _append_pointer_candidate(candidates, "segment_stitch", contracts.get("segment_stitch_plan_relpath"), "sample_manifest", 300, project_root)
+    _append_pointer_candidate(candidates, "continuity_pack", contracts.get("continuity_pack_relpath"), "sample_manifest", 300, project_root)
+
+    if isinstance(promoted, dict):
+        mc = promoted.get("motion_contract", {})
+        qt = promoted.get("quality_target", {})
+        seg = promoted.get("segment_stitch", {})
+        cp = promoted.get("continuity_pack", {})
+        _append_pointer_candidate(candidates, "motion_contract", mc.get("relpath") if isinstance(mc, dict) else None, "promotion_registry", 250, project_root)
+        _append_pointer_candidate(candidates, "quality_target", qt.get("relpath") if isinstance(qt, dict) else None, "promotion_registry", 250, project_root)
+        _append_pointer_candidate(candidates, "segment_stitch", seg.get("plan_relpath") if isinstance(seg, dict) else None, "promotion_registry", 250, project_root)
+        _append_pointer_candidate(candidates, "continuity_pack", cp.get("relpath") if isinstance(cp, dict) else None, "promotion_registry", 250, project_root)
+
+    if isinstance(reverse, dict):
+        _append_pointer_candidate(candidates, "motion_contract", reverse.get("pose_checkpoints_relpath"), "analysis_context", 200, project_root)
+    if isinstance(segment, dict):
+        _append_pointer_candidate(candidates, "segment_stitch", segment.get("relpath"), "analysis_context", 200, project_root)
+    if isinstance(quality_target, dict):
+        _append_pointer_candidate(candidates, "quality_target", quality_target.get("relpath"), "analysis_context", 200, project_root)
+    if isinstance(continuity, dict):
+        _append_pointer_candidate(candidates, "continuity_pack", continuity.get("relpath"), "analysis_context", 200, project_root)
+
+    _append_pointer_candidate(
+        candidates,
+        "motion_contract",
+        "repo/examples/pose_checkpoints.v1.example.json",
+        "fallback_example",
+        100,
+        project_root,
+    )
+    _append_pointer_candidate(
+        candidates,
+        "quality_target",
+        "repo/examples/quality_target.motion_strict.v1.example.json",
+        "fallback_example",
+        100,
+        project_root,
+    )
+    _append_pointer_candidate(
+        candidates,
+        "quality_target",
+        "repo/examples/quality_target.v1.example.json",
+        "fallback_example",
+        90,
+        project_root,
+    )
+
+    normalized_candidates: Dict[str, List[Dict[str, Any]]] = {}
+    for pointer, rows in candidates.items():
+        best_by_rel: Dict[str, Dict[str, Any]] = {}
+        for row in rows:
+            rel = row["relpath"]
+            cur = best_by_rel.get(rel)
+            if cur is None or int(row["priority"]) > int(cur["priority"]) or (
+                int(row["priority"]) == int(cur["priority"]) and str(row["source"]) < str(cur["source"])
+            ):
+                best_by_rel[rel] = row
+        ordered = sorted(best_by_rel.values(), key=lambda x: (-int(x["priority"]), str(x["relpath"]), str(x["source"])))
+        normalized_candidates[pointer] = ordered
+
+    selected: Dict[str, Dict[str, Any]] = {}
+    rejected: List[Dict[str, Any]] = []
+    fallback_used: List[str] = []
+    unresolved: List[str] = []
+    required = _required_pointer_keys(prd, inbox_list, job, quality_context)
+
+    for pointer in ("motion_contract", "quality_target", "segment_stitch", "continuity_pack"):
+        selected_rel = _job_pointer_relpath(job, pointer)
+        selected_row: Optional[Dict[str, Any]] = None
+        if isinstance(selected_rel, str) and selected_rel:
+            for row in normalized_candidates.get(pointer, []):
+                if row.get("relpath") == selected_rel:
+                    selected_row = row
+                    break
+            if selected_row is None:
+                selected_row = {
+                    "relpath": selected_rel,
+                    "source": "job_existing",
+                    "priority": 0,
+                    "exists": _is_existing_relpath(project_root, selected_rel),
+                }
+            selected[pointer] = selected_row
+            if selected_row.get("source") == "fallback_example":
+                fallback_used.append(pointer)
+
+        for row in normalized_candidates.get(pointer, []):
+            if selected_row and row.get("relpath") == selected_row.get("relpath"):
+                continue
+            reason = "lower_priority_than_selected"
+            if not bool(row.get("exists")):
+                reason = "path_not_found"
+            rejected.append(
+                {
+                    "pointer": pointer,
+                    "relpath": row.get("relpath"),
+                    "source": row.get("source"),
+                    "priority": row.get("priority"),
+                    "reason": reason,
+                }
+            )
+
+        if pointer in required:
+            if selected_row is None:
+                unresolved.append(f"{pointer}:missing_selected")
+            elif not bool(selected_row.get("exists")):
+                unresolved.append(f"{pointer}:selected_path_not_found")
+
+    analysis_id = None
+    if isinstance(reverse, dict):
+        raw_id = reverse.get("analysis_id")
+        if isinstance(raw_id, str) and raw_id:
+            analysis_id = raw_id
+
+    artifact: Dict[str, Any] = {
+        "version": "pointer_resolution.v1",
+        "analysis_id": analysis_id,
+        "required": required,
+        "selection_policy": {
+            "source_precedence": ["sample_manifest", "promotion_registry", "analysis_context", "fallback_example", "job_existing"],
+            "tie_break": "priority_desc_relpath_asc_source_asc",
+        },
+        "selected": selected,
+        "rejected": rejected,
+        "fallback_used": sorted(set(fallback_used)),
+    }
+    return artifact, unresolved
+
+
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Cat AI Factory planner CLI")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -1373,6 +1618,16 @@ def main(argv: List[str]) -> int:
         facts_errors = _validate_facts_only_guard(job, quality_context)
         if facts_errors:
             raise RuntimeError("facts-only guard failed: " + "; ".join(facts_errors[:3]))
+        pointer_resolution, pointer_errors = _build_pointer_resolution_artifact(
+            job=job,
+            prd=prd,
+            inbox_list=inbox_list,
+            quality_context=quality_context,
+            project_root=project_root,
+        )
+        job["pointer_resolution"] = pointer_resolution
+        if pointer_errors:
+            raise RuntimeError("pointer resolution failed: " + "; ".join(pointer_errors[:3]))
 
         base_job_id = _choose_job_id(args.job_id, job.get("job_id"), prd, inbox_with_names)
         final_path = _final_job_path(args.out, base_job_id)

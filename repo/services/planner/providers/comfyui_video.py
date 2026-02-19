@@ -9,6 +9,11 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 from .base import BaseProvider
+from repo.shared.demo_asset_resolver import (
+    DANCE_LOOP_CANDIDATES,
+    GENERAL_BACKGROUND_CANDIDATES,
+    resolve_first_existing,
+)
 
 
 def _today_utc() -> str:
@@ -26,6 +31,13 @@ def _prompt_text(prd: Dict[str, Any]) -> str:
         if isinstance(v, str) and v.strip():
             return v.strip()
     return "Mochi comfyui continuity test"
+
+
+def _is_dance_loop_intent(prd: Dict[str, Any]) -> bool:
+    blob = " ".join(
+        str(prd.get(k, "")) for k in ("prompt", "concept", "title", "niche")
+    ).lower()
+    return any(tok in blob for tok in ("dance", "loop", "choreo", "choreography", "groove", "beat"))
 
 
 class ComfyUIVideoProvider(BaseProvider):
@@ -76,7 +88,7 @@ class ComfyUIVideoProvider(BaseProvider):
         except Exception:
             return None
 
-    def _pick_background_asset(self, quality_context: Optional[Dict[str, Any]]) -> str:
+    def _pick_background_asset(self, quality_context: Optional[Dict[str, Any]], *, dance_intent: bool) -> str:
         # Prefer sample-ingest source video when available.
         if isinstance(quality_context, dict):
             resolver = quality_context.get("pointer_resolver")
@@ -93,16 +105,19 @@ class ComfyUIVideoProvider(BaseProvider):
                                 src = src[len("sandbox/") :]
                             return src
 
-        # Fallbacks: prefer dance loop demo if present.
-        candidates = [
-            "assets/demo/dance_loop.mp4",
-            "assets/demo/processed/dance_loop.mp4",
-            "assets/demo/fight_composite.mp4",
-        ]
-        root = self._repo_root() / "sandbox"
-        for rel in candidates:
-            if (root / rel).exists():
-                return rel
+        # Fail-loud for dance-loop intent: do not silently route to unrelated fight composite.
+        sandbox_root = self._repo_root() / "sandbox"
+        if dance_intent:
+            selected = resolve_first_existing(sandbox_root=sandbox_root, candidates=DANCE_LOOP_CANDIDATES)
+        else:
+            selected = resolve_first_existing(sandbox_root=sandbox_root, candidates=GENERAL_BACKGROUND_CANDIDATES)
+        if selected:
+            return selected
+        if dance_intent:
+            raise RuntimeError(
+                "Dance-loop brief requires dance reference asset; expected one of "
+                "sandbox/assets/demo/processed/dance_loop.mp4 or sandbox/assets/demo/dance_loop.mp4"
+            )
         return "assets/demo/fight_composite.mp4"
 
     def generate_job(
@@ -132,7 +147,7 @@ class ComfyUIVideoProvider(BaseProvider):
         date = prd.get("date") if isinstance(prd.get("date"), str) else _today_utc()
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
         workflow_tag = self.workflow_id.replace("_", "-")
-        background_asset = self._pick_background_asset(quality_context)
+        background_asset = self._pick_background_asset(quality_context, dance_intent=_is_dance_loop_intent(prd))
         comfy_positive = (
             f"{prompt}. "
             "single hero cat only, Mochi grey tabby kitten, feline face clearly visible, "

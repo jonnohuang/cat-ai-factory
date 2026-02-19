@@ -16,6 +16,8 @@ import shutil
 import subprocess
 import sys
 
+from repo.shared.demo_asset_resolver import FIGHT_COMPOSITE_ALIASES, resolve_first_existing
+
 
 def _repo_root() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parents[2]
@@ -28,6 +30,16 @@ def _load(path: pathlib.Path) -> dict:
 def _write(path: pathlib.Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def _resolve_demo_background_asset(root: pathlib.Path) -> str:
+    selected = resolve_first_existing(
+        sandbox_root=root / "sandbox",
+        candidates=FIGHT_COMPOSITE_ALIASES,
+    )
+    if selected:
+        return selected
+    raise FileNotFoundError(f"Missing demo background asset; expected one of: {list(FIGHT_COMPOSITE_ALIASES)}")
 
 
 def main(argv: list[str]) -> int:
@@ -57,6 +69,11 @@ def main(argv: list[str]) -> int:
     src["job_id"] = job_id
     src.setdefault("render", {})
     src["render"]["output_basename"] = job_id
+    try:
+        src["render"]["background_asset"] = _resolve_demo_background_asset(root)
+    except FileNotFoundError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     src["segment_stitch"] = {
         "plan_relpath": args.plan,
         "enabled": True,

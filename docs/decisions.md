@@ -1586,3 +1586,117 @@ References:
 - docs/PR_PROJECT_PLAN.md (PR-35h, PR-35i, PR-35j)
 - docs/system-requirements.md (FR-28.23, FR-28.24, FR-28.25)
 - docs/architecture.md
+
+------------------------------------------------------------
+
+## ADR-0051 — Deterministic brief pointer resolution authority and tie-break rules
+Date: 2026-02-19
+Status: Proposed
+
+Context:
+- Brief-first operation still requires manual pointer selection in too many runs.
+- Planner improvements must remain auditable and must not introduce hidden authority.
+- Pointer resolution needs deterministic behavior for replayability and debugging.
+
+Decision:
+- Define a deterministic pointer-resolution authority contract for planner output:
+  - required pointer classes per workflow/lane
+  - deterministic candidate ranking/tie-break rules
+  - explicit `resolution artifact` containing selected and rejected candidates with reasons
+- Fail loud when required pointers cannot be resolved from committed artifacts.
+- Keep runtime authority unchanged:
+  - planner resolves pointers
+  - controller routes from policy/report contracts
+  - worker remains deterministic and output-bound.
+
+Consequences:
+- Reduces manual path editing while preserving deterministic authority boundaries.
+- Makes brief->contract resolution reproducible and auditable.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-35h, PR-36)
+- docs/system-requirements.md (FR-28.23)
+- docs/architecture.md
+
+------------------------------------------------------------
+
+## ADR-0052 — QC gate authority precedence and deterministic retry matrix
+Date: 2026-02-19
+Status: Proposed
+
+Context:
+- Quality routing decisions must be explicit and stable as adapter diversity increases.
+- User expectation is quality convergence; production requires deterministic bounded loops.
+- Existing QC surfaces need a strict precedence rule and failure-class action matrix.
+
+Decision:
+- Define production routing authority precedence as:
+  - `qc_policy + qc_report + bounded retry state` only.
+- Define deterministic retry/fallback/escalation matrix keyed by failure class.
+- Preserve fail-loud terminal states when retry budget is exhausted or policy blocks finalize.
+- Keep lab/advisory outputs non-authoritative by default unless guarded trials are explicitly enabled.
+
+Consequences:
+- Prevents routing drift and ad-hoc fallback behavior.
+- Improves predictability and auditability of quality-convergence loops.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-35b, PR-35c, PR-35d, PR-36)
+- docs/system-requirements.md (FR-28.18, FR-28.19)
+- docs/architecture.md
+
+------------------------------------------------------------
+
+## ADR-0053 — Motion-conditioned workflow capability checks are mandatory and fail-loud
+Date: 2026-02-19
+Status: Proposed
+
+Context:
+- Motion/identity quality depends on required workflow nodes/models being present.
+- Current failures can degrade output quality without clear upfront capability failure semantics.
+- Production must fail loud rather than silently degrade in quality-critical routes.
+
+Decision:
+- Introduce explicit required-capability declarations for motion-conditioned workflows:
+  - workflow identifiers
+  - required node classes
+  - required model/checkpoint references
+- Add deterministic preflight capability checks before execution.
+- If required capabilities are missing, fail loud with explicit artifacts and no silent downgrade path.
+
+Consequences:
+- Improves quality predictability for choreography/identity-sensitive jobs.
+- Makes capability-related failures diagnosable and policy-manageable.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-35e, PR-36)
+- docs/system-requirements.md (FR-28.20)
+- docs/comfyui-workflows.md
+
+------------------------------------------------------------
+
+## ADR-0054 — Lab-to-production promotion governance is contract-only (no direct code mutation)
+Date: 2026-02-19
+Status: Proposed
+
+Context:
+- Lab mode can produce strong candidates but must not become hidden production authority.
+- Promotion needs explicit approval and deterministic activation semantics.
+- Direct code/path mutation by lab artifacts would violate reproducibility and governance posture.
+
+Decision:
+- Promotion lifecycle is contract-driven only:
+  - promotion candidate artifact
+  - explicit approval artifact
+  - deterministic policy/workflow update artifact
+- Lab artifacts must never directly mutate production code or runtime behavior.
+- Production may consume only promoted, committed contracts/artifacts.
+
+Consequences:
+- Preserves deterministic production authority while enabling autonomous quality improvement.
+- Keeps promotion decisions auditable and reversible.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-35f, PR-35g, PR-36)
+- docs/system-requirements.md (FR-28.22)
+- docs/architecture.md
