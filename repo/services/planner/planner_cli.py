@@ -1090,8 +1090,11 @@ def _apply_segment_stitch_hints(job: Dict[str, Any], quality_context: Dict[str, 
         return job
     enabled = True
     existing = job.get("segment_stitch")
-    if isinstance(existing, dict) and isinstance(existing.get("enabled"), bool):
-        enabled = existing["enabled"]
+    if isinstance(existing, dict):
+        if isinstance(existing.get("plan_relpath"), str) and existing.get("plan_relpath"):
+            return job
+        if isinstance(existing.get("enabled"), bool):
+            enabled = existing["enabled"]
     job["segment_stitch"] = {
         "plan_relpath": relpath,
         "enabled": enabled,
