@@ -193,6 +193,7 @@ def _build_prompt(
         "hashtags must be 3-20 strings matching ^#\\w[\\w_]*$ (no hyphens or spaces).\n"
         "render.subtitle_style must be big_bottom or karaoke_bottom.\n"
         "Use a background_asset under assets/demo/ if no other asset is specified.\n"
+        "visual descriptions in shots must be highly detailed, cinematic, and specify lighting, texture, and camera angle.\n"
     )
     return (
         "You are the Planner for Cat AI Factory.\n"

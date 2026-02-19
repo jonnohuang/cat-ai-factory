@@ -1162,8 +1162,13 @@ def _seed_prompt_from_job(job: Dict[str, Any], prd: Dict[str, Any], hero_desc: s
     if consistency_hints:
         deduped = _dedupe_preserve_order(consistency_hints)
         prompt = f"{prompt} | " + " | ".join(deduped)
+
     if not prompt:
         prompt = "A vertical cinematic scene for a short-form cat video."
+
+    # Ensure baseline quality for any generated seed frame.
+    prompt = f"{prompt} | 8k resolution, cinematic lighting, high fidelity, sharp focus, professional photography"
+
     return prompt[:1200]
 
 
