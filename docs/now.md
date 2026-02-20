@@ -27,16 +27,18 @@ Update rules:
 - **Output**: `pr36_acceptance_checklist.md` created. ADRs 0051-0054 Accepted.
 
 #### CODEX (Implementation)
-- **Status**: **Active (Quality Improvements)**
+- **Status**: **Active (Final Verification)**
 - **Completed**:
     - Deterministic Pointer Resolution (PR-35h).
     - QC Policy & Routing Authority (Fail-Closed).
     - Lab-to-Prod Promotion Queue.
     - **Veo3 Hybrid Adapter** (High Quality I2V) verified.
+    - **Veo3 Mock Mode** (`CAF_VEO_MOCK=1`) implemented in Planner & Worker.
+    - **QC Policy Engine** bugfixes (NameError/ValueError) and hardening.
     - **Hero Image Generation** (Imagen 3) tool implemented.
-    - Hero Registry Expansion (3 new heroes/costumes).
-- **Current Focus**: Motion Quality Investigation (Dance Loop fidelity).
 - **Recent Wins**:
+    - **Veo3 Mock Mode** enabled (cost-safe E2E verification path).
+    - **QC Tool bugfixes** (resolved Orchestrator crashes due to NameError/ValueError).
     - **Motion Metadata Translation** enabled (Veo3 generative prompt injection).
     - End-to-End Mochi Dino pipeline verification complete.
 
@@ -98,6 +100,15 @@ Update rules:
   - migrated call sites:
     - `repo/services/planner/providers/comfyui_video.py`
     - `repo/worker/render_ffmpeg.py`
+- Implemented PR-36 Veo3 Mock Mode (`CAF_VEO_MOCK=1`):
+  - `repo/services/planner/providers/vertex_ai.py`: Bypasses Gemini/Veo calls; returns mock job contract.
+  - `repo/worker/render_veo.py`: Bypasses Vertex API; copies demo asset `dance_loop.mp4` to output.
+  - Enables cost-blind E2E verification of the autonomous brief workflow.
+- Fixed PR-36 QC Policy Engine critical bugs:
+  - `repo/tools/decide_quality_action.py`:
+    - Resolved `NameError` by loading report/policy before access.
+    - Resolved `ValueError` (unpacking) by correcting method signatures and call sites.
+    - Hardened variable derivation for `action` and `reason` from QC report.
     - `repo/tools/smoke_segment_stitch_runtime.py`
   - alias behavior:
     - resolves known `flight_composite` references to existing `fight_composite` assets when needed.

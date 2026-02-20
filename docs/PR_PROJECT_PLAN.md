@@ -1843,6 +1843,16 @@ Acceptance criteria:
 ---
 
 ### PR-36 — Deterministic quality convergence loop hardening (ARCH scope lock)
+(Active)
+
+### PR-37.5: Director Primitives (PROPOSED)
+**Goal**: Transition from monolithic to granular shot-by-shot generation to enable the LangGraph Director vision.
+- **Shot-Aware Workers**: Update `render_veo.py` and `render_ffmpeg.py` to support `CAF_TARGET_SHOT_ID` for targeted generation/re-rendering.
+- **Granular QC**: Update `decide_quality_action.py` to emit `segment_retry` plans that point to specific `shot_id`s.
+- **Diffable Artifacts**: Ensure stage-emitted artifacts per shot are preserved for evaluation and diffing.
+
+---
+
 Status: **ACTIVE**
 
 Scope:
@@ -1875,6 +1885,12 @@ Implemented in current slice:
   - duplicate approval guard by `candidate_id`
   - evidence threshold gate (`pass_rate_delta`, `retry_count_delta`) before approval
   - deterministic action outcome audit in `promotion_queue_result.v1`
+- Implemented Veo3 Mock Mode (`CAF_VEO_MOCK=1`) for cost-safe E2E verification:
+  - Planner (Vertex AI Studio) bypasses pricing and returns mock jobs.
+  - Worker (Veo Adapter) bypasses pricing and returns demo assets.
+- Hardened QC Policy Engine (`decide_quality_action.py`):
+  - Resolved critical NameError and ValueError (unpacking) bugs.
+  - Verified stability on real Orchestrator loops.
 
 Outcome:
 - Autonomous quality convergence path is explicit, bounded, and contract-governed.

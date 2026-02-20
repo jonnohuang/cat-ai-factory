@@ -1,8 +1,8 @@
 {
   "daily_usage": {
-    "2026-02-20": 9.196118000000004
+    "2026-02-20": 10.146940000000004
   },
-  "total_usage": 9.196118000000004,
+  "total_usage": 10.146940000000004,
   "transactions": {
     "vertex-text-23844363-27e7-47da-b32e-7b978b89ef3c": 0.047743499999999994,
     "vertex-text-2397a76e-b975-4a3e-aabb-dc4d354853c1": 0.047743499999999994,
@@ -16,6 +16,7 @@
     "vertex-text-6770ad5b-6bc3-434e-822a-fee6a50d87b2": 0.047743499999999994,
     "vertex-text-8c42eb48-d133-4de9-b003-7a2d771d4fd2": 0.049069999999999996,
     "vertex-text-8f797c1e-cf02-4e77-ad60-658ebe3b2c82": 0.050239,
+    "vertex-text-8fa23cda-e347-4b22-bc5c-b03bc20469a2": 0.050274,
     "vertex-text-9f6756c0-dc76-4fec-8163-b0e782082c3e": 0.0562765,
     "vertex-text-b478c739-5295-4369-8bd8-147a487fa25c": 0.0505995,
     "vertex-text-c7b7a840-e789-4e41-8256-903ca8391343": 0.0562765,
@@ -25,10 +26,13 @@
     "vertex-text-cfed7d15-33e5-43ee-8a34-19f52958db54": 0.050319499999999996,
     "vertex-text-d44dea82-69ba-44b2-9ef7-82ec21ec3f3f": 0.050239,
     "vertex-text-e3a13145-df98-4192-b383-30cdf37ee626": 0.050239,
+    "vertex-text-e7f5c674-2098-4bf5-b805-14f310acd413": 0.050274,
     "vertex-text-e9a14552-32bc-4177-a796-8c642e6b4302": 0.047743499999999994,
     "vertex-text-f26ef3bf-d863-4bef-8157-957af7a26f03": 0.047743499999999994,
     "vertex-text-f52222fc-c8a6-4f0d-bf04-a18f39e332c0": 0.050239,
+    "vertex-text-fb9795c9-66cd-4c78-87ce-3f367f270476": 0.050274,
     "vertex-veo-0c353680-9b75-439d-ad95-6d2b2f85296b": 0.8,
+    "vertex-veo-13ed7d62-9848-46a7-9438-1bf1c58ce79a": 0.8,
     "vertex-veo-2855173c-a6c2-47a9-a6f7-f8803df60e9f": 0.8,
     "vertex-veo-4e45d4e5-1c1b-4fa8-a9b4-b55b595f2c30": 0.8,
     "vertex-veo-85a85065-1f42-4c7b-9fda-75e09e3da464": 0.8,

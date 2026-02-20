@@ -178,6 +178,9 @@ class _VertexBaseProvider(BaseProvider):
         return self._finalize_media_handoff(fixed_job, prd)
 
     def _vertex_ready(self) -> bool:
+        if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
+            return True
+            
         if not self.project_id:
             self._fallback_reason = "VERTEX_PROJECT_ID missing"
             return False
@@ -462,40 +465,46 @@ class _VertexBaseProvider(BaseProvider):
                 },
                 "shots": [
                     {
+                        "shot_id": "shot_0001",
                         "t": 0,
                         "visual": "Mochi dancing in a dino suit in a studio.",
                         "action": "dance | facts:camera=locked,brightness=mid,palette=#5F6A7A",
                         "caption": "Mochi's Dino Dance!"
                     },
                     {
+                        "shot_id": "shot_0002",
                         "t": 2,
                         "visual": "Mochi spinning in the dino suit.",
                         "action": "spin | facts:camera=locked,brightness=mid,palette=#5F6A7A",
                         "caption": "Spinning Mochi!"
                     },
                     {
+                        "shot_id": "shot_0003",
                         "t": 4,
-                        "visual": "Mochi jumping with paws up.",
-                        "action": "jump | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Paws up!"
+                        "visual": "Mochi grooving with arm movements.",
+                        "action": "groove | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+                        "caption": "Groovy moves!"
                     },
                     {
+                        "shot_id": "shot_0004",
                         "t": 6,
-                        "visual": "Mochi doing a tail wiggle.",
-                        "action": "wiggle | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Tail wiggle!"
-                    },
-                    {
-                        "t": 8,
-                        "visual": "Mochi stomping rhythmicallly.",
-                        "action": "stomp | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Dino stomps!"
-                    },
-                    {
-                        "t": 10,
-                        "visual": "Mochi striking a final pose.",
+                        "visual": "Mochi doing a final pose.",
                         "action": "pose | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Grand finale!"
+                        "caption": "Ta-da!"
+                    },
+                    {
+                        "shot_id": "shot_0005",
+                        "t": 8,
+                        "visual": "Mochi holding the pose.",
+                        "action": "hold | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+                        "caption": "Holding it!"
+                    },
+                    {
+                        "shot_id": "shot_0006",
+                        "t": 10,
+                        "visual": "Mochi walking off screen.",
+                        "action": "walk_off | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+                        "caption": "See ya!"
                     }
                 ],
                 "render": {
@@ -580,6 +589,9 @@ class VertexVeoProvider(_VertexBaseProvider):
     provider_name = "vertex_veo"
 
     def _try_generate_lane_a_video(self, job: Dict[str, Any], prd: Dict[str, Any]) -> str:
+        if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
+            return "sandbox/assets/demo/dance_loop.mp4"
+            
         self._lane_a_error = ""
         if not self.project_id or not self.access_token:
             self._lane_a_error = "vertex auth not configured"
@@ -595,12 +607,16 @@ class VertexVeoProvider(_VertexBaseProvider):
                 f"reference_preview={preview}"
             )
         requested_duration = int(job.get("video", {}).get("length_seconds", 15))
-        target_duration = _normalize_veo_duration(requested_duration)
-        if target_duration != requested_duration:
-            print(
-                "INFO planner provider="
-                f"{self.name} lane_a_duration_normalized={requested_duration}->{target_duration}"
-            )
+        duration = _normalize_veo_duration(requested_duration, has_references=bool(reference_images))
+        fps = int(job.get("video", {}).get("fps", 30))
+        if fps not in (24, 30):
+            fps = 24
+        res = str(job.get("video", {}).get("resolution", "1080x1920"))
+
+        print(
+            f"INFO planner provider={self.name} veo_video_request duration={duration}s "
+            f"fps={fps} res={res} references={len(reference_images)}"
+        )
         candidate_count = _clamp_int(os.environ.get("VERTEX_VEO_CANDIDATES", "3"), 1, 3, 3)
         min_score = _clamp_float(os.environ.get("VERTEX_VEO_MIN_MOTION_SCORE", "-9999"), -1e9, 1e9, -9999.0)
         allow_low_if_any = os.environ.get("VERTEX_VEO_ALLOW_LOW_SCORE_IF_ANY", "1").strip().lower() in (
@@ -619,7 +635,7 @@ class VertexVeoProvider(_VertexBaseProvider):
         last_error = ""
         for idx in range(1, candidate_count + 1):
             prompt_i = _veo_candidate_prompt(base_prompt, idx, candidate_count)
-            video_bytes = self._generate_video_bytes(prompt_i, target_duration, reference_images)
+            video_bytes = self._generate_video_bytes(prompt_i, duration, reference_images)
             if (not video_bytes) and _looks_like_safety_block(self._lane_a_error):
                 safe_prompt_i = _sanitize_prompt_for_safety(prompt_i)
                 if safe_prompt_i != prompt_i:
@@ -627,7 +643,7 @@ class VertexVeoProvider(_VertexBaseProvider):
                         f"INFO planner provider={self.name} veo_prompt_safety_retry candidate={idx}"
                     )
                     video_bytes = self._generate_video_bytes(
-                        safe_prompt_i, target_duration, reference_images
+                        safe_prompt_i, duration, reference_images
                     )
             if (not video_bytes) and _looks_like_safety_block(self._lane_a_error):
                 fallback_prompt = _safe_fallback_motion_prompt()
@@ -635,7 +651,7 @@ class VertexVeoProvider(_VertexBaseProvider):
                     f"INFO planner provider={self.name} veo_prompt_fallback_retry candidate={idx}"
                 )
                 video_bytes = self._generate_video_bytes(
-                    fallback_prompt, target_duration, reference_images
+                    fallback_prompt, duration, reference_images
                 )
             if not video_bytes:
                 last_error = self._lane_a_error
@@ -1141,11 +1157,15 @@ def _build_operation_urls(op_name: str, location: str) -> List[str]:
     return deduped
 
 
-def _normalize_veo_duration(requested: int) -> int:
-    # Veo text_to_video currently supports discrete durations only.
-    supported = (4, 6, 8, 12)
-    # Prefer the closest duration; tie-break upward so 5 -> 6.
-    return min(supported, key=lambda d: (abs(d - requested), -d))
+def _normalize_veo_duration(requested: int, has_references: bool = False) -> int:
+    if has_references:
+        # Vertex I2V strictly only supports 8s today.
+        supported = (8,)
+    else:
+        supported = (4, 6, 8, 12)
+        
+    closest = min(supported, key=lambda x: abs(x - requested))
+    return closest
 
 
 def _veo_candidate_prompt(base_prompt: str, idx: int, total: int) -> str:

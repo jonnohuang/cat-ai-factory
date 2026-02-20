@@ -52,6 +52,8 @@ def _load_quality_targets_from_job(root: pathlib.Path, job_id: str) -> Dict[str,
         "loop_seam": 0.70,
         "audio_video": 0.95,
         "costume_fidelity": 1.0,
+        "background_stability": 0.80,
+        "identity_drift": 0.80,
     }
     job = _load_json(_job_path(root, job_id))
     if not isinstance(job, dict):
@@ -69,7 +71,7 @@ def _load_quality_targets_from_job(root: pathlib.Path, job_id: str) -> Dict[str,
     if not isinstance(thresholds, dict):
         return defaults
     merged = dict(defaults)
-    for key in ("identity_consistency", "mask_edge_bleed", "temporal_stability", "loop_seam", "audio_video"):
+    for key in ("identity_consistency", "mask_edge_bleed", "temporal_stability", "loop_seam", "audio_video", "background_stability", "identity_drift"):
         v = thresholds.get(key)
         if isinstance(v, (int, float)):
             merged[key] = max(0.0, min(1.0, float(v)))

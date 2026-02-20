@@ -1,0 +1,74 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "IdentityPack",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "identity_id",
+        "version",
+        "references",
+        "contract"
+    ],
+    "properties": {
+        "identity_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Unique identifier for the character identity (e.g. mochi-dino)."
+        },
+        "version": {
+            "type": "string",
+            "const": "identity_pack.v1"
+        },
+        "references": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "front"
+            ],
+            "properties": {
+                "front": {
+                    "type": "string",
+                    "description": "Primary front-facing high-fidelity reference image."
+                },
+                "side": {
+                    "type": "string",
+                    "description": "Side-facing reference image for profile consistency."
+                },
+                "detail": {
+                    "type": "string",
+                    "description": "Detail/texture reference (e.g. fur pattern, button detail)."
+                },
+                "additional": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Optional extra reference frames."
+                }
+            }
+        },
+        "contract": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "canonical_descriptors"
+            ],
+            "properties": {
+                "canonical_descriptors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Hard-locked prompt tokens for current costume/identity."
+                },
+                "negative_descriptors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Forbidden tokens to prevent drift (e.g. 'no tail', 'no glasses')."
+                }
+            }
+        }
+    }
+}

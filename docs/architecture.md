@@ -547,7 +547,59 @@ Operator experience target:
 - One-command brief-to-output execution for known workflow classes.
 - All auto-selections and fallbacks remain auditable via explicit artifacts.
 
+## Diagram 6 — The Director & n8n High-Yield Pipeline (Dance-Loop Mode)
+
+This diagram visualizes the collaboration between the internal **Director** (LangGraph) and external **Ops Automation** (n8n) for high-quality, high-yield generation.
+
+flowchart TB
+  subgraph OPS[Ops/Distribution — n8n Wrapper (The Hands)]
+    TRIGGER[External Trigger\n(Webhook/Cron)]
+    FANOUT[Fan-out\n(Create K Variants)]
+    PICK[Selection Logic\n(Top N by QC score)]
+    HITL[Human Approval\n(Telegram/Slack)]
+    PUBLISH[Publishing\n(YouTube/IG/TikTok)]
+  end
+
+  subgraph FACTORY[Core Factory — The "Thinking" Engine]
+    subgraph P[Planner Plane]
+      DIRECTOR[Director (LangGraph)\nShot Decomposition\nIdentity Pack Ref]
+      JOB[/sandbox/jobs/*.job.json/]
+    end
+    
+    subgraph C[Control Plane]
+      ORCH[Ralph Loop\n(Shot Dispatcher)]
+    end
+
+    subgraph W[Worker Plane]
+      WORK[Shot Worker\n(4-6s Generative Clips)]
+      STITCH[Assembly Worker\n(FFmpeg Stitching)]
+    end
+
+    subgraph Q[Verification Plane]
+      QC[QC Verifier\n(Pose-Gating + Identity Drift)]
+    end
+  end
+
+  %% Flow
+  TRIGGER --> DIRECTOR
+  DIRECTOR --> FANOUT
+  FANOUT -->|K Jobs| JOB
+  JOB --> ORCH
+  ORCH -->|Targeted ShotID| WORK
+  WORK --> QC
+  QC --> PICK
+  PICK --> HITL
+  HITL -->|Approved Choice| DIRECTOR
+  DIRECTOR --> STITCH
+  STITCH --> PUBLISH
+
+Notes:
+- **The Director** (Internal): Handles creative strategy, shot list decomposition, and pose landmash anchoring.
+- **n8n** (External): Handles the operational volume—generating multiple seeds (K-variants), managing notification fatigue, and final publish triggers.
+- This flow preserves the **Three-Plane Invariant** by keeping all "Brains" inside the Planner Plane and "Hands" in the Ops/Distribution Plane.
+
 ------------------------------------------------------------
+
 
 ## References
 

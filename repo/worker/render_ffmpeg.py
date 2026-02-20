@@ -1758,10 +1758,12 @@ def emit_media_stack_artifacts(
     shots = job.get("shots", [])
     timeline_segments = []
     for idx, shot in enumerate(shots):
-        start_sec = float(shot.get("t", 0))
-        if idx + 1 < len(shots):
-            end_sec = float(shots[idx + 1].get("t", duration))
+        t_array = shot.get("t")
+        if isinstance(t_array, list) and len(t_array) >= 2:
+            start_sec = float(t_array[0])
+            end_sec = float(t_array[1])
         else:
+            start_sec = 0.0
             end_sec = float(duration)
         if end_sec < start_sec:
             end_sec = start_sec
@@ -2371,6 +2373,25 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
 
     # 2. Resolve safe paths
     safe_seeds = []
+    
+    # 2b. Identity Pack Resolution (PR-37.5)
+    hero = job.get("hero", {})
+    identity_pack_ref = hero.get("identity_pack_ref")
+    if identity_pack_ref:
+        print(f"INFO: Resolving identity pack from {identity_pack_ref}")
+        try:
+            pack_path = resolve_project_relpath(identity_pack_ref, repo_root_from_here(), sandbox_root)
+            if pack_path.exists():
+                pack = load_json_file(pack_path)
+                front_ref = (pack.get("references") or {}).get("front")
+                if front_ref:
+                    print(f"INFO: Using identity-pack front-reference as primary seed: {front_ref}")
+                    # Prepend to seed_frames if not already there or if we want to prioritize it
+                    if front_ref not in seed_frames:
+                        seed_frames = [front_ref] + seed_frames
+        except Exception as e:
+            print(f"WARNING: Identity pack resolution failed: {e}", file=sys.stderr)
+
     for sf in seed_frames:
         try:
             p = normalize_sandbox_path(sf, sandbox_root)
@@ -3068,6 +3089,18 @@ def main():
     out_dir = output_root / job_id
     out_dir.mkdir(parents=True, exist_ok=True)
     result_path = out_dir / "result.json"
+    
+    target_shot_id = os.environ.get("CAF_TARGET_SHOT_ID", "").strip()
+    if target_shot_id:
+        print(f"INFO: Worker running in Shot-Targeting mode (shot_id='{target_shot_id}')")
+        shots = job.get("shots", [])
+        target_shot = next((s for s in shots if s.get("shot_id") == target_shot_id), None)
+        if not target_shot:
+            print(f"ERROR: shot_id '{target_shot_id}' not found in job JSON.", file=sys.stderr)
+            sys.exit(1)
+        # For granular mode, we redirect output to a shot-specific path if not explicitly provided
+        # But render_ffmpeg typically writes to out_dir/final.mp4. 
+        # The Orchestrator should have set out_dir to the shot-specific subfolder.
     comfy_generation: dict[str, Any] | None = None
     motion_constraints_runtime: list[dict[str, Any]] = []
     post_process_runtime: list[dict[str, Any]] = []

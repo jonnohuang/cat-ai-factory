@@ -114,6 +114,11 @@
           "caption"
         ],
         "properties": {
+          "shot_id": {
+            "type": "string",
+            "pattern": "^shot_\\d{4}$",
+            "description": "Unique identifier for this granular segment (e.g. shot_0001)."
+          },
           "t": {
             "type": "integer",
             "minimum": 0,
@@ -172,6 +177,40 @@
         },
         "output_basename": {
           "type": "string"
+        },
+        "segment_generation_contract": {
+          "type": "string",
+          "enum": [
+            "monolithic",
+            "shot_by_shot"
+          ],
+          "default": "monolithic"
+        },
+        "pose_constraint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "relpath"
+          ],
+          "properties": {
+            "relpath": {
+              "type": "string",
+              "pattern": "^(assets|output|sandbox/assets|sandbox/output)/.+\\.json$"
+            }
+          }
+        }
+      }
+    },
+    "hero": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hero_id": {
+          "type": "string"
+        },
+        "identity_pack_ref": {
+          "type": "string",
+          "pattern": "^repo/(shared|canon|examples)/[a-zA-Z0-9._/-]+\\.json$"
         }
       }
     },
