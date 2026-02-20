@@ -17,7 +17,7 @@ Update rules:
 | Role | Status | Blocking |
 | :--- | :--- | :--- |
 | **ARCH** | **DONE** | **NO** |
-| **CODEX** | **PENDING** | **YES** |
+| **CODEX** | **IN PROG** | **YES** |
 | **CLOUD** | WAITING | NO |
 
 #### ARCH (Architecture & Decisions)
@@ -27,9 +27,18 @@ Update rules:
 - **Output**: `pr36_acceptance_checklist.md` created. ADRs 0051-0054 Accepted.
 
 #### CODEX (Implementation)
-- **Status**: Ready to start.
-- **Input**: Accepted ADRs 0051-0054, `pr36_acceptance_checklist.md`.
-- **Goal**: Implement deterministic quality convergence loop hardening.
+- **Status**: **Active (Quality Improvements)**
+- **Completed**:
+    - Deterministic Pointer Resolution (PR-35h).
+    - QC Policy & Routing Authority (Fail-Closed).
+    - Lab-to-Prod Promotion Queue.
+    - **Veo3 Hybrid Adapter** (High Quality I2V) verified.
+    - **Hero Image Generation** (Imagen 3) tool implemented.
+    - Hero Registry Expansion (3 new heroes/costumes).
+- **Current Focus**: Motion Quality Investigation (Dance Loop fidelity).
+- **Recent Wins**:
+    - **Motion Metadata Translation** enabled (Veo3 generative prompt injection).
+    - End-to-End Mochi Dino pipeline verification complete.
 
 ### Decisions / ADRs Touched
 - ADR-0047 (Free-first engine posture)

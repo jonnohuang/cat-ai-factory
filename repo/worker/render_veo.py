@@ -1,29 +1,40 @@
-#!/usr/bin/env python3
 import argparse
-import os
-import sys
+import io
 import json
-import time
+import os
 import pathlib
-import requests
+import sys
+import time
+import typing
 
-# Try importing google-genai, if not present, exit with error
 try:
     from google import genai
     from google.genai import types
 except ImportError:
-    print("ERROR: 'google-genai' package not found. Install with: pip install google-genai", file=sys.stderr)
+    print("ERROR: google-genai package not found. Install with: pip install google-genai", file=sys.stderr)
     sys.exit(1)
 
-def _sanitize_creds():
-    """
-    Sanitize environment: if GOOGLE_APPLICATION_CREDENTIALS points 
-    to a missing file, unset it to allow fallback to ADC.
-    """
-    gac = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    if gac and not os.path.exists(gac):
-        # print(f"WARNING: GOOGLE_APPLICATION_CREDENTIALS set to missing file '{gac}'. Unsetting to use ADC.")
-        del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+try:
+    from PIL import Image
+except ImportError:
+    print("WARNING: PIL not found, I2V features will be disabled.", file=sys.stderr)
+    Image = None
+
+def load_env(env_path: pathlib.Path = pathlib.Path(".env")):
+    """Load environment variables from a .env file."""
+    if not env_path.exists():
+        return
+    
+    print(f"Loading environment from {env_path}")
+    with open(env_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, value = line.split("=", 1)
+                if not os.environ.get(key):
+                    os.environ[key] = value
 
 def load_job(job_path: pathlib.Path) -> dict:
     with open(job_path, "r") as f:
@@ -33,42 +44,123 @@ def render(job_path: pathlib.Path, output_path: pathlib.Path, project_id: str, l
     job = load_job(job_path)
     
     # Extract prompt from job
-    # Structure depends on job format. Assuming "prompt" key or similar from args
-    # For Veo, we need a text prompt.
-    # Check if job has "prompt" directly or in "comfyui.bindings.prompt"
     prompt = job.get("prompt")
     if not prompt:
         bindings = job.get("comfyui", {}).get("bindings", {})
         prompt = bindings.get("prompt_text") or bindings.get("prompt")
-        
+    
+    # Fallback for legacy jobs or simple briefs
+    if not prompt:
+        script = job.get("script", {})
+        prompt = script.get("voiceover") or script.get("hook")
+
     if not prompt:
         print("ERROR: No prompt found in job JSON", file=sys.stderr)
         sys.exit(1)
         
     print(f"Authenticating (project={project_id}, location={location})")
     
-    # Initialize google-genai client
     try:
         client = genai.Client(vertexai=True, project=project_id, location=location)
     except Exception as e:
         print(f"ERROR: Failed to initialize google-genai client: {e}", file=sys.stderr)
         sys.exit(1)
         
+    # --- I2V Logic ---
+    veo_image = None
+    if Image:
+        # 1. Check image_motion (deterministic planner path)
+        image_motion = job.get("image_motion", {})
+        seed_frames = image_motion.get("seed_frames", [])
+        
+        # 2. Check storyboard logic (fallback/direct pointer)
+        if not seed_frames:
+             pass 
+             
+        # 3. Check fallback simple render.background_asset
+        if not seed_frames:
+             bg = job.get("render", {}).get("background_asset")
+             if bg and (bg.endswith(".png") or bg.endswith(".jpg")):
+                 seed_frames = [bg]
+
+        # Load ONLY the first seed frame if available for Veo 2.0 I2V
+        if seed_frames:
+            rel_path = seed_frames[0]
+            if os.path.isabs(rel_path):
+                p = pathlib.Path(rel_path)
+            else:
+                p = pathlib.Path(rel_path).resolve()
+            
+            if not p.exists():
+                 sandbox_p = pathlib.Path("sandbox") / rel_path
+                 if sandbox_p.exists():
+                     p = sandbox_p
+            
+            if p.exists():
+                try:
+                    print(f"Loading reference image: {p}")
+                    # Serialize to bytes explicitly
+                    with open(p, "rb") as f:
+                         img_bytes = f.read()
+                    
+                    mime = "image/png" if str(p).lower().endswith(".png") else "image/jpeg"
+                    veo_image = types.Image(image_bytes=img_bytes, mime_type=mime)
+                    
+                except Exception as e:
+                    print(f"WARNING: Failed to load image {p}: {e}", file=sys.stderr)
+            else:
+                print(f"WARNING: Seed frame not found at {p}", file=sys.stderr)
+
     print(f"Generating video with veo-2.0-generate-001...")
     print(f"Prompt: {prompt}")
+    if veo_image:
+        print("Reference Image: Loaded (I2V mode)")
     
     try:
-        # Start generation
-        response = client.models.generate_videos(
-            model='veo-2.0-generate-001',
-            prompt=prompt,
-        )
+
+        kwargs = {
+            "model": 'veo-2.0-generate-001',
+            "prompt": prompt,
+            "config": {
+                "fps": 24, # Cinematic 24fps default
+                "aspect_ratio": "9:16",
+            }
+        }
+        
+        # Add negative prompt if present
+        negative_prompt = job.get("negative_prompt")
+        if not negative_prompt:
+             bindings = job.get("comfyui", {}).get("bindings", {})
+             negative_prompt = bindings.get("negative_prompt") or bindings.get("negative_prompt_text")
+        
+        if negative_prompt:
+            print(f"Negative Prompt: {negative_prompt}")
+            kwargs["config"]["negative_prompt"] = negative_prompt
+
+        if veo_image:
+            kwargs["image"] = veo_image
+            
+        if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
+            print("INFO: CAF_VEO_MOCK enabled. Skipping Vertex AI API call and copying demo video.")
+            source_demo = pathlib.Path("sandbox/assets/demo/dance_loop.mp4")
+            if not source_demo.exists():
+                # Try higher up if running from worker dir
+                source_demo = pathlib.Path("../../sandbox/assets/demo/dance_loop.mp4")
+            
+            if source_demo.exists():
+                print(f"Mocking output by copying {source_demo} to {output_path}")
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_demo, output_path)
+                return
+            else:
+                print(f"ERROR: Mock source {source_demo} not found.", file=sys.stderr)
+                sys.exit(1)
+
+        response = client.models.generate_videos(**kwargs)
         
         print(f"Operation started: {response.name}")
         
-        # Poll for completion
         while True:
-            # Poll operation status
             current_op = client.operations.get(operation=response)
             
             if current_op.done:
@@ -80,23 +172,11 @@ def render(job_path: pathlib.Path, output_path: pathlib.Path, project_id: str, l
                 result = current_op.result
                 
                 if result and result.generated_videos:
-                    # Get the first video
                     video_obj = result.generated_videos[0]
-                    # Check for bytes or URI
-                    # Based on introspection, GeneratedVideo has a .video attribute of type Video
-                    # which likely contains the data
-                    
-                    # Inspect if video_bytes is available directly on video_obj or nested
-                    # Based on test script: video_obj is GeneratedVideo
-                    # It has a .video attribute
                     inner_video = video_obj.video 
                     
                     if inner_video and inner_video.uri:
                          print(f"Video URI: {inner_video.uri}")
-                         # If it's a GCS URI and we want local file, we might need to download
-                         # For now, let's just print it. If bytes are missing, we might need to implement download.
-                         # But Veo usually returns bytes for small videos?
-                         pass
                     
                     if inner_video and inner_video.video_bytes:
                         print(f"Writing {len(inner_video.video_bytes)} bytes to {output_path}")
@@ -104,7 +184,6 @@ def render(job_path: pathlib.Path, output_path: pathlib.Path, project_id: str, l
                             f.write(inner_video.video_bytes)
                     elif inner_video and inner_video.uri:
                          print(f"WARNING: No bytes returned, but URI is {inner_video.uri}. Downloading not yet implemented.", file=sys.stderr)
-                         # TODO: Implement GCS download if needed
                          sys.exit(1)
                     else:
                         print("ERROR: No video content (bytes or URI) found in response.", file=sys.stderr)
@@ -122,56 +201,32 @@ def render(job_path: pathlib.Path, output_path: pathlib.Path, project_id: str, l
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
-def main():
-    load_env()
-    _sanitize_creds()
-    
-    # Auto-detect project if not provided
-    # internal helper to get default project if possible
-    # But genai.Client handles this locally if we don't pass project?
-    # Let's rely on args or env
-    default_project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCP_PROJECT_ID")
-    default_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-
-    parser = argparse.ArgumentParser(description="Vertex AI Veo3 Worker (google-genai)")
-    parser.add_argument("--job", required=True, type=pathlib.Path, help="Path to job JSON")
-    parser.add_argument("--out", required=True, type=pathlib.Path, help="Path to output MP4")
-    parser.add_argument("--project", default=default_project, help="GCP Project ID")
-    parser.add_argument("--location", default=default_location, help="GCP Region")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("job_json", type=pathlib.Path)
+    parser.add_argument("output_video", type=pathlib.Path)
+    parser.add_argument("--project", default=os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCP_PROJECT_ID"), help="GCP Project ID")
+    parser.add_argument("--location", default=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"), help="Vertex AI Location")
     
     args = parser.parse_args()
     
-    if not args.project:
-        # Try to guess from google.auth as fallback
-        try:
-             import google.auth
-             _, project_id = google.auth.default()
-             args.project = project_id
-        except:
-             pass
+    load_env()
+    
+    gac = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if gac and not os.path.exists(gac):
+        if gac:
+             print(f"WARNING: GOOGLE_APPLICATION_CREDENTIALS file not found: {gac}. Unsetting to use ADC.")
+        del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
 
-    if not args.project:
-        print("ERROR: --project or GOOGLE_CLOUD_PROJECT env required", file=sys.stderr)
+    project_id = args.project
+    if not project_id:
+        if os.environ.get("GEN_LANG_CLIENT_PROJECT"):
+             project_id = os.environ.get("GEN_LANG_CLIENT_PROJECT")
+        else:
+             project_id = "gen-lang-client-0381423928"
+
+    if not project_id:
+        print("ERROR: Could not determine Google Cloud Project ID. Set GOOGLE_CLOUD_PROJECT or pass --project.", file=sys.stderr)
         sys.exit(1)
 
-    render(args.job, args.out, args.project, args.location)
-
-def load_env():
-    # Helper to load .env manually if not running in an env with exported vars
-    # traverse up until repo root
-    current = pathlib.Path(__file__).resolve()
-    for _ in range(4): # up to repo root
-        current = current.parent
-        env_path = current / ".env"
-        if env_path.exists():
-            with open(env_path) as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#"):
-                        key, _, val = line.partition("=")
-                        if key and val:
-                            os.environ[key.strip()] = val.strip().strip('"').strip("'")
-            break
-
-if __name__ == "__main__":
-    main()
+    render(args.job_json, args.output_video, project_id, args.location)

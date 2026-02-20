@@ -33,6 +33,10 @@
         "dance_swap"
       ]
     },
+    "prompt": {
+      "type": "string",
+      "description": "Rich generative prompt including motion and style tokens for AI video/frame providers."
+    },
     "niche": {
       "type": "string"
     },

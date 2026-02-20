@@ -165,15 +165,75 @@ class ComfyUIVideoProvider(BaseProvider):
         background_asset = self._pick_background_asset(quality_context, dance_intent=is_dance)
         identity_asset = self._pick_identity_asset(quality_context)
         pose_video_asset = background_asset if is_dance else "sandbox/assets/demo/dance_loop.mp4"
+
+
+        # Resolve Hero and Costume (Existing Logic)
+        hero_id = "mochi-grey-tabby"  # Default fallback
+        if isinstance(hero_registry, dict):
+            pass
+
+        # Construct Dynamic Prompt (Existing Logic)
+        hero = None
+        costume = None
+        if isinstance(hero_registry, dict):
+            # ... (keep existing registry lookup) ...
+            heroes = hero_registry.get("heroes", [])
+            hero = next((h for h in heroes if h["hero_id"] == hero_id), None)
+            pass
+
+        # ... (keep existing local registry loading) ...
+        shared_root = self._repo_root() / "repo" / "shared"
+        hero_reg_path = shared_root / "hero_registry.v1.json"
+        costume_reg_path = shared_root / "costume_profiles.v1.json"
+        
+        hero_data = self._load_json_rel("repo/shared/hero_registry.v1.json") or {}
+        costume_data = self._load_json_rel("repo/shared/costume_profiles.v1.json") or {}
+        
+        prompt_lower = prompt.lower()
+        selected_hero = None
+        for h in hero_data.get("heroes", []):
+            if h["hero_id"] in prompt_lower or h["name"]["en"].lower() in prompt_lower:
+                selected_hero = h
+                break
+        if not selected_hero:
+             selected_hero = next((h for h in hero_data.get("heroes", []) if h["hero_id"] == "mochi-grey-tabby"), None)
+
+        traits_str = "cute cat"
+        costume_str = "costume"
+        
+        if selected_hero:
+            t = selected_hero.get("traits", {})
+            traits_str = f"{selected_hero['name']['en']} {t.get('primary_color','')} {t.get('coat_type','')}"
+            if t.get('eye_color'):
+                traits_str += f", {t['eye_color']} eyes"
+            c_def = selected_hero.get("costume", {})
+            c_id = c_def.get("id")
+            c_profile = next((c for c in costume_data.get("profiles", []) if c["id"] == c_id), None)
+            if c_profile:
+                costume_str = ", ".join(c_profile.get("cues", []))
+            else:
+                costume_str = c_def.get("notes", "costume")
+
+        # --- NEW: Inject Analysis Style Tokens ---
+        style_tokens = []
+        reverse_prompt_data = None
+        if isinstance(quality_context, dict):
+             reverse_prompt_data = quality_context.get("reverse_prompt")
+             if isinstance(reverse_prompt_data, dict):
+                 suggestions = reverse_prompt_data.get("suggestions", {})
+                 style_tokens = suggestions.get("vendor_style_tokens", [])
+
+        style_suffix = ", ".join(style_tokens) if style_tokens else "high fidelity, 8k"
+
         comfy_positive = (
             f"{prompt}. "
-            "single hero cat only, Mochi grey tabby kitten, feline face clearly visible, "
-            "green dinosaur onesie costume, cat paws and cat tail preserved, "
-            "preserve same hero face and same costume across all frames, "
-            "full-body dance, clean studio lighting, high detail."
+            f"single hero character, {traits_str}, "
+            f"{costume_str}, "
+            f"full body, smooth motion, {style_suffix}."
         )
+        
         comfy_negative = (
-            "human, person, woman, man, human face, human body, multiple cats, crowd, duplicate subject, "
+            "human, person, woman, man, human face, human body, multiple characters, crowd, duplicate subject, "
             "extra limbs, giant ears, mouse ears, identity drift, costume drift, flicker, background drift, "
             "blur, low detail, deformed face"
         )

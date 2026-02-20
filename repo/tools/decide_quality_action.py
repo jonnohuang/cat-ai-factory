@@ -637,6 +637,24 @@ def main(argv: list[str]) -> int:
     # 2. Retry budget state
     # 3. Contract validity checks
 
+    qc_policy_relpath, qc_policy_path, qc_policy_error, qc_missing_report_action = _load_qc_policy_from_job(project_root, args.job_id)
+    qc_report_path, qc_report_error = _ensure_qc_report(project_root, args.job_id, qc_policy_relpath)
+    qc_report = _load_json(qc_report_path) if qc_report_path is not None else None
+
+    pointer_resolution, pointer_resolution_label, pointer_resolution_error = _load_pointer_resolution_from_job(project_root, args.job_id)
+    pointer_resolution_path = pathlib.Path(pointer_resolution_label) if pointer_resolution_label and pointer_resolution_label.startswith("/") else None
+
+    quality_targets, quality_targets_path, quality_target_error = _load_quality_targets_from_job(project_root, args.job_id)
+    continuity_pack, continuity_pack_path, continuity_pack_error = _load_continuity_pack_from_job(project_root, args.job_id)
+    advice_path, advice = _load_qc_route_advice(project_root, args.job_id)
+    advice_error = None  # Advice load doesn't return an error string in its current form
+    
+    retry_attempt = 0
+    # Derive retry_attempt from existing attempts
+    attempts_dir = project_root / "sandbox" / "logs" / args.job_id / "attempts"
+    if attempts_dir.exists():
+        retry_attempt = len([d for d in attempts_dir.iterdir() if d.is_dir() and d.name.startswith("run-")])
+
     failed_metrics: list[str] = []
     failed_failure_classes: list[str] = []
 
@@ -660,6 +678,7 @@ def main(argv: list[str]) -> int:
 
     failed_metrics = sorted(set(failed_metrics))
     failed_failure_classes = sorted(set(failed_failure_classes))
+    segment_report = _load_segment_report(project_root, args.job_id)
     segment_retry = _segment_retry_plan(segment_report, failed_metrics)
 
     # Derive pass/fail status from QC gates for retry context
@@ -771,8 +790,8 @@ def main(argv: list[str]) -> int:
             "quality_report_relpath": _safe_rel(quality_path, project_root) if quality_path.exists() else None,
             "costume_report_relpath": _safe_rel(costume_path, project_root) if costume_path.exists() else None,
             "two_pass_orchestration_relpath": _safe_rel(two_pass_path, project_root) if two_pass_path.exists() else None,
-            "quality_target_relpath": _safe_rel(quality_target_path, project_root)
-            if quality_target_path is not None and quality_target_path.exists()
+            "quality_target_relpath": _safe_rel(quality_targets_path, project_root)
+            if quality_targets_path is not None and quality_targets_path.exists()
             else None,
             "quality_target_contract_error": quality_target_error,
             "qc_policy_relpath": _safe_rel(qc_policy_path, project_root)
@@ -782,11 +801,10 @@ def main(argv: list[str]) -> int:
             "qc_report_relpath": _safe_rel(qc_report_path, project_root) if qc_report_path is not None else None,
             "qc_report_error": qc_report_error,
             "qc_route_advice_relpath": _safe_rel(advice_path, project_root) if advice_path is not None else None,
-            "continuity_pack_relpath": _safe_rel(continuity_pack_path, project_root)
-            if continuity_pack_path is not None and continuity_pack_path.exists()
-            else None,
+            "qc_route_advice_error": advice_error,
+            "continuity_pack_relpath": _safe_rel(continuity_pack_path, project_root) if continuity_pack_path is not None else None,
             "continuity_pack_error": continuity_pack_error,
-            "pointer_resolution_relpath": pointer_resolution_relpath,
+            "pointer_resolution_relpath": _safe_rel(pointer_resolution_path, project_root) if pointer_resolution_path is not None else None,
             "pointer_resolution_error": pointer_resolution_error,
             "pointer_resolution_version": pointer_resolution.get("version")
             if isinstance(pointer_resolution, dict)

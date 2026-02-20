@@ -3,7 +3,12 @@
   "profiles": [
     {
       "id": "dance_loop_bee_onesie",
-      "aliases": ["bee costume", "bee costume cat", "bee onesie", "bumblebee outfit"],
+      "aliases": [
+        "bee costume",
+        "bee costume cat",
+        "bee onesie",
+        "bumblebee outfit"
+      ],
       "cues": [
         "yellow-and-black striped bee onesie",
         "small antennae on hood",
@@ -13,7 +18,10 @@
     },
     {
       "id": "dance_loop_tiger_onesie",
-      "aliases": ["tiger costume", "tiger onesie"],
+      "aliases": [
+        "tiger costume",
+        "tiger onesie"
+      ],
       "cues": [
         "orange tiger-striped onesie",
         "white belly panel and chest",
@@ -22,7 +30,11 @@
     },
     {
       "id": "dance_loop_dino_onesie",
-      "aliases": ["dinosaur costume", "dino onesie", "green dino suit"],
+      "aliases": [
+        "dinosaur costume",
+        "dino onesie",
+        "green dino suit"
+      ],
       "cues": [
         "full-length one-piece dinosaur kigurumi onesie (head-to-ankle)",
         "green dinosaur onesie with lighter green belly panel",
@@ -34,7 +46,11 @@
     },
     {
       "id": "dance_loop_bear_onesie",
-      "aliases": ["bear costume", "bear onesie", "brown bear suit"],
+      "aliases": [
+        "bear costume",
+        "bear onesie",
+        "brown bear suit"
+      ],
       "cues": [
         "brown bear onesie with round ears",
         "beige belly patch",
@@ -43,7 +59,11 @@
     },
     {
       "id": "dance_loop_pink_bunny_fairy",
-      "aliases": ["pink bunny costume", "bunny onesie", "pink fairy bunny"],
+      "aliases": [
+        "pink bunny costume",
+        "bunny onesie",
+        "pink fairy bunny"
+      ],
       "cues": [
         "pink bunny onesie with hood ears",
         "light pink fairy-style wings",
@@ -52,7 +72,11 @@
     },
     {
       "id": "dance_loop_group_set",
-      "aliases": ["dance loop costume set", "group dance costumes", "demo dance loop costumes"],
+      "aliases": [
+        "dance loop costume set",
+        "group dance costumes",
+        "demo dance loop costumes"
+      ],
       "cues": [
         "group palette includes tiger, dinosaur, bear, bee, and pink bunny outfits",
         "all costumes are plush kigurumi-style onesies",
@@ -61,13 +85,59 @@
     },
     {
       "id": "mochi_kitten_demo_loop",
-      "aliases": ["mochi kitten demo loop", "mochi kitten style", "demo loop kitten mochi"],
+      "aliases": [
+        "mochi kitten demo loop",
+        "mochi kitten style",
+        "demo loop kitten mochi"
+      ],
       "cues": [
         "Mochi appears as a kitten-age cat with rounder face and larger eyes",
         "small compact kitten body proportions, short limbs, soft plush fur detail",
         "cute toy-like expression and gentle cheek volume",
         "maintain mochi grey-tabby identity while using kitten proportions",
         "avoid adult-cat elongated muzzle or heavy jawline"
+      ]
+    },
+    {
+      "id": "chef-uniform",
+      "aliases": [
+        "chef coat",
+        "baker hat",
+        "cooking outfit"
+      ],
+      "cues": [
+        "classic white double-breasted chef coat",
+        "tall white chef's toque hat",
+        "red neckerchief accent",
+        "holding a small whisk or wooden spoon (optional)"
+      ]
+    },
+    {
+      "id": "space-suit",
+      "aliases": [
+        "astronaut suit",
+        "nasa suit",
+        "interstellar gear"
+      ],
+      "cues": [
+        "white puffy astronaut suit with mission patches",
+        "bubble helmet reflecting stars",
+        "bulky gloves and boots",
+        "futuristic sci-fi aesthetic"
+      ]
+    },
+    {
+      "id": "kimono-flow",
+      "aliases": [
+        "japanese robe",
+        "kimono",
+        "yukata"
+      ],
+      "cues": [
+        "traditional patterned kimono with obi sash",
+        "floral or wave patterns",
+        "wide flowing sleeves",
+        "peaceful tea ceremony vibe"
       ]
     }
   ]
