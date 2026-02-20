@@ -46,6 +46,20 @@
       "dimension": "costume",
       "threshold": 1.0,
       "failure_action": "block_for_costume"
+    },
+    {
+      "gate_id": "background_stability_gate",
+      "metric": "background_stability",
+      "dimension": "motion",
+      "threshold": 0.8,
+      "failure_action": "retry_motion"
+    },
+    {
+      "gate_id": "identity_drift_gate",
+      "metric": "identity_drift",
+      "dimension": "identity",
+      "threshold": 0.8,
+      "failure_action": "retry_recast"
     }
   ],
   "routing": {
@@ -63,9 +77,17 @@
         "class_id": "identity_drift",
         "metrics": [
           "identity_consistency",
-          "mask_edge_bleed"
+          "mask_edge_bleed",
+          "identity_drift"
         ],
         "action": "retry_recast"
+      },
+      {
+        "class_id": "background_warping",
+        "metrics": [
+          "background_stability"
+        ],
+        "action": "retry_motion"
       },
       {
         "class_id": "pose_mismatch",

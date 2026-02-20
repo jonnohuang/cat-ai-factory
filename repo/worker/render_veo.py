@@ -3,6 +3,7 @@ import io
 import json
 import os
 import pathlib
+import shutil
 import sys
 import time
 import typing
@@ -43,8 +44,28 @@ def load_job(job_path: pathlib.Path) -> dict:
 def render(job_path: pathlib.Path, output_path: pathlib.Path, project_id: str, location: str):
     job = load_job(job_path)
     
+    target_shot_id = os.environ.get("CAF_TARGET_SHOT_ID", "").strip()
+    
     # Extract prompt from job
-    prompt = job.get("prompt")
+    prompt = None
+    
+    if target_shot_id:
+        shots = job.get("shots", [])
+        target_shot = next((s for s in shots if s.get("shot_id") == target_shot_id), None)
+        if target_shot:
+            print(f"INFO: Targeting granular shot_id='{target_shot_id}'")
+            prompt = target_shot.get("visual")
+            # In Director mode, we may want to append action tokens
+            action = target_shot.get("action")
+            if action:
+                prompt = f"{prompt} | {action}"
+        else:
+            print(f"ERROR: shot_id '{target_shot_id}' specified via CAF_TARGET_SHOT_ID but not found in job.", file=sys.stderr)
+            sys.exit(1)
+
+    if not prompt:
+        prompt = job.get("prompt")
+    
     if not prompt:
         bindings = job.get("comfyui", {}).get("bindings", {})
         prompt = bindings.get("prompt_text") or bindings.get("prompt")
@@ -55,7 +76,7 @@ def render(job_path: pathlib.Path, output_path: pathlib.Path, project_id: str, l
         prompt = script.get("voiceover") or script.get("hook")
 
     if not prompt:
-        print("ERROR: No prompt found in job JSON", file=sys.stderr)
+        print("ERROR: No prompt found in job JSON (or target shot missing visual)", file=sys.stderr)
         sys.exit(1)
         
     print(f"Authenticating (project={project_id}, location={location})")

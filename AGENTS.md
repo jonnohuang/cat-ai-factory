@@ -184,7 +184,7 @@ Important:
 * RAG must never become an authority source outside committed artifacts.
 * CrewAI (PR-22.2) is planner-only and MUST be contained inside a LangGraph node/subgraph.
 * Video Analyzer artifacts are planner-only and MUST NOT be runtime authority for Worker.
-
+* **Mock Mode** (`CAF_VEO_MOCK=1`) is supported across the Planner, Worker, and Orchestrator for cost-safe, deterministic E2E verification using demo assets.
 
 ---
 
@@ -221,7 +221,26 @@ This section describes the core local-first system.
 
 ---
 
+### 🎬 The Director — Orchestrator-Above-Orchestrator (Planner Plane)
+
+**Purpose**
+Orchestrates the granular, multi-stage pipeline (Brief -> Shot -> Frame -> Motion -> Assembly).
+
+**Responsibilities**
+- **Pipeline Logic**: Maps high-level creative specs to individual shot-level work orders.
+- **Granular Retries**: Directs the Control Plane to re-roll specific shots based on QC failures.
+- **Feedback Inversion**: Translates QC reports and OpenClaw advice into "Prompt Deltas" for subsequent attempts.
+- **Idempotent Assembly**: Ensures final video stitching is consistent across r-rendered clips.
+
+**Authority**
+- Acts as the "Thinking" layer of the Planner.
+- MUST NOT replace the deterministic Worker or the state-tracking Ralph Loop.
+- Operates within LangGraph as a coordinating graph node.
+
+---
+
 ### 🦞 Clawdbot — Planner Agent (Planner Plane)
+
 
 **Purpose**
 Translate intent into structured, machine-readable work contracts.

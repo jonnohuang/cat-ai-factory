@@ -20,9 +20,11 @@ DEFAULT_QUALITY_TARGETS: dict[str, float] = {
     "temporal_stability": 0.70,
     "loop_seam": 0.70,
     "audio_video": 0.95,
+    "background_stability": 0.80,
+    "identity_drift": 0.80,
 }
-IDENTITY_METRICS = {"identity_consistency", "mask_edge_bleed"}
-MOTION_METRICS = {"temporal_stability", "loop_seam"}
+IDENTITY_METRICS = {"identity_consistency", "mask_edge_bleed", "identity_drift"}
+MOTION_METRICS = {"temporal_stability", "loop_seam", "background_stability"}
 
 
 def _repo_root() -> pathlib.Path:
@@ -339,15 +341,18 @@ def _collect_tuned_failed_metrics(quality: Optional[Dict[str, Any]], quality_tar
 def _segment_retry_plan(
     segment_report: Optional[Dict[str, Any]],
     failed_metrics: list[str],
+    quality_report: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     trigger = sorted({m for m in failed_metrics if m in MOTION_METRICS})
     if not trigger:
         return {"mode": "none", "target_segments": [], "trigger_metrics": []}
-    if not isinstance(segment_report, dict):
+    
+    # If we have no mapping resources, we default to full retry
+    if not isinstance(segment_report, dict) and not isinstance(quality_report, dict):
         return {"mode": "retry_all", "target_segments": [], "trigger_metrics": trigger}
 
     segment_ids: list[str] = []
-    if "loop_seam" in trigger:
+    if "loop_seam" in trigger and isinstance(segment_report, dict):
         seams = segment_report.get("seams", [])
         if isinstance(seams, list):
             for seam in seams:
@@ -360,7 +365,7 @@ def _segment_retry_plan(
                 if isinstance(b, str) and b.startswith("seg_"):
                     segment_ids.append(b)
 
-    if not segment_ids and "temporal_stability" in trigger:
+    if not segment_ids and "temporal_stability" in trigger and isinstance(segment_report, dict):
         segments = segment_report.get("segments", [])
         if isinstance(segments, list):
             for seg in segments:
@@ -370,6 +375,28 @@ def _segment_retry_plan(
                         segment_ids.append(sid)
 
     dedup = sorted(set(segment_ids))
+    if not dedup and isinstance(quality_report, dict):
+        # Fallback: Parse the raw quality report for `shot_X_metric` properties that failed (score == 0.0 or < threshold)
+        # For simplicity, if a metric failed the global gate, any granular shot that scores low contributed to it.
+        metrics = quality_report.get("metrics", {})
+        shots_failed = []
+        if isinstance(metrics, dict):
+            for m, payload in metrics.items():
+                if m.startswith("shot_"):
+                    # payload should be a dict like {"score": 0.0}
+                    if isinstance(payload, dict):
+                        score = payload.get("score")
+                        # Use a naive check: if the granular shot score is low (e.g. < 0.5), it failed.
+                        # Real implementations might index the global target, but < 0.8 is typical.
+                        if isinstance(score, (int, float)) and score < 0.8:
+                            parts = m.split("_")
+                            if len(parts) >= 2:
+                                shots_failed.append(f"shot_{parts[1]}")
+                     
+        if shots_failed:
+             segment_ids.extend(shots_failed)
+             dedup = sorted(set(segment_ids))
+
     if dedup:
         return {"mode": "retry_selected", "target_segments": dedup, "trigger_metrics": trigger}
     return {"mode": "retry_all", "target_segments": [], "trigger_metrics": trigger}
@@ -679,7 +706,8 @@ def main(argv: list[str]) -> int:
     failed_metrics = sorted(set(failed_metrics))
     failed_failure_classes = sorted(set(failed_failure_classes))
     segment_report = _load_segment_report(project_root, args.job_id)
-    segment_retry = _segment_retry_plan(segment_report, failed_metrics)
+    recast_quality_report = _load_json(quality_path) if quality_path.exists() else None
+    segment_retry = _segment_retry_plan(segment_report, failed_metrics, recast_quality_report)
 
     # Derive pass/fail status from QC gates for retry context
     motion_status = "unknown"

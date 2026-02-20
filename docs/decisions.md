@@ -1700,3 +1700,51 @@ References:
 - docs/PR_PROJECT_PLAN.md (PR-35f, PR-35g, PR-36)
 - docs/system-requirements.md (FR-28.22)
 - docs/architecture.md
+
+## ADR-0055: Granular Shot-by-Shot Director Architecture
+**Date**: 2024-07-31  
+**Status**: PROPOSED  
+**Context**: Monolithic video generation (30s+ clips) leads to high rework costs and poor deterministic control over specific segment defects. Our LangGraph "Director" vision requires the ability to rework individual shots without re-generating the entire video.
+
+**Decision**:
+1.  **Granularity First**: The system will prioritize generating individual shots (cliplets) based on the Shot List before assembly.
+2.  **Shot IDs**: Every shot in the `job.json` SHOULD have a unique `shot_id`.
+3.  **Targeted Redraw**: Workers MUST support targeted generation via `CAF_TARGET_SHOT_ID`.
+4.  **Director Responsibility**: The LangGraph Director is responsible for orchestrating these granular calls and validating segment-level QC before final assembly.
+
+**Consequences**:
+- **Benefit**: Significantly lower generation costs during retries (re-rolling a 5s shot vs 30s video).
+- **Benefit**: Improved identity consistency by allowing the Director to "pin" a good shot and only rework a bad one.
+- **Risk**: Increased orchestration complexity.
+- **Risk**: Potential for "seams" between shots if motion state is not shared (mitigated by `image_motion.seed_frames`).
+
+
+## ADR-0056: Identity Packs and Pose-Gated Generation
+**Date**: 2024-07-31  
+**Status**: PROPOSED  
+**Context**: Text-to-video and single-frame-to-video are insufficient for maintaining identity and choreography over long durations or multi-character scenes. 
+
+**Decision**:
+1.  **Identity Packs**: The Hero Registry will evolve into `identity_pack/` collections containing multiple reference frames (front, side, detail) and a strict `identity_contract.json` (canonical descriptors).
+2.  **Pose Landmark Extraction**: The Video Analyzer must extract `pose_seq.json` landmarks from reference videos.
+3.  **Pose-Gated QC**: The QC Engine will use pose landmarks to reject generations that diverge from the target choreography (motion_smoothness scoring).
+4.  **Multi-Subject Pass**: For complex scenes (e.g. 6 cats), the Director should decompose the job into background-plate generation and grouped-character compositing.
+
+**Consequences**:
+- **Benefit**: Significantly higher "yield" of usable dance clips.
+- **Benefit**: Hard deterministic gate for choreography without needing model-level pose-control support.
+- **Risk**: Increased processing time during the "Analysis" phase.
+
+## ADR-0057: n8n Boundary (Ops/Distribution only)
+**Date**: 2024-07-31  
+**Status**: PROPOSED  
+**Context**: We need to automate the "fan-out" and "retry" loop for high-yield generation while keeping the CAF core clean.
+
+**Decision**:
+1.  **Ops Only**: n8n is strictly limited to the Ops/Distribution plane.
+2.  **Responsibilities**: n8n handles the fan-out (K-variants), triggers/webhooks, human approval notifications, and publishing integrations.
+3.  **No Logic**: Quality scoring, prompt generation, and contract validation MUST remain inside the CAF file-bus (Planner/Control).
+
+**Consequences**:
+- **Benefit**: Decouples "Ops Automation" from "Factory Logic".
+- **Benefit**: Prevents "logic leak" into low-code tools.

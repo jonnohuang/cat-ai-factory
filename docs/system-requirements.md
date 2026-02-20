@@ -698,7 +698,23 @@ The system MUST support an end-to-end operator path where a high-level brief can
   - persist lifecycle/state artifacts for adapter/UI status visibility
 - Hard constraints:
   - no bypass of promotion policy for production authority
-  - all transitions must remain artifact-driven and replayable
+  ### FR-28.26 — Granular shot-by-shot generation primitives
+The system MUST support generating and reworking individual shots/cliplets independently to enable Director-level autonomy.
+
+- Required behavior:
+  - Workers MUST support `CAF_TARGET_SHOT_ID` to generate only the specified segment.
+  - Assembly engine MUST support partial updates to the final video without re-rendering all segments.
+  - Every stage (Shot, Frame, Motion) MUST emit unique, versioned artifacts (e.g., `shot_001_v1.mp4`).
+- Hard constraints:
+  - `job.json` remains the root execution authority.
+  - No nondeterministic behavior in the Worker.
+  - Shot-level idempotency must be maintained.
+
+### FR-28.27 — Identity Packs and Costume Stability (optional but recommended)
+The system SHOULD support explicit identity-pack references (multi-frame character anchors) to improve character/fur/costume stability over time.
+
+### FR-28.28 — Pose-Gated Quality Control
+The system MUST support rejecting generations where the motion/choreography diverges from the extracted pose landmarks (`pose_seq.json`).
 
 
 ------------------------------------------------------------
