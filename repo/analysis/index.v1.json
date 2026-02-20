@@ -1,0 +1,13 @@
+{
+    "version": "video_analysis_index.v1",
+    "entries": {
+        "demo-dance-loop-mochi-01": {
+            "path": "repo/examples/video_analysis.v1.example.json",
+            "type": "video_analysis"
+        },
+        "cat-wave-step-demo": {
+            "path": "repo/examples/video_analysis.v1.example.json",
+            "type": "video_analysis"
+        }
+    }
+}

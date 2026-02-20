@@ -1,0 +1,10 @@
+{
+  "job_id": "smoke-test-veo-001",
+  "prompt": "A cinematic shot of a cute grey tabby kitten in a green dinosaur costume, dancing joyfully in a studio setting, high quality, 4k. The dancing motion matches the rhythm of the provided seed frame context.",
+  "image_motion": {
+    "seed_frames": [
+      "/Users/jonathanhuang/Developer/cat-ai-factory/param_test_seed.png"
+    ],
+    "motion_preset": "pan_lr"
+  }
+}

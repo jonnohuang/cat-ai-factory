@@ -1,112 +1,27 @@
 {
   "version": "video_analysis_index.v1",
-  "generated_at": "2026-02-18T06:50:17Z",
   "analyses": [
     {
-      "analysis_id": "cat-kick-spin-loop",
-      "relpath": "repo/canon/demo_analyses/video-analysis-cat-kick-spin.json",
-      "priority": 90,
-      "quality_score": 0.91,
+      "analysis_id": "demo-dance-loop-mochi-01",
+      "relpath": "repo/canon/demo_analyses/demo-dance-loop-mochi-01.json",
       "tags": [
-        "kick",
-        "spin",
-        "loopable",
-        "high-energy"
+        "dance",
+        "loop"
       ],
       "lane_hints": [
-        "dance_swap",
-        "template_remix"
-      ],
-      "duration_bucket": "short_16_30",
-      "summary": "High-energy kick-spin sequence with reliable reset for loop closure."
+        "image_motion"
+      ]
     },
     {
-      "analysis_id": "cat-duckwalk-loop",
-      "relpath": "repo/canon/demo_analyses/video-analysis-cat-duckwalk-loop.json",
-      "priority": 82,
-      "quality_score": 0.88,
+      "analysis_id": "cat-wave-step-demo",
+      "relpath": "repo/examples/video_analysis.v1.example.json",
       "tags": [
-        "duckwalk",
-        "groove",
-        "side-step",
-        "medium-energy"
-      ],
-      "lane_hints": [
-        "image_motion",
-        "dance_swap"
-      ],
-      "duration_bucket": "short_0_15",
-      "summary": "Compact duckwalk pattern with stable lateral motion and strong loop repeatability."
-    },
-    {
-      "analysis_id": "cat-blame1",
-      "relpath": "repo/canon/demo_analyses/cat-blame1.video_analysis.v1.json",
-      "priority": 50,
-      "quality_score": 0.75,
-      "tags": [
-        "cat-blame1"
+        "wave",
+        "step"
       ],
       "lane_hints": [
         "template_remix"
-      ],
-      "duration_bucket": "short_31_60",
-      "summary": "Auto-analysis: 65.8s, 30.0fps, 720x1280."
-    },
-    {
-      "analysis_id": "cat-construction-fight",
-      "relpath": "repo/canon/demo_analyses/cat-construction-fight.video_analysis.v1.json",
-      "priority": 50,
-      "quality_score": 0.75,
-      "tags": [
-        "cat-construction-fight"
-      ],
-      "lane_hints": [
-        "template_remix"
-      ],
-      "duration_bucket": "short_31_60",
-      "summary": "Auto-analysis: 41.27s, 30.0fps, 360x640."
-    },
-    {
-      "analysis_id": "cat-server-fight",
-      "relpath": "repo/canon/demo_analyses/cat-server-fight.video_analysis.v1.json",
-      "priority": 50,
-      "quality_score": 0.75,
-      "tags": [
-        "cat-server-fight"
-      ],
-      "lane_hints": [
-        "template_remix"
-      ],
-      "duration_bucket": "short_0_15",
-      "summary": "Auto-analysis: 10.0s, 30.0fps, 360x640."
-    },
-    {
-      "analysis_id": "dance-loop",
-      "relpath": "repo/canon/demo_analyses/dance-loop.video_analysis.v1.json",
-      "priority": 50,
-      "quality_score": 0.75,
-      "tags": [
-        "dance-loop"
-      ],
-      "lane_hints": [
-        "template_remix"
-      ],
-      "duration_bucket": "short_16_30",
-      "summary": "Auto-analysis: 23.6s, 30.0fps, 640x360."
-    },
-    {
-      "analysis_id": "fight-composite",
-      "relpath": "repo/canon/demo_analyses/fight-composite.video_analysis.v1.json",
-      "priority": 50,
-      "quality_score": 0.75,
-      "tags": [
-        "fight-composite"
-      ],
-      "lane_hints": [
-        "template_remix"
-      ],
-      "duration_bucket": "short_0_15",
-      "summary": "Auto-analysis: 10.13s, 30.0fps, 356x640."
+      ]
     }
   ]
 }

@@ -594,3 +594,103 @@ Ops/Distribution remains outside the factory.
 * Never partially mutate state.
 
 If required inputs are missing or invalid, the system exits immediately without producing partial or ambiguous artifacts.
+
+---
+
+## End-to-End Video Generation Workflow
+
+This section documents the optimal path for high-quality video generation, covering the entire lifecycle from sample analysis to final output.
+
+### 1. Sample Analysis & Ingestion (Lab Plane)
+
+Before generating content, reference assets (like character turnarounds or style references) must be ingested into the deterministic canon.
+
+*   **Analyze Video**:
+    *   Command: `python -m repo.tools.analyze_video --input <video_path> --output <json_path>`
+    *   Purpose: Extracts deterministic metadata (beats, shot pattern, motion profile) from a video.
+    *   Output: `video_analysis.v1` JSON.
+
+*   **Ingest Samples**:
+    *   Command: `python -m repo.tools.ingest_demo_samples --incoming-dir <dir>`
+    *   Purpose: Bulk analyze and register demo videos into `repo/canon/demo_analyses`.
+    *   Artifacts: Creates `sample_ingest_manifest.v1` and moves assets to processed directory.
+
+### 2. Hero Image Creation (Frame Engine)
+
+The **Frame Engine** is responsible for creating the "seed" or "hero" image that anchors the video's identity.
+
+*   **Current State**:
+    *   Hero images are typically opaque assets provided to the factory (e.g., `assets/demo/mochi_front.png`).
+    *   **Planner Role**: The planner selects these assets via `quality_context` or `render.background_asset` pointers in `job.json`.
+    *   **Generation**: Future capability (e.g., `grok_image` or `imagen`) will generate these via a Worker adapter. For now, they are treated as static inputs or external hand-offs.
+
+### 3. User Brief & Planning (Planner Plane)
+
+The workflow begins with a user intent.
+
+*   **Entry Point**:
+    *   Command: `python repo/tools/run_autonomous_brief.py --prompt "..." --provider vertex_veo`
+    *   Function: Orchestrates the transition from vague brief to strict contract.
+
+*   **Planner Logic (`Clawdbot`)**:
+    *   Analyzes brief against `PRD.json` and optional `inbox` context.
+    *   Selects **optimal path**:
+        *   **Provider**: `vertex_veo` (for high-quality generation) or `comfyui` (for controllable motion).
+        *   **Lane**: `ai_video` (generative) or `template_remix` (composite).
+    *   Generates `job.json` containing:
+        *   `generation_policy`: explicit provider order (e.g., `["vertex_veo", "wan_dashscope"]`).
+        *   `image_motion.seed_frames`: pointer to Hero Image.
+        *   `render.background_asset`: fallback/primary visual anchor.
+        *   **Motion Metadata Translation**:
+            *   Extracts `video_analysis.v1` signals (energy, camera patterns).
+            *   Translates signals into Veo3 motion vocabulary (e.g., "building energy" -> "intense motion").
+            *   Injects translated tokens into `job.prompt` for generative alignment.
+            *   Verified by `job.schema.json` (root `prompt` field support).
+
+### 4. Component Execution (Control & Worker Planes)
+
+The **Control Plane (`Ralph Loop`)** executes the deterministic recipe defined in `job.json`.
+
+*   **Motion Engine (Video Generation)**:
+    *   **Vertex Veo3**:
+        *   Worker: `repo/worker/render_veo.py`
+        *   Input: Prompt + Seed Image (I2V).
+        *   Action: Calls Vertex AI, polls LRO, writes raw video to `sandbox/output/<job_id>`.
+    *   **ComfyUI**:
+        *   Worker: `repo/worker/render_ffmpeg.py` (wraps Comfy execution).
+        *   Input: Workflow JSON + Assets.
+        *   Action: Executes local ComfyUI graph.
+
+*   **Audio Engine**:
+    *   Worker: `repo/worker/render_ffmpeg.py`
+    *   Action: Mixes `audio.audio_asset` (voiceover/music) with video.
+
+*   **Editor Engine**:
+    *   Worker: `repo/worker/render_ffmpeg.py`
+    *   Action:
+        *   Stitches segments (if `segment_stitch` is enabled).
+        *   Applies watermarks (`repo/assets/watermarks/caf-watermark.png`).
+        *   Burns captions (if `captions` present).
+        *   Produces `final.mp4`.
+
+### 5. Quality Control (QC Engine)
+
+Verification is automated and deterministic.
+
+*   **QC Engine**:
+    *   Tool: `repo/tools/decide_quality_action.py` (invoked by Ralph).
+    *   Logic:
+        *   Checks `quality_target` thresholds (e.g., `identity_consistency > 0.7`).
+        *   Validates artifact lineage (ensure `final.mp4` matches `job.json` spec).
+        *   Enforces `fail-closed` policy for missing inputs/reports.
+    *   Output: `quality_decision.v1.json` (Pass/Fail/Retry).
+
+### 6. Troubleshooting & Gotchas
+
+*   **ModuleNotFoundError: No module named 'repo'**:
+    *   **Cause**: Worker environment missing `PYTHONPATH`.
+    *   **Fix**: `ralph_loop.py` injects `PYTHONPATH=repo_root` automatically (Fixed in PR-36).
+
+*   **Auth Errors (403/401)**:
+    *   **Vertex**: Check `VERTEX_PROJECT_ID` and `VERTEX_LOCATION`. Use `gcloud auth application-default login`.
+    *   **Comfy**: Ensure local server is running at `127.0.0.1:8188`.

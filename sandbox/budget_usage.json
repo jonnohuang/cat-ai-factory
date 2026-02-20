@@ -1,0 +1,42 @@
+{
+  "daily_usage": {
+    "2026-02-20": 9.196118000000004
+  },
+  "total_usage": 9.196118000000004,
+  "transactions": {
+    "vertex-text-23844363-27e7-47da-b32e-7b978b89ef3c": 0.047743499999999994,
+    "vertex-text-2397a76e-b975-4a3e-aabb-dc4d354853c1": 0.047743499999999994,
+    "vertex-text-2bf108f5-e12e-4582-84a8-d2fe634566ac": 0.050239,
+    "vertex-text-2cf115f6-f35a-4ae7-af84-337b1aae8b15": 0.049069999999999996,
+    "vertex-text-392e5c56-8a55-4b64-9d1c-8cae52d1870e": 0.047743499999999994,
+    "vertex-text-3c08889a-2104-49e5-8192-ab2cf33ae2b8": 0.047743499999999994,
+    "vertex-text-40f9f256-87fa-4a6c-bc95-8121d5e121dc": 0.050319499999999996,
+    "vertex-text-5a1f5f2e-f268-43d2-87a3-9ba82c2209e4": 0.047743499999999994,
+    "vertex-text-5ff84fad-10c8-4f23-8da7-72a3f23acb1b": 0.050239,
+    "vertex-text-6770ad5b-6bc3-434e-822a-fee6a50d87b2": 0.047743499999999994,
+    "vertex-text-8c42eb48-d133-4de9-b003-7a2d771d4fd2": 0.049069999999999996,
+    "vertex-text-8f797c1e-cf02-4e77-ad60-658ebe3b2c82": 0.050239,
+    "vertex-text-9f6756c0-dc76-4fec-8163-b0e782082c3e": 0.0562765,
+    "vertex-text-b478c739-5295-4369-8bd8-147a487fa25c": 0.0505995,
+    "vertex-text-c7b7a840-e789-4e41-8256-903ca8391343": 0.0562765,
+    "vertex-text-c8705992-b299-4970-bb22-82e5460e445f": 0.050239,
+    "vertex-text-ca4e7f14-313a-4e8e-b3af-ba7357ddfd4f": 0.050239,
+    "vertex-text-cdcc9550-7e23-4790-8f0d-19d58cf57f60": 0.050326499999999996,
+    "vertex-text-cfed7d15-33e5-43ee-8a34-19f52958db54": 0.050319499999999996,
+    "vertex-text-d44dea82-69ba-44b2-9ef7-82ec21ec3f3f": 0.050239,
+    "vertex-text-e3a13145-df98-4192-b383-30cdf37ee626": 0.050239,
+    "vertex-text-e9a14552-32bc-4177-a796-8c642e6b4302": 0.047743499999999994,
+    "vertex-text-f26ef3bf-d863-4bef-8157-957af7a26f03": 0.047743499999999994,
+    "vertex-text-f52222fc-c8a6-4f0d-bf04-a18f39e332c0": 0.050239,
+    "vertex-veo-0c353680-9b75-439d-ad95-6d2b2f85296b": 0.8,
+    "vertex-veo-2855173c-a6c2-47a9-a6f7-f8803df60e9f": 0.8,
+    "vertex-veo-4e45d4e5-1c1b-4fa8-a9b4-b55b595f2c30": 0.8,
+    "vertex-veo-85a85065-1f42-4c7b-9fda-75e09e3da464": 0.8,
+    "vertex-veo-94fad0ff-407e-4b46-86e2-d5d7b0d13e7e": 0.8,
+    "vertex-veo-a66e200e-0cc7-4954-a2d0-190043c959c4": 0.8,
+    "vertex-veo-b6b7c66f-6238-4cac-8255-90e44b175116": 0.8,
+    "vertex-veo-b7901132-7324-4339-82b1-f0a9cf70a056": 0.8,
+    "vertex-veo-cb3a1d39-3bdb-4be3-90e7-579f996f3a7b": 0.8,
+    "vertex-veo-f242e983-352e-4bfd-8622-ef3ed3287ca0": 0.8
+  }
+}

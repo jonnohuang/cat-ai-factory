@@ -1,204 +1,297 @@
 {
-    "project": "Cat AI Factory",
-    "schema": "hero_registry.v1",
-    "version": "1.0",
-    "generated_at": "2026-02-10T00:00:00Z",
-    "heroes": [
-        {
-            "hero_id": "tiger-black",
-            "name": {
-                "en": "Tiger",
-                "zh-Hans": "虎虎"
-            },
-            "role": "boss",
-            "series_tags": [
-                "office",
-                "management",
-                "approval-gate"
-            ],
-            "traits": {
-                "coat_type": "solid",
-                "primary_color": "black",
-                "secondary_color": null,
-                "pattern": null,
-                "eye_color": "amber",
-                "distinguishing_marks": "none"
-            },
-            "personality_traits": [
-                "decisive",
-                "intense",
-                "no-nonsense",
-                "high-standards"
-            ],
-            "costume": {
-                "id": "tiger-onesie-orange-black",
-                "notes": "Signature ‘boss’ onesie; keep face/eyes clearly visible."
-            }
-        },
-        {
-            "hero_id": "dino-tabby",
-            "name": {
-                "en": "Dino",
-                "zh-Hans": "小恐"
-            },
-            "role": "engineer",
-            "series_tags": [
-                "office",
-                "tech",
-                "debugging"
-            ],
-            "traits": {
-                "coat_type": "tabby",
-                "primary_color": "grey",
-                "secondary_color": null,
-                "pattern": "mackerel",
-                "eye_color": "green-yellow",
-                "distinguishing_marks": "high-contrast forehead M"
-            },
-            "personality_traits": [
-                "curious",
-                "methodical",
-                "quietly-funny",
-                "problem-solver"
-            ],
-            "costume": {
-                "id": "dinosaur-onesie-green",
-                "notes": "Green dino hoodie; keep tabby ‘M’ mark visible if possible."
-            }
-        },
-        {
-            "hero_id": "bear-tuxedo",
-            "name": {
-                "en": "Bear",
-                "zh-Hans": "小熊"
-            },
-            "role": "barista",
-            "series_tags": [
-                "cafe",
-                "customer-service",
-                "workplace-drama"
-            ],
-            "traits": {
-                "coat_type": "tuxedo",
-                "primary_color": "black",
-                "secondary_color": "white",
-                "pattern": "tuxedo-mask",
-                "eye_color": null,
-                "distinguishing_marks": "white muzzle; symmetrical facial mask"
-            },
-            "personality_traits": [
-                "friendly",
-                "chaotic-good",
-                "fast-talker",
-                "dramatic"
-            ],
-            "costume": {
-                "id": "bear-onesie-brown",
-                "notes": "Brown bear onesie; preserve tuxedo face mask contrast."
-            }
-        },
-        {
-            "hero_id": "bee-silver",
-            "name": {
-                "en": "Bee",
-                "zh-Hans": "小蜂"
-            },
-            "role": "site-supervisor",
-            "series_tags": [
-                "construction",
-                "safety",
-                "team-lead"
-            ],
-            "traits": {
-                "coat_type": "tabby",
-                "primary_color": "silver",
-                "secondary_color": "white",
-                "pattern": "spotted-or-classic",
-                "eye_color": null,
-                "distinguishing_marks": "white chest bib; white front paws"
-            },
-            "personality_traits": [
-                "organized",
-                "protective",
-                "rule-driven",
-                "secretly-sweet"
-            ],
-            "costume": {
-                "id": "bumblebee-onesie-yellow",
-                "notes": "Yellow bee stripes; keep white bib/paws visible when possible."
-            }
-        },
-        {
-            "hero_id": "butterfly-ginger",
-            "name": {
-                "en": "Butterfly",
-                "zh-Hans": "小蝶"
-            },
-            "role": "sales",
-            "series_tags": [
-                "office",
-                "sales",
-                "marketing"
-            ],
-            "traits": {
-                "coat_type": "ginger-tabby",
-                "primary_color": "ginger-cream",
-                "secondary_color": "cream",
-                "pattern": "soft-tabby",
-                "eye_color": null,
-                "distinguishing_marks": "cream underbelly; light tail rings"
-            },
-            "personality_traits": [
-                "bubbly",
-                "persuasive",
-                "trend-aware",
-                "playful"
-            ],
-            "costume": {
-                "id": "butterfly-onesie-pink",
-                "notes": "Pink butterfly wings; preserve ginger face warmth."
-            }
-        },
-        {
-            "hero_id": "mochi-grey-tabby",
-            "name": {
-                "en": "Mochi",
-                "zh-Hans": "麻薯"
-            },
-            "role": "ops",
-            "series_tags": [
-                "office",
-                "ops",
-                "lane-b",
-                "image-motion"
-            ],
-            "traits": {
-                "coat_type": "tabby",
-                "primary_color": "grey",
-                "secondary_color": "white",
-                "pattern": "mackerel",
-                "eye_color": "green-yellow",
-                "distinguishing_marks": "white chest bib; white paws; clean forehead M"
-            },
-            "personality_traits": [
-                "calm",
-                "punctual",
-                "process-driven",
-                "reliable",
-                "dry-humor"
-            ],
-            "costume": {
-                "id": "dinosaur-onesie-green",
-                "notes": "Green dino hoodie; same as dino-tabby for the demo loop."
-            },
-            "asset_hints": {
-                "seed_frames": [
-                    "assets/demo/mochi_front.png",
-                    "assets/demo/mochi_profile.png",
-                    "assets/demo/mochi_jump.png"
-                ],
-                "style_notes": "Photoreal/semi-real; consistent face proportions; clean background; stable lighting; 9:16 safe composition."
-            }
-        }
-    ]
+  "project": "Cat AI Factory",
+  "schema": "hero_registry.v1",
+  "version": "1.0",
+  "generated_at": "2026-02-10T00:00:00Z",
+  "heroes": [
+    {
+      "hero_id": "tiger-black",
+      "name": {
+        "en": "Tiger",
+        "zh-Hans": "虎虎"
+      },
+      "role": "boss",
+      "series_tags": [
+        "office",
+        "management",
+        "approval-gate"
+      ],
+      "traits": {
+        "coat_type": "solid",
+        "primary_color": "black",
+        "secondary_color": null,
+        "pattern": null,
+        "eye_color": "amber",
+        "distinguishing_marks": "none"
+      },
+      "personality_traits": [
+        "decisive",
+        "intense",
+        "no-nonsense",
+        "high-standards"
+      ],
+      "costume": {
+        "id": "tiger-onesie-orange-black",
+        "notes": "Signature ‘boss’ onesie; keep face/eyes clearly visible."
+      }
+    },
+    {
+      "hero_id": "dino-tabby",
+      "name": {
+        "en": "Dino",
+        "zh-Hans": "小恐"
+      },
+      "role": "engineer",
+      "series_tags": [
+        "office",
+        "tech",
+        "debugging"
+      ],
+      "traits": {
+        "coat_type": "tabby",
+        "primary_color": "grey",
+        "secondary_color": null,
+        "pattern": "mackerel",
+        "eye_color": "green-yellow",
+        "distinguishing_marks": "high-contrast forehead M"
+      },
+      "personality_traits": [
+        "curious",
+        "methodical",
+        "quietly-funny",
+        "problem-solver"
+      ],
+      "costume": {
+        "id": "dinosaur-onesie-green",
+        "notes": "Green dino hoodie; keep tabby ‘M’ mark visible if possible."
+      }
+    },
+    {
+      "hero_id": "bear-tuxedo",
+      "name": {
+        "en": "Bear",
+        "zh-Hans": "小熊"
+      },
+      "role": "barista",
+      "series_tags": [
+        "cafe",
+        "customer-service",
+        "workplace-drama"
+      ],
+      "traits": {
+        "coat_type": "tuxedo",
+        "primary_color": "black",
+        "secondary_color": "white",
+        "pattern": "tuxedo-mask",
+        "eye_color": null,
+        "distinguishing_marks": "white muzzle; symmetrical facial mask"
+      },
+      "personality_traits": [
+        "friendly",
+        "chaotic-good",
+        "fast-talker",
+        "dramatic"
+      ],
+      "costume": {
+        "id": "bear-onesie-brown",
+        "notes": "Brown bear onesie; preserve tuxedo face mask contrast."
+      }
+    },
+    {
+      "hero_id": "bee-silver",
+      "name": {
+        "en": "Bee",
+        "zh-Hans": "小蜂"
+      },
+      "role": "site-supervisor",
+      "series_tags": [
+        "construction",
+        "safety",
+        "team-lead"
+      ],
+      "traits": {
+        "coat_type": "tabby",
+        "primary_color": "silver",
+        "secondary_color": "white",
+        "pattern": "spotted-or-classic",
+        "eye_color": null,
+        "distinguishing_marks": "white chest bib; white front paws"
+      },
+      "personality_traits": [
+        "organized",
+        "protective",
+        "rule-driven",
+        "secretly-sweet"
+      ],
+      "costume": {
+        "id": "bumblebee-onesie-yellow",
+        "notes": "Yellow bee stripes; keep white bib/paws visible when possible."
+      }
+    },
+    {
+      "hero_id": "butterfly-ginger",
+      "name": {
+        "en": "Butterfly",
+        "zh-Hans": "小蝶"
+      },
+      "role": "sales",
+      "series_tags": [
+        "office",
+        "sales",
+        "marketing"
+      ],
+      "traits": {
+        "coat_type": "ginger-tabby",
+        "primary_color": "ginger-cream",
+        "secondary_color": "cream",
+        "pattern": "soft-tabby",
+        "eye_color": null,
+        "distinguishing_marks": "cream underbelly; light tail rings"
+      },
+      "personality_traits": [
+        "bubbly",
+        "persuasive",
+        "trend-aware",
+        "playful"
+      ],
+      "costume": {
+        "id": "butterfly-onesie-pink",
+        "notes": "Pink butterfly wings; preserve ginger face warmth."
+      }
+    },
+    {
+      "hero_id": "mochi-grey-tabby",
+      "name": {
+        "en": "Mochi",
+        "zh-Hans": "麻薯"
+      },
+      "role": "ops",
+      "series_tags": [
+        "office",
+        "ops",
+        "lane-b",
+        "image-motion"
+      ],
+      "traits": {
+        "coat_type": "tabby",
+        "primary_color": "grey",
+        "secondary_color": "white",
+        "pattern": "mackerel",
+        "eye_color": "green-yellow",
+        "distinguishing_marks": "white chest bib; white paws; clean forehead M"
+      },
+      "personality_traits": [
+        "calm",
+        "punctual",
+        "process-driven",
+        "reliable",
+        "dry-humor"
+      ],
+      "costume": {
+        "id": "dinosaur-onesie-green",
+        "notes": "Green dino hoodie; same as dino-tabby for the demo loop."
+      },
+      "asset_hints": {
+        "seed_frames": [
+          "assets/generated/heroes/mochi-grey-tabby_dance_loop_dino_onesie.png",
+          "assets/demo/mochi_front.png",
+          "assets/demo/mochi_profile.png"
+        ],
+        "style_notes": "Photoreal/semi-real; consistent face proportions; clean background; stable lighting; 9:16 safe composition."
+      }
+    },
+    {
+      "hero_id": "red-panda-chef",
+      "name": {
+        "en": "Red",
+        "zh-Hans": "阿红"
+      },
+      "role": "chef",
+      "series_tags": [
+        "kitchen",
+        "cooking",
+        "passionate"
+      ],
+      "traits": {
+        "coat_type": "fur",
+        "primary_color": "rust-red",
+        "secondary_color": "black",
+        "pattern": "masked",
+        "eye_color": "dark-brown",
+        "distinguishing_marks": "ringed tail; white ear tufts"
+      },
+      "personality_traits": [
+        "passionate",
+        "perfectionist",
+        "loud",
+        "generous"
+      ],
+      "costume": {
+        "id": "chef-uniform",
+        "notes": "Pristine white chef coat; tall hat always on."
+      }
+    },
+    {
+      "hero_id": "axolotl-space",
+      "name": {
+        "en": "Axel",
+        "zh-Hans": "艾克"
+      },
+      "role": "pilot",
+      "series_tags": [
+        "space",
+        "adventure",
+        "curious"
+      ],
+      "traits": {
+        "coat_type": "skin",
+        "primary_color": "pink",
+        "secondary_color": "dark-pink",
+        "pattern": "spotted",
+        "eye_color": "black",
+        "distinguishing_marks": "large external gills; wide smile"
+      },
+      "personality_traits": [
+        "dreamy",
+        "optimistic",
+        "floaty",
+        "naive"
+      ],
+      "costume": {
+        "id": "space-suit",
+        "notes": "Bubble helmet must accommodate gills."
+      }
+    },
+    {
+      "hero_id": "capybara-chill",
+      "name": {
+        "en": "Cappy",
+        "zh-Hans": "卡皮"
+      },
+      "role": "mentor",
+      "series_tags": [
+        "zen",
+        "garden",
+        "tea"
+      ],
+      "traits": {
+        "coat_type": "fur",
+        "primary_color": "brown",
+        "secondary_color": null,
+        "pattern": "solid",
+        "eye_color": "black",
+        "distinguishing_marks": "blocky snout; sleepy eyes"
+      },
+      "personality_traits": [
+        "zen",
+        "slow",
+        "wise",
+        "unbothered"
+      ],
+      "costume": {
+        "id": "kimono-flow",
+        "notes": "Loose fitting kimono; very relaxed fit."
+      }
+    }
+  ]
 }

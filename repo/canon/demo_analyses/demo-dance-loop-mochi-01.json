@@ -1,0 +1,54 @@
+{
+    "version": "video_analysis.v1",
+    "analysis_id": "demo-dance-loop-mochi-01",
+    "analyzed_at": "2026-02-16T11:00:00Z",
+    "source": {
+        "source_type": "demo_reference",
+        "reference_label": "mochi dance loop reference",
+        "content_fingerprint": "c1d2e3f4a5b6c7d8",
+        "copyright_safe_metadata_only": true
+    },
+    "pattern": {
+        "lane_hints": [
+            "image_motion"
+        ],
+        "duration_bucket": "short_0_15",
+        "tags": [
+            "dance",
+            "loop",
+            "high-energy"
+        ],
+        "choreography": {
+            "beats": [
+                {
+                    "start_sec": 0.0,
+                    "end_sec": 0.9,
+                    "label": "beat-1"
+                },
+                {
+                    "start_sec": 0.9,
+                    "end_sec": 1.8,
+                    "label": "beat-2"
+                }
+            ],
+            "energy_curve": "build"
+        },
+        "camera": {
+            "shot_pattern": [
+                "tracking",
+                "dynamic"
+            ],
+            "motion_notes": "Use dynamic tracking for high energy feel."
+        },
+        "looping": {
+            "loop_start_sec": 0.0,
+            "loop_end_sec": 1.8,
+            "seamless_confidence": 0.95
+        }
+    },
+    "summary": "Mochi dance loop pattern.",
+    "safety": {
+        "no_embedded_copyright_media": true,
+        "notes": "Example metadata only."
+    }
+}

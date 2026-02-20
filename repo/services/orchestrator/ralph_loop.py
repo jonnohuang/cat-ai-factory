@@ -595,6 +595,8 @@ def main(argv: List[str]) -> int:
             worker_cmd = [py_exec, "repo/worker/render_ffmpeg.py", "--job", str(job_path)]
             retry_plan_path = logs_dir / "qc" / "retry_plan.v1.json"
             worker_env: Dict[str, str] = {}
+            # Ensure workers can import from repo.*
+            worker_env["PYTHONPATH"] = str(repo_root)
             if retry_plan_path.exists():
                 worker_env["CAF_RETRY_PLAN_PATH"] = str(retry_plan_path.resolve())
                 worker_env.update(provider_switch_env_from_retry_plan(retry_plan_path))
