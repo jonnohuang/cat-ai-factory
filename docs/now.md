@@ -37,10 +37,11 @@ Status: **ACTIVE**
     - **CI/CD Skeleton (PR-27)**: Standardized `test_harness.py`.
     - **Coze Wiring (PR-28)**: FastAPI ingress service for `PlanRequest.v1`.
     - **n8n Workflows (PR-29)**: Human approval and manual publish loops with JSON exports.
-    - **Terraform Infra (PR-30)**: Initialized core cloud backbone (GCS, Firestore, Cloud Tasks, Cloud Run, Artifact Registry, Cloud Build IAM).
-    - **Environment Sync**: Updated `.env` and `.env.example` with comprehensive GCP placeholders.
+    - **Director Orchestration (PR-39)**: Implemented `DirectorService` for granular, shot-aware orchestration and assembly; integrated into `ralph_loop.py`.
+    - **Cloud Containerization (PR-39)**: Provided `Dockerfile`s and `cloudbuild.yaml` for GCP CI/CD.
+    - **ADR Acceptance**: Accepted ADRs 0050, 0055, 0056, 0057.
     - **Veo3 Mock Mode** enabled.
-    - **End-to-End verified** with all 7 smoke modules passing.
+    - **End-to-End verified** with all 7 smoke modules + new `smoke_director_loop.py`.
 
 ### Decisions / ADRs Touched
 - ADR-0047 (Free-first engine posture)
@@ -49,6 +50,18 @@ Status: **ACTIVE**
 - ADR-0050 (Planner intelligence + lab bootstrap; proposed)
 
 ### What Changed (Diff Summary)
+- Implemented PR-39 Director Orchestration:
+  - Created `repo/services/orchestrator/director_service.py`: Core shot-by-shot manager.
+  - Refactored `repo/services/orchestrator/ralph_loop.py`: Integrated `DirectorService` for multi-shot jobs.
+  - Updated `repo/worker/render_ffmpeg.py`: Supported `CAF_OUTPUT_OVERRIDE` for targeted rendering.
+  - Added `repo/tools/smoke_director_loop.py` for full-loop verification.
+- Implemented PR-39 Cloud Containerization:
+  - Created root `requirements.txt`: Unified dependency list.
+  - Created `Dockerfile.worker`: Optimized for video/AI workloads.
+  - Created `Dockerfile.planner`: Configured for FastAPI ingress.
+  - Created `cloudbuild.yaml`: GCP Artifact Registry & Build pipeline.
+- Implemented PR-30 Terraform Infra:
+  - Initialized core cloud backbone (GCS, Firestore, Cloud Tasks, Cloud Run, Artifact Registry, Cloud Build IAM).
 - Implemented PR-38 Asset RAG Manifest:
   - Created `repo/shared/asset_manifest.v1.json` + schema: authoritative media registry.
   - Created `repo/services/planner/asset_resolver.py`: Tag-based media retrieval.

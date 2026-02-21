@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+jsonschema
+python-multipart
+google-cloud-storage
+google-cloud-aiplatform
+requests
+numpy
+opencv-python-headless
+python-dotenv
+# CrewAI and LangGraph for Planner
+crewai
+langgraph
+langchain-google-genai

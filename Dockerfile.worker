@@ -1,0 +1,27 @@
+# Dockerfile.worker
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the repo code
+COPY repo ./repo
+
+# Ensure the sandbox structure exists (though it's usually mounted)
+RUN mkdir -p sandbox/jobs sandbox/output sandbox/assets sandbox/logs
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Default command to start the worker orchestrator
+CMD ["python", "repo/services/orchestrator/ralph_loop.py"]

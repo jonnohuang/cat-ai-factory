@@ -1,0 +1,42 @@
+# cloudbuild.yaml
+steps:
+  # 1. Build Worker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/worker:${SHORT_SHA}',
+      '-t', '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/worker:latest',
+      '-f', 'Dockerfile.worker',
+      '.'
+    ]
+
+  # 2. Build Planner Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/planner:${SHORT_SHA}',
+      '-t', '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/planner:latest',
+      '-f', 'Dockerfile.planner',
+      '.'
+    ]
+
+  # 3. Push Worker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '--all-tags', '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/worker']
+
+  # 4. Push Planner Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '--all-tags', '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/planner']
+
+# Substituted variables with defaults
+substitutions:
+  _LOCATION: 'us-central1'
+  _REPOSITORY: 'cat-ai-factory'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+images:
+  - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/worker:latest'
+  - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/planner:latest'

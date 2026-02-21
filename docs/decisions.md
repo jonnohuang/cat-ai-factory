@@ -1558,7 +1558,7 @@ References:
 
 ## ADR-0050 — Planner intelligence + lab bootstrap are required for practical brief-first autonomy
 Date: 2026-02-18
-Status: Proposed
+Status: Accepted
 
 Context:
 - Users can provide high-level creative briefs, but current operation still often needs manual analysis/pointer selection.
@@ -1705,7 +1705,7 @@ References:
 
 ## ADR-0055: Granular Shot-by-Shot Director Architecture
 **Date**: 2024-07-31  
-**Status**: PROPOSED  
+**Status**: Accepted  
 **Context**: Monolithic video generation (30s+ clips) leads to high rework costs and poor deterministic control over specific segment defects. Our LangGraph "Director" vision requires the ability to rework individual shots without re-generating the entire video.
 
 **Decision**:
@@ -1723,7 +1723,7 @@ References:
 
 ## ADR-0056: Identity Packs and Pose-Gated Generation
 **Date**: 2024-07-31  
-**Status**: PROPOSED  
+**Status**: Accepted  
 **Context**: Text-to-video and single-frame-to-video are insufficient for maintaining identity and choreography over long durations or multi-character scenes. 
 
 **Decision**:
@@ -1739,7 +1739,7 @@ References:
 
 ## ADR-0057: n8n Boundary (Ops/Distribution only)
 **Date**: 2024-07-31  
-**Status**: PROPOSED  
+**Status**: Accepted  
 **Context**: We need to automate the "fan-out" and "retry" loop for high-yield generation while keeping the CAF core clean.
 
 **Decision**:
