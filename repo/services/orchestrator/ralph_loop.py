@@ -282,7 +282,7 @@ def main(argv: List[str]) -> int:
     job_path = pathlib.Path(args.job)
     filename_job_id = job_id_from_filename(job_path)
 
-    # staging_log = pathlib.Path("/tmp") / f"ralph-validate-{os.getpid()}.log"
+    staging_log = sandbox_root / f"ralph-validate-{os.getpid()}.log"
     py_exec = sys.executable or "python3"
     # validate_cmd = [py_exec, "repo/tools/validate_job.py", str(job_path)]
     # rc, _timed_out = run_cmd(validate_cmd, staging_log)

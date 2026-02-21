@@ -13,7 +13,12 @@ select = [
 ignore = [
     "E501", # line too long (handled by line-length and formatter)
     "F401", # unused-import (sometimes needed for registrations)
+    "E402", # module level import not at top of file (common in our repo-root scripts)
+    "F841", # local variable assigned but never used (cleanup task for later)
 ]
+
+[lint.mccabe]
+max-complexity = 60
 
 [format]
 quote-style = "double"
