@@ -1901,7 +1901,7 @@ Outcome:
 ---
 
 ### PR-38 — Asset RAG Manifest (deterministic media retrieval)
-Status: **IMPLEMENTED**
+Status: **COMPLETED**
 
 Scope:
 - Introduce `asset_manifest.v1.json` for raw media metadata (images, videos, contracts).

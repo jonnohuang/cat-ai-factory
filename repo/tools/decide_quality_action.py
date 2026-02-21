@@ -189,6 +189,11 @@ def _ensure_qc_report(
     job_id: str,
     qc_policy_relpath: str,
 ) -> Tuple[Optional[pathlib.Path], Optional[str]]:
+    report_path = project_root / "sandbox" / "logs" / job_id / "qc" / "qc_report.v1.json"
+    if report_path.exists():
+        # If report exists, we trust the bus authority
+        return report_path, None
+
     cmd = [
         sys.executable,
         "-m",
@@ -198,8 +203,9 @@ def _ensure_qc_report(
         "--qc-policy-relpath",
         qc_policy_relpath,
     ]
+    # In some environments, run_qc_runner might not be in the path correctly if run as module
+    # We use -m to be safe.
     proc = subprocess.run(cmd, cwd=str(project_root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    report_path = project_root / "sandbox" / "logs" / job_id / "qc" / "qc_report.v1.json"
     if proc.returncode != 0:
         return None, "qc runner execution failed"
     if not report_path.exists():
@@ -719,9 +725,10 @@ def main(argv: list[str]) -> int:
             identity_gates = [g for g in gates if isinstance(g, dict) and g.get("dimension") == "identity"]
             
             if motion_gates:
-                motion_status = "fail" if any(g.get("status") == "fail" for g in motion_gates) else "pass"
+                # Fail-Closed: any fail or unknown in a required dimension constitutes failure
+                motion_status = "fail" if any(g.get("status") in {"fail", "unknown"} for g in motion_gates) else "pass"
             if identity_gates:
-                identity_status = "fail" if any(g.get("status") == "fail" for g in identity_gates) else "pass"
+                identity_status = "fail" if any(g.get("status") in {"fail", "unknown"} for g in identity_gates) else "pass"
 
     action = "proceed_finalize"
     reason = "No blocking quality findings."
@@ -743,34 +750,45 @@ def main(argv: list[str]) -> int:
         action = qc_missing_report_action
         reason = f"QC report unavailable: {qc_report_error}"
 
-    # Priority 2: QC Report Recommendation
+    # Priority 1b: Verify Metric Coverage (Fail Closed if expected metrics are missing)
     elif isinstance(qc_report, dict):
-        overall = qc_report.get("overall", {})
-        recommended = overall.get("recommended_action")
-        
-        if overall.get("pass") is True:
-            action = "proceed_finalize"
-            reason = "QC report passed all required gates."
-        elif isinstance(recommended, str):
-            # Evaluate retry budget
-            next_retry = retry_attempt + 1
-            if recommended in {"retry_motion", "retry_recast"}:
-                if next_retry <= max(0, args.max_retries):
-                    action = recommended
-                    reason = f"QC report recommended {recommended} within retry budget."
-                    retry_attempt = next_retry
-                else:
-                    action = "escalate_hitl"
-                    reason = "QC report recommended retry but budget exceeded; escalate to HITL."
-                    retry_attempt = next_retry
-            else:
-                # Block/Escalate are terminal
-                action = recommended
-                reason = f"QC report recommended terminal action: {recommended}"
-        else:
-            # Fallback if report is malformed
+        required_metrics = set(quality_targets.keys())
+        reported_gates = {g.get("metric") for g in qc_report.get("gates", []) if isinstance(g, dict) and g.get("metric")}
+        missing_mandatory = required_metrics - reported_gates
+        if missing_mandatory:
             action = "escalate_hitl"
-            reason = "QC report missing recommended_action; escalate to HITL."
+            reason = f"QC report missing mandatory metrics defined in quality_target: {sorted(missing_mandatory)}"
+        
+        else:
+            # Continue to Recommendation check
+            overall = qc_report.get("overall", {})
+            recommended = overall.get("recommended_action")
+            
+            if overall.get("pass") is True:
+                action = "proceed_finalize"
+                reason = "QC report passed all required gates."
+            elif isinstance(recommended, str):
+                # Evaluate retry budget
+                next_retry = retry_attempt + 1
+                if recommended in {"retry_motion", "retry_recast"}:
+                    # Verify budget lock
+                    allowed_retries = max(0, args.max_retries)
+                    if next_retry <= allowed_retries:
+                        action = recommended
+                        reason = f"QC report recommended {recommended} (attempt {next_retry}/{allowed_retries})."
+                        retry_attempt = next_retry
+                    else:
+                        action = "escalate_hitl"
+                        reason = f"QC report recommended {recommended} but budget exceeded ({retry_attempt} retries already used)."
+                        retry_attempt = next_retry
+                else:
+                    # Block/Escalate are terminal
+                    action = recommended
+                    reason = f"QC report recommended terminal action: {recommended}"
+            else:
+                # Fallback if report is malformed
+                action = "escalate_hitl"
+                reason = "QC report missing recommended_action; escalate to HITL."
 
     advisory_mode_cfg = {}
     authority_cfg = {}

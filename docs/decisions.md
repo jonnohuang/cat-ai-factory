@@ -1602,7 +1602,8 @@ Decision:
 - Define a deterministic pointer-resolution authority contract for planner output:
   - required pointer classes per workflow/lane
   - deterministic candidate ranking/tie-break rules
-  - explicit `resolution artifact` containing selected and rejected candidates with reasons
+  - explicit `pointer_resolution.v1` artifact containing selected and rejected candidates with reasons
+- **Sole Source of Truth**: Downstream components (Adapters, Workers, Controllers) MUST derive asset and contract paths EXCLUSIVELY from the `pointer_resolution` block in the job contract or its linked resolution artifact. Hardcoded fallbacks within providers are strictly forbidden.
 - Fail loud when required pointers cannot be resolved from committed artifacts.
 - Keep runtime authority unchanged:
   - planner resolves pointers
@@ -1610,6 +1611,7 @@ Decision:
   - worker remains deterministic and output-bound.
 
 Consequences:
+- Eliminates provider-specific "path drift" and hidden hardcoded dependencies.
 - Reduces manual path editing while preserving deterministic authority boundaries.
 - Makes brief->contract resolution reproducible and auditable.
 

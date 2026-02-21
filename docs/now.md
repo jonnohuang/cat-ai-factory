@@ -12,13 +12,13 @@ Update rules:
 
 ------------------------------------------------------------
 
-### 3. Current PR Status (PR-38)
+### 3. Current PR Status (Phase 8: Pointer Authority & QC Hardening)
 
 | Role | Status | Blocking |
 | :--- | :--- | :--- |
 | **ARCH** | **DONE** | **NO** |
 | **CODEX** | **DONE** | **NO** |
-| **CLOUD** | WAITING | NO |
+| **CLOUD** | **WAITING** | NO |
 
 #### ARCH (Architecture & Decisions)
 - **Action**: Review pending ADRs (0051..0054). [x]
@@ -29,24 +29,12 @@ Update rules:
 #### CODEX (Implementation)
 - **Status**: **DONE**
 - **Completed**:
-    - **Asset RAG Manifest** (PR-38): Moves media paths from hardcoding to manifest-driven retrieval.
-    - **AssetResolver** utility for tag-based media lookups.
-    - **PointerResolver** refactored to use RAG for demo contracts.
-    - **VertexVeoProvider** refactored for dynamic reference image injection.
-    - Deterministic Pointer Resolution (PR-35h).
-    - QC Policy & Routing Authority (Fail-Closed).
-    - Lab-to-Prod Promotion Queue.
-    - **Veo3 Hybrid Adapter** (High Quality I2V) verified.
-    - **Veo3 Mock Mode** (`CAF_VEO_MOCK=1`) implemented in Planner & Worker.
-    - **QC Policy Engine** bugfixes (NameError/ValueError) and hardening.
-    - **Hero Image Generation** (Imagen 3) tool implemented.
-- **Recent Wins**:
-    - **Asset RAG** enabled (removed hardcoded paths for Mochi and Dance-Loop assets).
-    - **Asset Smoke Test** passed (verified deterministic tie-breaking and tag matching).
-    - **Veo3 Mock Mode** enabled (cost-safe E2E verification path).
-    - **QC Tool bugfixes** (resolved Orchestrator crashes due to NameError/ValueError).
-    - **Motion Metadata Translation** enabled (Veo3 generative prompt injection).
-    - End-to-End Mochi Dino pipeline verification complete.
+    - **Pointer Authority (ADR-0051)**: Hardened `PointerResolver` to be 100% manifest-driven; removed hardcoded paths.
+    - **Asset RAG Manifest (PR-38)**: Authoritative media registry for all core and demo assets.
+    - **QC Routing Authority (PR-36)**: Hardened `decide_quality_action.py` with fail-closed logic for unknown gates and missing metrics.
+    - **Budget Lock**: Strict retry enforcement in quality controller.
+    - **Veo3 Mock Mode** enabled.
+    - **End-to-End verified** with `smoke_pointer_authority.py` and `smoke_qc_strict_routing.py`.
 
 ### Decisions / ADRs Touched
 - ADR-0047 (Free-first engine posture)
@@ -674,8 +662,8 @@ Update rules:
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- ARCH: Review PR-36 implementation and draft ADR-0051 (Pointer Authority).
-- CODEX: Continue PR-36 hardening (Strict QC routing authority in `decide_quality_action.py`).
+- CODEX: Begin Phase 7 (Cloud Migration) ingress/provisioning stubs.
+- ARCH: Final review of PR-38/36 closeout walkthrough.
 
 ### ARCH Decision Queue Snapshot (PR-34.5 Focus)
 1) Video Analyzer contracts:
