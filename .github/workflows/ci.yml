@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+          # Add other dependencies if needed, e.g., if tests require specific packages
+          # If we have a requirements.txt:
+          # pip install -r requirements.txt
+          
+      - name: Lint with ruff
+        run: ruff check .
+        
+      - name: Run Smoke Tests
+        run: python repo/tools/test_harness.py
+        env:
+          CAF_VEO_MOCK: "1"
+          BUDGET_DAILY_USD_LIMIT: "50.0"
+          BUDGET_TOTAL_USD_LIMIT: "200.0"

@@ -60,10 +60,25 @@ class WanLocalProvider(BaseProvider):
                 "ending": "Loop cleanly for retry checks.",
             },
             "shots": [
-                {"t": 0, "visual": "wide stage", "action": "start groove", "caption": "Mochi starts"},
-                {"t": 2, "visual": "mid shot", "action": "side step", "caption": "On beat"},
+                {
+                    "t": 0,
+                    "visual": "wide stage",
+                    "action": "start groove",
+                    "caption": "Mochi starts",
+                },
+                {
+                    "t": 2,
+                    "visual": "mid shot",
+                    "action": "side step",
+                    "caption": "On beat",
+                },
                 {"t": 4, "visual": "mid shot", "action": "spin", "caption": "Spin"},
-                {"t": 6, "visual": "wide stage", "action": "pose hit", "caption": "Pose"},
+                {
+                    "t": 6,
+                    "visual": "wide stage",
+                    "action": "pose hit",
+                    "caption": "Pose",
+                },
                 {"t": 8, "visual": "mid shot", "action": "bounce", "caption": "Bounce"},
                 {"t": 10, "visual": "wide stage", "action": "reset", "caption": "Loop"},
             ],

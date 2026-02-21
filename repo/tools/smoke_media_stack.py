@@ -6,6 +6,7 @@ PR-33.2 smoke runner:
 - runs worker render on a supplied or default job
 - validates generated Media Stack v1 stage manifests
 """
+
 from __future__ import annotations
 
 import argparse
@@ -24,7 +25,9 @@ def _load(path: pathlib.Path) -> dict:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Smoke test Media Stack stage artifacts")
+    parser = argparse.ArgumentParser(
+        description="Smoke test Media Stack stage artifacts"
+    )
     parser.add_argument(
         "--job",
         default="sandbox/jobs/mochi-dino-replace-smoke-20240515.job.json",
@@ -38,7 +41,13 @@ def main(argv: list[str]) -> int:
         print(f"ERROR: job not found: {job_path}", file=sys.stderr)
         return 1
 
-    run_worker = [sys.executable, "-m", "repo.worker.render_ffmpeg", "--job", str(job_path)]
+    run_worker = [
+        sys.executable,
+        "-m",
+        "repo.worker.render_ffmpeg",
+        "--job",
+        str(job_path),
+    ]
     print("RUN:", " ".join(run_worker))
     subprocess.check_call(run_worker, cwd=str(root))
 
@@ -73,4 +82,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

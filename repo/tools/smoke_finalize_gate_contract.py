@@ -65,10 +65,30 @@ def main(argv: list[str]) -> int:
         "video_relpath": f"sandbox/output/{job_id}/final.mp4",
         "generated_at": "2026-02-17T00:00:00Z",
         "metrics": {
-            "identity_consistency": {"available": True, "score": 0.85, "threshold": 0.55, "pass": True},
-            "mask_edge_bleed": {"available": True, "score": 0.78, "threshold": 0.45, "pass": True},
-            "temporal_stability": {"available": True, "score": 0.66, "threshold": 0.55, "pass": True},
-            "loop_seam": {"available": True, "score": 0.67, "threshold": 0.60, "pass": True},
+            "identity_consistency": {
+                "available": True,
+                "score": 0.85,
+                "threshold": 0.55,
+                "pass": True,
+            },
+            "mask_edge_bleed": {
+                "available": True,
+                "score": 0.78,
+                "threshold": 0.45,
+                "pass": True,
+            },
+            "temporal_stability": {
+                "available": True,
+                "score": 0.66,
+                "threshold": 0.55,
+                "pass": True,
+            },
+            "loop_seam": {
+                "available": True,
+                "score": 0.67,
+                "threshold": 0.60,
+                "pass": True,
+            },
             "audio_video": {
                 "audio_stream_present": True,
                 "av_sync_sec": 0.0,
@@ -115,10 +135,15 @@ def main(argv: list[str]) -> int:
     block_gate = _load(gate_path)
     action = _load(decision_path).get("decision", {}).get("action")
     if block_gate.get("gate", {}).get("allow_finalize") is not False:
-        print("ERROR: expected allow_finalize=False for retry/fail quality", file=sys.stderr)
+        print(
+            "ERROR: expected allow_finalize=False for retry/fail quality",
+            file=sys.stderr,
+        )
         return 1
     if action == "proceed_finalize":
-        print("ERROR: expected non-finalize action in failing scenario", file=sys.stderr)
+        print(
+            "ERROR: expected non-finalize action in failing scenario", file=sys.stderr
+        )
         return 1
 
     print("OK:", gate_path)

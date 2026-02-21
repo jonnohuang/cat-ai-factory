@@ -1,0 +1,69 @@
+{
+    "name": "CAF Human Approval v1",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "webhook/approve",
+                "options": {}
+            },
+            "name": "Webhook Approval",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                400,
+                300
+            ],
+            "id": "webhook-approval"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=http://local-ingress:8080/ops/approve/{{ $json.query.job_id }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $node[\"Auth Provider\"].json.token }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "approver",
+                            "value": "n8n-manual-ui"
+                        },
+                        {
+                            "name": "comment",
+                            "value": "Approved via n8n webhook"
+                        }
+                    ]
+                }
+            },
+            "name": "CAF Ingress Approve",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                600,
+                300
+            ],
+            "id": "caf-ingress-approve"
+        }
+    ],
+    "connections": {
+        "Webhook Approval": {
+            "main": [
+                [
+                    {
+                        "node": "CAF Ingress Approve",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

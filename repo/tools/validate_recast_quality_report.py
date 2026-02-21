@@ -4,6 +4,7 @@ validate_recast_quality_report.py
 
 Validate recast_quality_report.v1 output against schema with semantic checks.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,11 +46,19 @@ def main(argv: list[str]) -> int:
 
     failed = set(report.get("overall", {}).get("failed_metrics", []))
     metrics = report.get("metrics", {})
-    for name in ("identity_consistency", "mask_edge_bleed", "temporal_stability", "loop_seam", "audio_video"):
+    for name in (
+        "identity_consistency",
+        "mask_edge_bleed",
+        "temporal_stability",
+        "loop_seam",
+        "audio_video",
+    ):
         row = metrics.get(name, {})
         passed = bool(row.get("pass"))
         if (not passed) and (name not in failed):
-            errors.append(f"{name} has pass=false but is missing from overall.failed_metrics")
+            errors.append(
+                f"{name} has pass=false but is missing from overall.failed_metrics"
+            )
         if passed and (name in failed):
             errors.append(f"{name} has pass=true but appears in overall.failed_metrics")
 
@@ -65,4 +74,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

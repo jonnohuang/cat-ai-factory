@@ -38,7 +38,9 @@ def main():
     args = parser.parse_args()
 
     root = repo_root_from_here()
-    sandbox_root = pathlib.Path(args.sandbox_root) if args.sandbox_root else (root / "sandbox")
+    sandbox_root = (
+        pathlib.Path(args.sandbox_root) if args.sandbox_root else (root / "sandbox")
+    )
 
     jobs_dir = sandbox_root / "jobs"
     output_root = sandbox_root / "output"

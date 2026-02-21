@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Minimal Cloud Run HTTP stub for orchestrator trigger (PR-24)."""
+
 from __future__ import annotations
 
 import argparse
@@ -10,7 +11,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict
 
 
-def _json_response(handler: BaseHTTPRequestHandler, code: int, payload: Dict[str, Any]) -> None:
+def _json_response(
+    handler: BaseHTTPRequestHandler, code: int, payload: Dict[str, Any]
+) -> None:
     body = json.dumps(payload, sort_keys=True).encode("utf-8")
     handler.send_response(code)
     handler.send_header("Content-Type", "application/json")
@@ -64,7 +67,9 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path != "/trigger":
-            _json_response(self, HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
+            _json_response(
+                self, HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"}
+            )
             return
         try:
             payload = _read_json(self)

@@ -15,6 +15,7 @@ Usage:
     --tag loopable \
     --index repo/canon/demo_analyses/video_analysis_index.v1.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,7 +34,12 @@ def eprint(*args: Any) -> None:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _repo_root() -> pathlib.Path:
@@ -58,7 +64,9 @@ def _fingerprint_sha256_16(path: pathlib.Path) -> str:
 def _run(cmd: list[str]) -> str:
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if p.returncode != 0:
-        raise RuntimeError(f"command failed ({p.returncode}): {' '.join(cmd)}\n{p.stderr.strip()}")
+        raise RuntimeError(
+            f"command failed ({p.returncode}): {' '.join(cmd)}\n{p.stderr.strip()}"
+        )
     return p.stdout
 
 
@@ -182,7 +190,9 @@ def _clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
 
 
-def _opencv_extract_profile(path: pathlib.Path, fps: float, duration: float) -> dict[str, Any] | None:
+def _opencv_extract_profile(
+    path: pathlib.Path, fps: float, duration: float
+) -> dict[str, Any] | None:
     try:
         import cv2  # type: ignore
     except Exception:
@@ -232,7 +242,11 @@ def _opencv_extract_profile(path: pathlib.Path, fps: float, duration: float) -> 
     candidates: list[tuple[float, float]] = []
     for i in range(1, len(motion_series) - 1):
         t, v = motion_series[i]
-        if v >= motion_series[i - 1][1] and v >= motion_series[i + 1][1] and v > mean_motion:
+        if (
+            v >= motion_series[i - 1][1]
+            and v >= motion_series[i + 1][1]
+            and v > mean_motion
+        ):
             candidates.append((v, t))
 
     if not candidates:
@@ -318,7 +332,9 @@ def _build_analysis(
 
     beats = _build_beats(duration)
     shot_pattern = ["medium", "static"]
-    motion_notes = f"Auto-derived from metadata; review manually if needed (fps={round(fps,2)})."
+    motion_notes = (
+        f"Auto-derived from metadata; review manually if needed (fps={round(fps,2)})."
+    )
     seamless_confidence = 0.75
 
     if opencv_profile is not None:
@@ -398,7 +414,11 @@ def _update_index(
             "analyses": [],
         }
 
-    entries = [e for e in data.get("analyses", []) if e.get("analysis_id") != analysis["analysis_id"]]
+    entries = [
+        e
+        for e in data.get("analyses", [])
+        if e.get("analysis_id") != analysis["analysis_id"]
+    ]
     entries.append(
         {
             "analysis_id": analysis["analysis_id"],
@@ -412,7 +432,9 @@ def _update_index(
         }
     )
     # Deterministic order.
-    entries.sort(key=lambda x: (-int(x.get("priority", 0)), str(x.get("analysis_id", ""))))
+    entries.sort(
+        key=lambda x: (-int(x.get("priority", 0)), str(x.get("analysis_id", "")))
+    )
     data["analyses"] = entries
     data["generated_at"] = _utc_now()
     _save_json(index_path, data)
@@ -424,10 +446,17 @@ def _validate(path: pathlib.Path) -> None:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Deterministic offline video analyzer for CAF PR-32.1")
+    parser = argparse.ArgumentParser(
+        description="Deterministic offline video analyzer for CAF PR-32.1"
+    )
     parser.add_argument("--input", required=True, help="Path to input video")
-    parser.add_argument("--output", required=True, help="Path to output video_analysis.v1 JSON")
-    parser.add_argument("--analysis-id", help="Kebab-case analysis id (default: derived from input filename)")
+    parser.add_argument(
+        "--output", required=True, help="Path to output video_analysis.v1 JSON"
+    )
+    parser.add_argument(
+        "--analysis-id",
+        help="Kebab-case analysis id (default: derived from input filename)",
+    )
     parser.add_argument(
         "--source-type",
         default="demo_reference",
@@ -442,17 +471,31 @@ def main(argv: list[str]) -> int:
         choices=["ai_video", "image_motion", "template_remix", "dance_swap", "mixed"],
         help="Repeatable lane hint (defaults to template_remix)",
     )
-    parser.add_argument("--tag", action="append", dest="tags", help="Repeatable kebab-case tag")
-    parser.add_argument("--index", help="Optional video_analysis_index.v1.json path to upsert entry")
-    parser.add_argument("--priority", type=int, default=50, help="Index priority [0..100]")
-    parser.add_argument("--quality-score", type=float, default=0.75, help="Index quality score [0..1]")
+    parser.add_argument(
+        "--tag", action="append", dest="tags", help="Repeatable kebab-case tag"
+    )
+    parser.add_argument(
+        "--index", help="Optional video_analysis_index.v1.json path to upsert entry"
+    )
+    parser.add_argument(
+        "--priority", type=int, default=50, help="Index priority [0..100]"
+    )
+    parser.add_argument(
+        "--quality-score", type=float, default=0.75, help="Index quality score [0..1]"
+    )
     parser.add_argument(
         "--disable-opencv",
         action="store_true",
         help="Disable OpenCV analysis path and use ffprobe-only deterministic fallback.",
     )
-    parser.add_argument("--no-validate", action="store_true", help="Skip post-write schema+semantic validation")
-    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing output file")
+    parser.add_argument(
+        "--no-validate",
+        action="store_true",
+        help="Skip post-write schema+semantic validation",
+    )
+    parser.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing output file"
+    )
     args = parser.parse_args(argv[1:])
 
     input_path = pathlib.Path(args.input).resolve()
@@ -467,7 +510,7 @@ def main(argv: list[str]) -> int:
     if not input_path.is_file():
         eprint(f"ERROR: input is not a file: {input_path}")
         return 1
-    if not input_path.suffix.lower() in {".mp4", ".mov", ".mkv", ".webm"}:
+    if input_path.suffix.lower() not in {".mp4", ".mov", ".mkv", ".webm"}:
         eprint("ERROR: input must be a supported video file (.mp4/.mov/.mkv/.webm)")
         return 1
 

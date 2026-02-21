@@ -14,9 +14,6 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
-from ..util.json_extract import extract_json_object
-from ..util.redact import redact_text
-from ..asset_resolver import AssetResolver
 from ...budget.pricing import (
     COST_GEMINI_PRO_INPUT_1M,
     COST_GEMINI_PRO_OUTPUT_1M,
@@ -24,6 +21,9 @@ from ...budget.pricing import (
     COST_VERTEX_VEO_VIDEO_SEC,
 )
 from ...budget.tracker import BudgetTracker
+from ..asset_resolver import AssetResolver
+from ..util.json_extract import extract_json_object
+from ..util.redact import redact_text
 from .base import BaseProvider
 from .gemini_ai_studio import (
     GeminiAIStudioProvider,
@@ -72,7 +72,7 @@ class _VertexBaseProvider(BaseProvider):
         """Ensures required schema fields are present and typed correctly before validation."""
         if not isinstance(job, dict):
             return job
-        
+
         # 0. Type Fixes (Floats to Ints where required by schema)
         video = job.get("video", {})
         if isinstance(video, dict):
@@ -86,7 +86,7 @@ class _VertexBaseProvider(BaseProvider):
                     video["fps"] = int(round(float(video["fps"])))
                 except (ValueError, TypeError):
                     video["fps"] = 30
-        
+
         shots = job.get("shots", [])
         if isinstance(shots, list):
             for shot in shots:
@@ -99,15 +99,26 @@ class _VertexBaseProvider(BaseProvider):
         # 1. Captions (required, min 4)
         if not job.get("captions") or len(job.get("captions", [])) < 4:
             shots = job.get("shots", [])
-            caps = [s.get("caption", "...") for s in shots if isinstance(s, dict) and s.get("caption")]
+            caps = [
+                s.get("caption", "...")
+                for s in shots
+                if isinstance(s, dict) and s.get("caption")
+            ]
             if len(caps) < 4:
-                caps.extend(["Mochi is rhythm!", "Meow moves!", "Dino cat style!", "Dance loop magic!"])
+                caps.extend(
+                    [
+                        "Mochi is rhythm!",
+                        "Meow moves!",
+                        "Dino cat style!",
+                        "Dance loop magic!",
+                    ]
+                )
             job["captions"] = caps[:24]
-            
+
         # 2. Hashtags (required, min 3)
         if not job.get("hashtags") or len(job.get("hashtags", [])) < 3:
             job["hashtags"] = ["#Mochi", "#CatDance", "#DinoCostume", "#CutePets"]
-            
+
         # 3. Render (required: background_asset, subtitle_style, output_basename)
         render = job.setdefault("render", {})
         if not render.get("background_asset"):
@@ -117,7 +128,7 @@ class _VertexBaseProvider(BaseProvider):
         if not render.get("output_basename"):
             job_id = job.get("job_id", "mochi-generated")
             render["output_basename"] = job_id
-            
+
         return job
 
     def generate_job(
@@ -127,7 +138,9 @@ class _VertexBaseProvider(BaseProvider):
         hero_registry: Optional[Dict[str, Any]] = None,
         quality_context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        self._quality_context = quality_context if isinstance(quality_context, dict) else None
+        self._quality_context = (
+            quality_context if isinstance(quality_context, dict) else None
+        )
         self._selected_hero = _select_target_hero(hero_registry, prd, inbox or [])
         if self._selected_hero:
             _persist_hero_bundle(self._selected_hero)
@@ -182,7 +195,7 @@ class _VertexBaseProvider(BaseProvider):
     def _vertex_ready(self) -> bool:
         if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
             return True
-            
+
         if not self.project_id:
             self._fallback_reason = "VERTEX_PROJECT_ID missing"
             return False
@@ -237,7 +250,9 @@ class _VertexBaseProvider(BaseProvider):
                     "Planner fail-loud: vertex_veo resolved to demo background_asset via fallback. "
                     "Set CAF_ALLOW_DEMO_BACKGROUND_FALLBACK=1 only for explicit dev-only runs."
                 )
-            if self._must_require_generated_video(context_text) and _job_uses_demo_background(job):
+            if self._must_require_generated_video(
+                context_text
+            ) and _job_uses_demo_background(job):
                 raise RuntimeError(
                     "Planner fail-loud: dance context requires generated video; demo background fallback is disallowed."
                 )
@@ -251,19 +266,21 @@ class _VertexBaseProvider(BaseProvider):
             )
         return job
 
-    def _finalize_media_handoff(self, job: Dict[str, Any], prd: Dict[str, Any]) -> Dict[str, Any]:
+    def _finalize_media_handoff(
+        self, job: Dict[str, Any], prd: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Attach planner-generated assets for end-to-end original media output.
 
         PR-25 wiring: try generating an Imagen seed frame and route through deterministic
         image_motion rendering.
         """
         self._attach_default_audio(job, prd)
-        
+
         # Ensure the rich prompt (with motion/style tokens) is preserved for the worker
         hero_desc = _hero_prompt_descriptor(self._selected_hero)
         rich_prompt = _seed_prompt_from_job(job, prd, hero_desc, self._quality_context)
         job["prompt"] = rich_prompt
-        
+
         context_text = _job_context_text(job, prd)
 
         # Prefer true lane-A generated video when available.
@@ -325,7 +342,9 @@ class _VertexBaseProvider(BaseProvider):
         )
         return job
 
-    def _try_generate_lane_a_video(self, job: Dict[str, Any], prd: Dict[str, Any]) -> str:
+    def _try_generate_lane_a_video(
+        self, job: Dict[str, Any], prd: Dict[str, Any]
+    ) -> str:
         # Base provider does not generate video assets.
         return ""
 
@@ -343,11 +362,11 @@ class _VertexBaseProvider(BaseProvider):
             return
 
         job["audio"] = {"audio_asset": audio_asset}
-        print(
-            f"INFO planner provider={self.name} audio_asset_selected={audio_asset}"
-        )
+        print(f"INFO planner provider={self.name} audio_asset_selected={audio_asset}")
 
-    def _try_generate_seed_frames(self, job: Dict[str, Any], prd: Dict[str, Any]) -> List[str]:
+    def _try_generate_seed_frames(
+        self, job: Dict[str, Any], prd: Dict[str, Any]
+    ) -> List[str]:
         if not self.project_id or not self.access_token:
             return []
 
@@ -358,7 +377,9 @@ class _VertexBaseProvider(BaseProvider):
         kitten_mode = _is_kitten_context(context)
         candidate_pool = desired
         if desired > 1 or kitten_mode:
-            candidate_pool = _clamp_int(os.environ.get("VERTEX_IMAGEN_CANDIDATES", "3"), 1, 6, 3)
+            candidate_pool = _clamp_int(
+                os.environ.get("VERTEX_IMAGEN_CANDIDATES", "3"), 1, 6, 3
+            )
             candidate_pool = max(candidate_pool, desired)
         image_batch = self._generate_image_batch(prompt, candidate_pool)
         if not image_batch:
@@ -448,7 +469,9 @@ class _VertexBaseProvider(BaseProvider):
 
     def _generate_content(self, prompt: str) -> str:
         if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
-            print(f"INFO planner provider={self.name} CAF_VEO_MOCK=1; bypassing Gemini planning call.")
+            print(
+                f"INFO planner provider={self.name} CAF_VEO_MOCK=1; bypassing Gemini planning call."
+            )
             # Return a mock job contract that matches the "dance loop" demo
             mock_job = {
                 "job_id": "mock-veo-dance-loop",
@@ -458,12 +481,12 @@ class _VertexBaseProvider(BaseProvider):
                     "length_seconds": 12,
                     "aspect_ratio": "9:16",
                     "fps": 30,
-                    "resolution": "1080x1920"
+                    "resolution": "1080x1920",
                 },
                 "script": {
                     "hook": "Mochi's Dino Dance!",
                     "voiceover": "Watch Mochi groovy in a dinosaur suit! This 12 second loop captures the magic of the studio.",
-                    "ending": "Follow for more!"
+                    "ending": "Follow for more!",
                 },
                 "shots": [
                     {
@@ -471,58 +494,57 @@ class _VertexBaseProvider(BaseProvider):
                         "t": 0,
                         "visual": "Mochi dancing in a dino suit in a studio.",
                         "action": "dance | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Mochi's Dino Dance!"
+                        "caption": "Mochi's Dino Dance!",
                     },
                     {
                         "shot_id": "shot_0002",
                         "t": 2,
                         "visual": "Mochi spinning in the dino suit.",
                         "action": "spin | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Spinning Mochi!"
+                        "caption": "Spinning Mochi!",
                     },
                     {
                         "shot_id": "shot_0003",
                         "t": 4,
                         "visual": "Mochi grooving with arm movements.",
                         "action": "groove | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Groovy moves!"
+                        "caption": "Groovy moves!",
                     },
                     {
                         "shot_id": "shot_0004",
                         "t": 6,
                         "visual": "Mochi doing a final pose.",
                         "action": "pose | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Ta-da!"
+                        "caption": "Ta-da!",
                     },
                     {
                         "shot_id": "shot_0005",
                         "t": 8,
                         "visual": "Mochi holding the pose.",
                         "action": "hold | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "Holding it!"
+                        "caption": "Holding it!",
                     },
                     {
                         "shot_id": "shot_0006",
                         "t": 10,
                         "visual": "Mochi walking off screen.",
                         "action": "walk_off | facts:camera=locked,brightness=mid,palette=#5F6A7A",
-                        "caption": "See ya!"
-                    }
+                        "caption": "See ya!",
+                    },
                 ],
                 "render": {
                     "background_asset": "assets/generated/mock-veo-dance-loop/veo-0001.mp4",
-                    "output_basename": "mock-veo-dance-loop"
-                }
+                    "output_basename": "mock-veo-dance-loop",
+                },
             }
             return json.dumps(mock_job)
 
         # Budget check
         est_input_tokens = len(prompt) // 4
         est_output_tokens = 4096
-        est_cost = (
-            (est_input_tokens / 1_000_000) * COST_GEMINI_PRO_INPUT_1M
-            + (est_output_tokens / 1_000_000) * COST_GEMINI_PRO_OUTPUT_1M
-        )
+        est_cost = (est_input_tokens / 1_000_000) * COST_GEMINI_PRO_INPUT_1M + (
+            est_output_tokens / 1_000_000
+        ) * COST_GEMINI_PRO_OUTPUT_1M
         if not self._budget.check_budget(est_cost):
             raise RuntimeError(f"Budget exceeded (estimated cost: ${est_cost:.4f})")
 
@@ -590,10 +612,12 @@ class VertexVeoProvider(_VertexBaseProvider):
     vertex_model_default = "gemini-2.5-flash"
     provider_name = "vertex_veo"
 
-    def _try_generate_lane_a_video(self, job: Dict[str, Any], prd: Dict[str, Any]) -> str:
+    def _try_generate_lane_a_video(
+        self, job: Dict[str, Any], prd: Dict[str, Any]
+    ) -> str:
         if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
             return "sandbox/assets/demo/dance_loop.mp4"
-            
+
         self._lane_a_error = ""
         if not self.project_id or not self.access_token:
             self._lane_a_error = "vertex auth not configured"
@@ -609,7 +633,9 @@ class VertexVeoProvider(_VertexBaseProvider):
                 f"reference_preview={preview}"
             )
         requested_duration = int(job.get("video", {}).get("length_seconds", 15))
-        duration = _normalize_veo_duration(requested_duration, has_references=bool(reference_images))
+        duration = _normalize_veo_duration(
+            requested_duration, has_references=bool(reference_images)
+        )
         fps = int(job.get("video", {}).get("fps", 30))
         if fps not in (24, 30):
             fps = 24
@@ -619,9 +645,15 @@ class VertexVeoProvider(_VertexBaseProvider):
             f"INFO planner provider={self.name} veo_video_request duration={duration}s "
             f"fps={fps} res={res} references={len(reference_images)}"
         )
-        candidate_count = _clamp_int(os.environ.get("VERTEX_VEO_CANDIDATES", "3"), 1, 3, 3)
-        min_score = _clamp_float(os.environ.get("VERTEX_VEO_MIN_MOTION_SCORE", "-9999"), -1e9, 1e9, -9999.0)
-        allow_low_if_any = os.environ.get("VERTEX_VEO_ALLOW_LOW_SCORE_IF_ANY", "1").strip().lower() in (
+        candidate_count = _clamp_int(
+            os.environ.get("VERTEX_VEO_CANDIDATES", "3"), 1, 3, 3
+        )
+        min_score = _clamp_float(
+            os.environ.get("VERTEX_VEO_MIN_MOTION_SCORE", "-9999"), -1e9, 1e9, -9999.0
+        )
+        allow_low_if_any = os.environ.get(
+            "VERTEX_VEO_ALLOW_LOW_SCORE_IF_ANY", "1"
+        ).strip().lower() in (
             "1",
             "true",
             "yes",
@@ -637,7 +669,9 @@ class VertexVeoProvider(_VertexBaseProvider):
         last_error = ""
         for idx in range(1, candidate_count + 1):
             prompt_i = _veo_candidate_prompt(base_prompt, idx, candidate_count)
-            video_bytes = self._generate_video_bytes(prompt_i, duration, reference_images)
+            video_bytes = self._generate_video_bytes(
+                prompt_i, duration, reference_images
+            )
             if (not video_bytes) and _looks_like_safety_block(self._lane_a_error):
                 safe_prompt_i = _sanitize_prompt_for_safety(prompt_i)
                 if safe_prompt_i != prompt_i:
@@ -667,7 +701,10 @@ class VertexVeoProvider(_VertexBaseProvider):
 
         if not candidates:
             if not self._lane_a_error:
-                self._lane_a_error = last_error or "Vertex predict response did not contain decodable video bytes"
+                self._lane_a_error = (
+                    last_error
+                    or "Vertex predict response did not contain decodable video bytes"
+                )
             return ""
 
         # Deterministic selection: prefer clip with closest cadence to demo dance_loop.
@@ -685,9 +722,7 @@ class VertexVeoProvider(_VertexBaseProvider):
                     f"threshold={min_score:.3f} allow_low_score_if_any=true using_best_available"
                 )
             else:
-                self._lane_a_error = (
-                    f"best candidate motion_score {best_score:.3f} below threshold {min_score:.3f}"
-                )
+                self._lane_a_error = f"best candidate motion_score {best_score:.3f} below threshold {min_score:.3f}"
                 return ""
 
         out_path = out_dir / "veo-0001.mp4"
@@ -710,9 +745,14 @@ class VertexVeoProvider(_VertexBaseProvider):
 
         est_cost = normalized_duration * COST_VERTEX_VEO_VIDEO_SEC
         if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
-            print(f"INFO planner provider={self.name} CAF_VEO_MOCK=1; bypassing priced generation and budget tracking.")
+            print(
+                f"INFO planner provider={self.name} CAF_VEO_MOCK=1; bypassing priced generation and budget tracking."
+            )
             # Return real video bytes to satisfy analysis logic
-            rel_path = self._asset_resolver.resolve_background_video(prompt or "") or "sandbox/assets/demo/dance_loop.mp4"
+            rel_path = (
+                self._asset_resolver.resolve_background_video(prompt or "")
+                or "sandbox/assets/demo/dance_loop.mp4"
+            )
             source_demo = _repo_root_path() / rel_path
             if source_demo.exists():
                 return source_demo.read_bytes()
@@ -806,7 +846,11 @@ class VertexVeoProvider(_VertexBaseProvider):
             return b""
 
         if not self._lane_a_error:
-            top_keys = ",".join(sorted(data.keys())[:12]) if isinstance(data, dict) else "non-dict"
+            top_keys = (
+                ",".join(sorted(data.keys())[:12])
+                if isinstance(data, dict)
+                else "non-dict"
+            )
             self._lane_a_error = (
                 "predict response missing bytes and media uri "
                 f"(top-level keys: {top_keys})"
@@ -841,7 +885,9 @@ class VertexVeoProvider(_VertexBaseProvider):
                 # Fall back to generic operations.get URL forms below.
                 op = None
             except Exception as ex:
-                self._lane_a_error = f"LRO fetchPredictOperation failed: {type(ex).__name__}: {ex}"
+                self._lane_a_error = (
+                    f"LRO fetchPredictOperation failed: {type(ex).__name__}: {ex}"
+                )
                 return {}
 
             if op is None:
@@ -864,12 +910,16 @@ class VertexVeoProvider(_VertexBaseProvider):
                         last_http_err = f"{op_url} -> HTTP {ex.code}: {msg[:180]}"
                         continue
                     except Exception as ex:
-                        self._lane_a_error = f"LRO poll failed: {type(ex).__name__}: {ex}"
+                        self._lane_a_error = (
+                            f"LRO poll failed: {type(ex).__name__}: {ex}"
+                        )
                         return {}
 
                 if op is None:
                     if last_http_err:
-                        self._lane_a_error = f"LRO polling failed across URLs: {last_http_err}"
+                        self._lane_a_error = (
+                            f"LRO polling failed across URLs: {last_http_err}"
+                        )
                     else:
                         self._lane_a_error = "LRO polling failed: no operation response"
                     return {}
@@ -898,15 +948,25 @@ class VertexVeoProvider(_VertexBaseProvider):
         self._lane_a_error = f"LRO timeout after {timeout_s}s"
         return {}
 
-    def _build_veo_reference_images(self, job: Dict[str, Any], prd: Dict[str, Any]) -> List[Dict[str, Any]]:
-        if os.environ.get("VERTEX_VEO_DISABLE_REFERENCES", "").strip().lower() in ("1", "true", "yes"):
+    def _build_veo_reference_images(
+        self, job: Dict[str, Any], prd: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        if os.environ.get("VERTEX_VEO_DISABLE_REFERENCES", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
             return []
 
         refs: List[pathlib.Path] = []
         self._last_reference_image_rels = []
 
         # PR-34.8a: storyboard-first I2V defaults.
-        storyboard_ctx = self._quality_context.get("storyboard_i2v", {}) if isinstance(self._quality_context, dict) else {}
+        storyboard_ctx = (
+            self._quality_context.get("storyboard_i2v", {})
+            if isinstance(self._quality_context, dict)
+            else {}
+        )
         if isinstance(storyboard_ctx, dict):
             seed_assets = storyboard_ctx.get("seed_frame_assets", [])
             if isinstance(seed_assets, list):
@@ -949,7 +1009,9 @@ class VertexVeoProvider(_VertexBaseProvider):
                 continue
             seen.add(k)
             uniq.append(p)
-        max_refs = _clamp_int(os.environ.get("VERTEX_VEO_REFERENCE_IMAGES", "3"), 0, 3, 3)
+        max_refs = _clamp_int(
+            os.environ.get("VERTEX_VEO_REFERENCE_IMAGES", "3"), 0, 3, 3
+        )
         if max_refs <= 0:
             return []
         uniq = uniq[:max_refs]
@@ -964,7 +1026,9 @@ class VertexVeoProvider(_VertexBaseProvider):
             except Exception:
                 continue
             try:
-                rel = str(p.resolve().relative_to((_repo_root_path() / "sandbox").resolve())).replace("\\", "/")
+                rel = str(
+                    p.resolve().relative_to((_repo_root_path() / "sandbox").resolve())
+                ).replace("\\", "/")
                 self._last_reference_image_rels.append(rel)
             except Exception:
                 pass
@@ -1057,7 +1121,11 @@ def _extract_first_media_uri(node: Any) -> str:
             val = node.get(key)
             if isinstance(val, str) and val.strip():
                 v = val.strip()
-                if v.startswith("gs://") or v.startswith("https://") or v.startswith("http://"):
+                if (
+                    v.startswith("gs://")
+                    or v.startswith("https://")
+                    or v.startswith("http://")
+                ):
                     return v
         for val in node.values():
             found = _extract_first_media_uri(val)
@@ -1152,7 +1220,7 @@ def _normalize_veo_duration(requested: int, has_references: bool = False) -> int
         supported = (8,)
     else:
         supported = (4, 6, 8, 12)
-        
+
     closest = min(supported, key=lambda x: abs(x - requested))
     return closest
 
@@ -1236,7 +1304,10 @@ def _select_target_hero(
 
     # Default to Mochi when present.
     for hero in heroes:
-        if isinstance(hero, dict) and str(hero.get("hero_id", "")).lower() == "mochi-grey-tabby":
+        if (
+            isinstance(hero, dict)
+            and str(hero.get("hero_id", "")).lower() == "mochi-grey-tabby"
+        ):
             return hero
     return None
 
@@ -1251,7 +1322,14 @@ def _hero_prompt_descriptor(hero: Optional[Dict[str, Any]]) -> str:
     traits = hero.get("traits")
     trait_bits: List[str] = []
     if isinstance(traits, dict):
-        for key in ("coat_type", "primary_color", "secondary_color", "pattern", "eye_color", "distinguishing_marks"):
+        for key in (
+            "coat_type",
+            "primary_color",
+            "secondary_color",
+            "pattern",
+            "eye_color",
+            "distinguishing_marks",
+        ):
             val = traits.get(key)
             if isinstance(val, str) and val.strip():
                 trait_bits.append(f"{key.replace('_', ' ')}: {val.strip()}")
@@ -1290,7 +1368,9 @@ def _persist_hero_bundle(hero: Dict[str, Any]) -> None:
     out_dir = root / "sandbox" / "assets" / "generated" / "heroes" / safe_hero_id
     out_dir.mkdir(parents=True, exist_ok=True)
     profile_path = out_dir / "hero_profile.json"
-    profile_path.write_text(json.dumps(hero, indent=2, sort_keys=True), encoding="utf-8")
+    profile_path.write_text(
+        json.dumps(hero, indent=2, sort_keys=True), encoding="utf-8"
+    )
 
     seeds = _hero_seed_frames(hero)
     if seeds:
@@ -1303,7 +1383,9 @@ def _persist_hero_bundle(hero: Dict[str, Any]) -> None:
                 pass
 
 
-def _merge_unique_seeds(primary: List[str], secondary: List[str], max_items: int) -> List[str]:
+def _merge_unique_seeds(
+    primary: List[str], secondary: List[str], max_items: int
+) -> List[str]:
     out: List[str] = []
     for s in primary + secondary:
         if not isinstance(s, str) or not s.startswith("assets/"):
@@ -1340,13 +1422,13 @@ def _seed_prompt_from_job(
     style_tokens = []
     motion_tokens = []
     if isinstance(quality_context, dict):
-         reverse_prompt_data = quality_context.get("reverse_prompt")
-         if isinstance(reverse_prompt_data, dict):
-             suggestions = reverse_prompt_data.get("suggestions", {})
-             style_tokens = suggestions.get("vendor_style_tokens", [])
-         
-         # Motion Translation
-         motion_tokens = _translate_motion_metadata(quality_context)
+        reverse_prompt_data = quality_context.get("reverse_prompt")
+        if isinstance(reverse_prompt_data, dict):
+            suggestions = reverse_prompt_data.get("suggestions", {})
+            style_tokens = suggestions.get("vendor_style_tokens", [])
+
+        # Motion Translation
+        motion_tokens = _translate_motion_metadata(quality_context)
 
     parts = [p for p in [user_prompt, niche, hook, voiceover, hero_desc] if p]
     if style_tokens:
@@ -1362,9 +1444,13 @@ def _seed_prompt_from_job(
     if "costume" in context:
         consistency_hints.append("same costume in every frame")
     if _is_dance_context(context):
-        consistency_hints.append("same character identity and outfit across all generated frames")
+        consistency_hints.append(
+            "same character identity and outfit across all generated frames"
+        )
         consistency_hints.append("consistent camera style and lighting")
-        consistency_hints.append("dance choreography synchronized to a steady upbeat beat")
+        consistency_hints.append(
+            "dance choreography synchronized to a steady upbeat beat"
+        )
         consistency_hints.append("clear full-body motion, avoid static posing")
         consistency_hints.extend(_dance_loop_directives(context))
     style_hints = _style_profile_hints(context)
@@ -1434,17 +1520,31 @@ def _dance_loop_directives(context: str) -> List[str]:
         "loop-safe choreography: ending pose, facing, and paw position should align with opening pose",
     ]
     if "bee" in context:
-        hints.append("bee kigurumi onesie: yellow-black stripes, soft plush texture, small antennae")
+        hints.append(
+            "bee kigurumi onesie: yellow-black stripes, soft plush texture, small antennae"
+        )
     if "dino" in context or "dinosaur" in context:
-        hints.append("full-length one-piece green dinosaur kigurumi onesie with sleeves and full leg coverage")
-        hints.append("lighter green belly panel, hood spikes, cartoon dino snout details")
-        hints.append("avoid two-piece clothing; keep costume as a single plush pajama suit")
+        hints.append(
+            "full-length one-piece green dinosaur kigurumi onesie with sleeves and full leg coverage"
+        )
+        hints.append(
+            "lighter green belly panel, hood spikes, cartoon dino snout details"
+        )
+        hints.append(
+            "avoid two-piece clothing; keep costume as a single plush pajama suit"
+        )
     if "mochi" in context:
-        hints.append("preserve Mochi grey-tabby face markings and body pattern consistently in every frame")
+        hints.append(
+            "preserve Mochi grey-tabby face markings and body pattern consistently in every frame"
+        )
     if "cats" in context or "group" in context:
-        hints.append("Mochi dancing together with a group of 4 other costumed cats (tiger, bear, bee, butterfly) as seen in the demo")
+        hints.append(
+            "Mochi dancing together with a group of 4 other costumed cats (tiger, bear, bee, butterfly) as seen in the demo"
+        )
     if "dance loop demo style" in context or "demo dance loop style" in context:
-        hints.append("cozy living-room dance-party feel with playful social-video energy, matching the demo background")
+        hints.append(
+            "cozy living-room dance-party feel with playful social-video energy, matching the demo background"
+        )
     return hints
 
 
@@ -1458,7 +1558,9 @@ def _is_kitten_context(text: str) -> bool:
     return any(k in text for k in keywords)
 
 
-def _choose_motion_preset(job: Dict[str, Any], prd: Dict[str, Any], seed_count: int) -> str:
+def _choose_motion_preset(
+    job: Dict[str, Any], prd: Dict[str, Any], seed_count: int
+) -> str:
     text = _job_context_text(job, prd)
     if seed_count >= 2 and _is_dance_context(text):
         return "cut_3frame"
@@ -1642,20 +1744,19 @@ def _costume_profile_hints(context: str) -> List[str]:
     return hints
 
 
-
 def _translate_motion_metadata(quality_context: Optional[Dict[str, Any]]) -> List[str]:
     """Translates analysis metadata into Veo3 motion prompts."""
     if not isinstance(quality_context, dict):
         return []
-    
+
     prompts = []
-    
+
     # 1. Video Analysis Parsing (pattern.choreography, pattern.camera)
     # Assumes quality_context may contain a 'video_analysis' key with the v1 schema
     video_analysis = quality_context.get("video_analysis", {})
     if video_analysis:
         pattern = video_analysis.get("pattern", {})
-        
+
         # Energy Curve
         energy = pattern.get("choreography", {}).get("energy_curve")
         if energy == "build":
@@ -1664,7 +1765,7 @@ def _translate_motion_metadata(quality_context: Optional[Dict[str, Any]]) -> Lis
             prompts.append("sudden drop in energy, dramatic pause")
         elif energy == "sustain":
             prompts.append("consistent high energy, sustained motion")
-            
+
         # Camera Pattern
         shot_patterns = pattern.get("camera", {}).get("shot_pattern", [])
         if "static" in shot_patterns or "locked" in shot_patterns:
@@ -1679,7 +1780,7 @@ def _translate_motion_metadata(quality_context: Optional[Dict[str, Any]]) -> Lis
     reverse_prompt = quality_context.get("reverse_prompt", {})
     if reverse_prompt:
         facts = reverse_prompt.get("truth", {}).get("visual_facts", {})
-        
+
         # Camera Mode
         cam_mode = facts.get("camera_movement_mode")
         if cam_mode == "locked":
@@ -1687,18 +1788,21 @@ def _translate_motion_metadata(quality_context: Optional[Dict[str, Any]]) -> Lis
             prompts.append("tripod shot, locked camera")
         elif cam_mode == "handheld":
             prompts.append("handheld camera motion, organic shake")
-            
+
         # Motion Intensity
         # Determine average intensity from shots if available, or top-level fact
         shots = reverse_prompt.get("truth", {}).get("shots", [])
         if shots:
-            avg_intensity = sum(s.get("motion_intensity", 0) for s in shots) / len(shots)
+            avg_intensity = sum(s.get("motion_intensity", 0) for s in shots) / len(
+                shots
+            )
             if avg_intensity > 0.7:
                 prompts.append("high energy, fast paced, dynamic movement")
             elif avg_intensity < 0.3:
                 prompts.append("subtle motion, slow movement, calm")
 
-    return list(set(prompts)) # Simple dedup
+    return list(set(prompts))  # Simple dedup
+
 
 def _costume_hints_from_ids(ids: List[str]) -> List[str]:
     data = _load_costume_profiles()
@@ -1880,7 +1984,7 @@ def _normalized_best_lag_correlation(a: List[float], b: List[float]) -> float:
             x = aa_n[lag:]
             y = bb_n[: len(x)]
         else:
-            x = aa_n[: lag]
+            x = aa_n[:lag]
             y = bb_n[-lag:]
         if len(x) < 4:
             continue
@@ -1920,7 +2024,11 @@ def _env_float(name: str, default: float) -> float:
 
 def _looks_like_safety_block(msg: str) -> bool:
     text = (msg or "").lower()
-    return ("sensitive words" in text) or ("responsible ai" in text) or ("support codes" in text)
+    return (
+        ("sensitive words" in text)
+        or ("responsible ai" in text)
+        or ("support codes" in text)
+    )
 
 
 def _sanitize_prompt_for_safety(prompt: str) -> str:

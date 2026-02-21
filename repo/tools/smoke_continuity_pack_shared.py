@@ -6,7 +6,10 @@ import pathlib
 import subprocess
 import sys
 
-from repo.services.planner.planner_cli import _apply_continuity_pack_hints, _load_quality_context
+from repo.services.planner.planner_cli import (
+    _apply_continuity_pack_hints,
+    _load_quality_context,
+)
 
 
 def _repo_root() -> pathlib.Path:
@@ -23,9 +26,16 @@ def main(argv: list[str]) -> int:
     quality_context = _load_quality_context(str(root), None)
     job = {"job_id": "smoke-segment-stitch-runtime"}
     job = _apply_continuity_pack_hints(job, quality_context)
-    relpath = job.get("continuity_pack", {}).get("relpath") if isinstance(job.get("continuity_pack"), dict) else None
+    relpath = (
+        job.get("continuity_pack", {}).get("relpath")
+        if isinstance(job.get("continuity_pack"), dict)
+        else None
+    )
     if relpath != "repo/examples/episode_continuity_pack.v1.example.json":
-        print(f"ERROR: planner did not apply continuity pack relpath, got {relpath!r}", file=sys.stderr)
+        print(
+            f"ERROR: planner did not apply continuity pack relpath, got {relpath!r}",
+            file=sys.stderr,
+        )
         return 1
 
     job_id = "smoke-segment-stitch-runtime"
@@ -35,13 +45,28 @@ def main(argv: list[str]) -> int:
     patched["continuity_pack"] = {"relpath": relpath}
     job_path.write_text(json.dumps(patched, indent=2) + "\n", encoding="utf-8")
 
-    decide_cmd = [sys.executable, "-m", "repo.tools.decide_quality_action", "--job-id", job_id, "--max-retries", "0"]
+    decide_cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.decide_quality_action",
+        "--job-id",
+        job_id,
+        "--max-retries",
+        "0",
+    ]
     print("RUN:", " ".join(decide_cmd))
     try:
         subprocess.check_call(decide_cmd, cwd=str(root))
 
-        decision_path = root / "sandbox" / "logs" / job_id / "qc" / "quality_decision.v1.json"
-        validate_cmd = [sys.executable, "-m", "repo.tools.validate_quality_decision", str(decision_path)]
+        decision_path = (
+            root / "sandbox" / "logs" / job_id / "qc" / "quality_decision.v1.json"
+        )
+        validate_cmd = [
+            sys.executable,
+            "-m",
+            "repo.tools.validate_quality_decision",
+            str(decision_path),
+        ]
         print("RUN:", " ".join(validate_cmd))
         subprocess.check_call(validate_cmd, cwd=str(root))
 
@@ -49,10 +74,16 @@ def main(argv: list[str]) -> int:
         d_relpath = decision.get("inputs", {}).get("continuity_pack_relpath")
         action = decision.get("decision", {}).get("action")
         if d_relpath != "repo/examples/episode_continuity_pack.v1.example.json":
-            print(f"ERROR: quality decision did not consume continuity pack relpath, got {d_relpath!r}", file=sys.stderr)
+            print(
+                f"ERROR: quality decision did not consume continuity pack relpath, got {d_relpath!r}",
+                file=sys.stderr,
+            )
             return 1
         if action != "block_for_costume":
-            print(f"ERROR: expected block_for_costume due to continuity rule, got {action!r}", file=sys.stderr)
+            print(
+                f"ERROR: expected block_for_costume due to continuity rule, got {action!r}",
+                file=sys.stderr,
+            )
             return 1
 
         print("OK:", job_path)

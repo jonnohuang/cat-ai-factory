@@ -28,7 +28,9 @@ def _load(path: pathlib.Path) -> Any:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_finalize_gate path/to/finalize_gate.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_finalize_gate path/to/finalize_gate.v1.json"
+        )
         return 1
 
     target = pathlib.Path(argv[1]).resolve()

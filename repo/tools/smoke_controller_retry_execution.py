@@ -51,10 +51,30 @@ def main(argv: list[str]) -> int:
         "video_relpath": f"sandbox/output/{job_id}/final.mp4",
         "generated_at": "2026-02-17T00:00:00Z",
         "metrics": {
-            "identity_consistency": {"available": True, "score": 0.90, "threshold": 0.70, "pass": True},
-            "mask_edge_bleed": {"available": True, "score": 0.90, "threshold": 0.60, "pass": True},
-            "temporal_stability": {"available": True, "score": 0.50, "threshold": 0.70, "pass": False},
-            "loop_seam": {"available": True, "score": 0.52, "threshold": 0.70, "pass": False},
+            "identity_consistency": {
+                "available": True,
+                "score": 0.90,
+                "threshold": 0.70,
+                "pass": True,
+            },
+            "mask_edge_bleed": {
+                "available": True,
+                "score": 0.90,
+                "threshold": 0.60,
+                "pass": True,
+            },
+            "temporal_stability": {
+                "available": True,
+                "score": 0.50,
+                "threshold": 0.70,
+                "pass": False,
+            },
+            "loop_seam": {
+                "available": True,
+                "score": 0.52,
+                "threshold": 0.70,
+                "pass": False,
+            },
             "audio_video": {
                 "audio_stream_present": True,
                 "av_sync_sec": 0.0,
@@ -63,7 +83,11 @@ def main(argv: list[str]) -> int:
                 "pass": True,
             },
         },
-        "overall": {"score": 0.764, "pass": False, "failed_metrics": ["temporal_stability", "loop_seam"]},
+        "overall": {
+            "score": 0.764,
+            "pass": False,
+            "failed_metrics": ["temporal_stability", "loop_seam"],
+        },
     }
     two_pass = {
         "version": "two_pass_orchestration.v1",
@@ -89,7 +113,10 @@ def main(argv: list[str]) -> int:
     print("RUN:", " ".join(run_cmd))
     proc = subprocess.run(run_cmd, cwd=str(root), env=env)
     if proc.returncode == 0:
-        print("ERROR: expected bounded retry loop to end non-zero under forced motion failures", file=sys.stderr)
+        print(
+            "ERROR: expected bounded retry loop to end non-zero under forced motion failures",
+            file=sys.stderr,
+        )
         return 1
 
     if not retry_plan_path.exists():
@@ -101,15 +128,26 @@ def main(argv: list[str]) -> int:
     events = _load_events(events_path)
     names = [str(e.get("event", "")) for e in events]
     if "QUALITY_RETRY_EXECUTION" not in names:
-        print("ERROR: expected QUALITY_RETRY_EXECUTION event in controller loop", file=sys.stderr)
+        print(
+            "ERROR: expected QUALITY_RETRY_EXECUTION event in controller loop",
+            file=sys.stderr,
+        )
         return 1
     if "QUALITY_RETRY_PLAN" not in names:
-        print("ERROR: expected QUALITY_RETRY_PLAN event in controller loop", file=sys.stderr)
+        print(
+            "ERROR: expected QUALITY_RETRY_PLAN event in controller loop",
+            file=sys.stderr,
+        )
         return 1
     if "QUALITY_ADVISORY" not in names:
-        print("ERROR: expected QUALITY_ADVISORY event in controller loop", file=sys.stderr)
+        print(
+            "ERROR: expected QUALITY_ADVISORY event in controller loop", file=sys.stderr
+        )
         return 1
-    if not attempts_root.exists() or len([p for p in attempts_root.iterdir() if p.is_dir()]) == 0:
+    if (
+        not attempts_root.exists()
+        or len([p for p in attempts_root.iterdir() if p.is_dir()]) == 0
+    ):
         print("ERROR: expected at least one retry attempt directory", file=sys.stderr)
         return 1
 

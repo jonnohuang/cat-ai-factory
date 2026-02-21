@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 from typing import Any, Dict, List, Optional
+
 from .asset_resolver import AssetResolver
 
 
@@ -16,7 +17,13 @@ class PointerResolver:
     def _exists(self, relpath: str) -> bool:
         return (self.repo_root / relpath).exists()
 
-    def _resolve_core_pointer(self, tags: List[str], key: str, pointers: Dict[str, str], rejected: List[Dict[str, Any]]):
+    def _resolve_core_pointer(
+        self,
+        tags: List[str],
+        key: str,
+        pointers: Dict[str, str],
+        rejected: List[Dict[str, Any]],
+    ):
         """Helper to resolve a core contract pointer via AssetResolver."""
         paths = self.asset_resolver.find_assets(tags, asset_type="contract")
         if paths:
@@ -25,9 +32,21 @@ class PointerResolver:
                 pointers[key] = paths[0]
                 return
             else:
-                rejected.append({"candidate_relpath": paths[0], "reason": "file_missing_on_disk", "tags": tags})
+                rejected.append(
+                    {
+                        "candidate_relpath": paths[0],
+                        "reason": "file_missing_on_disk",
+                        "tags": tags,
+                    }
+                )
         else:
-            rejected.append({"candidate_relpath": f"tag_query:{tags}", "reason": "not_found_in_manifest", "tags": tags})
+            rejected.append(
+                {
+                    "candidate_relpath": f"tag_query:{tags}",
+                    "reason": "not_found_in_manifest",
+                    "tags": tags,
+                }
+            )
 
     def resolve(
         self,
@@ -43,15 +62,25 @@ class PointerResolver:
         rejected: List[Dict[str, Any]] = []
 
         # 1. Canon / Shared Contracts (Resolved via RAG)
-        self._resolve_core_pointer(["hero", "registry"], "hero_registry", pointers, rejected)
-        self._resolve_core_pointer(["bible", "series"], "series_bible", pointers, rejected)
-        self._resolve_core_pointer(["engine", "registry"], "engine_adapter_registry", pointers, rejected)
-        self._resolve_core_pointer(["promotion", "registry"], "promotion_registry", pointers, rejected)
+        self._resolve_core_pointer(
+            ["hero", "registry"], "hero_registry", pointers, rejected
+        )
+        self._resolve_core_pointer(
+            ["bible", "series"], "series_bible", pointers, rejected
+        )
+        self._resolve_core_pointer(
+            ["engine", "registry"], "engine_adapter_registry", pointers, rejected
+        )
+        self._resolve_core_pointer(
+            ["promotion", "registry"], "promotion_registry", pointers, rejected
+        )
 
         # Special Case: Audio Manifest (Dynamic Asset)
-        audio_paths = self.asset_resolver.find_assets(["audio", "manifest"], asset_type="contract")
+        audio_paths = self.asset_resolver.find_assets(
+            ["audio", "manifest"], asset_type="contract"
+        )
         if audio_paths:
-             pointers["audio_manifest"] = audio_paths[0]
+            pointers["audio_manifest"] = audio_paths[0]
         else:
             # Fallback legacy check for audio manifest since it's in sandbox
             audio_man = "sandbox/assets/audio/audio_manifest.v1.json"
@@ -64,19 +93,31 @@ class PointerResolver:
         target_tags = ["quality", "target"]
         if "strict_motion" in policy:
             target_tags.append("strict")
-            
+
         qt_paths = self.asset_resolver.find_assets(target_tags, asset_type="contract")
         if qt_paths:
             pointers["quality_target"] = qt_paths[0]
         else:
             # Fallback to standard quality target if strict is missing
-            std_qt = self.asset_resolver.find_assets(["quality", "target"], asset_type="contract")
+            std_qt = self.asset_resolver.find_assets(
+                ["quality", "target"], asset_type="contract"
+            )
             if std_qt:
                 pointers["quality_target"] = std_qt[0]
                 if "strict" in target_tags:
-                    rejected.append({"candidate_relpath": "strict_quality_target", "reason": "missing_falling_back_to_std"})
+                    rejected.append(
+                        {
+                            "candidate_relpath": "strict_quality_target",
+                            "reason": "missing_falling_back_to_std",
+                        }
+                    )
             else:
-                rejected.append({"candidate_relpath": "quality_target_query", "reason": "not_found_in_manifest"})
+                rejected.append(
+                    {
+                        "candidate_relpath": "quality_target_query",
+                        "reason": "not_found_in_manifest",
+                    }
+                )
 
         # 3. Motion / Analyzer Artifacts (Keyword Heuristic)
         motion_intent = str(brief.get("motion", "")).lower()
@@ -85,18 +126,32 @@ class PointerResolver:
 
         if "dance" in combined_intent or "loop" in combined_intent:
             # Resolve pose via RAG
-            poses = self.asset_resolver.find_assets(["dance", "loop", "pose"], asset_type="contract")
+            poses = self.asset_resolver.find_assets(
+                ["dance", "loop", "pose"], asset_type="contract"
+            )
             if poses:
                 pointers["pose_checkpoint"] = poses[0]
             else:
-                rejected.append({"candidate_relpath": "dance_loop_pose_contract_rag", "reason": "not_found_in_asset_manifest"})
+                rejected.append(
+                    {
+                        "candidate_relpath": "dance_loop_pose_contract_rag",
+                        "reason": "not_found_in_asset_manifest",
+                    }
+                )
 
             # Resolve beat via RAG
-            beats = self.asset_resolver.find_assets(["dance", "loop", "beat"], asset_type="contract")
+            beats = self.asset_resolver.find_assets(
+                ["dance", "loop", "beat"], asset_type="contract"
+            )
             if beats:
                 pointers["beat_grid"] = beats[0]
             else:
-                rejected.append({"candidate_relpath": "dance_loop_beat_contract_rag", "reason": "not_found_in_asset_manifest"})
+                rejected.append(
+                    {
+                        "candidate_relpath": "dance_loop_beat_contract_rag",
+                        "reason": "not_found_in_asset_manifest",
+                    }
+                )
 
         return {
             "version": "pointer_resolution.v1",

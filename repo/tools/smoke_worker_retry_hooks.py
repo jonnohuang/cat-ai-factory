@@ -28,7 +28,14 @@ def main(argv: list[str]) -> int:
     job_path = root / "sandbox" / "jobs" / f"{job_id}.job.json"
     qc_dir = root / "sandbox" / "logs" / job_id / "qc"
     retry_plan_path = qc_dir / "retry_plan.v1.json"
-    report_path = root / "sandbox" / "output" / job_id / "segments" / "segment_stitch_report.v1.json"
+    report_path = (
+        root
+        / "sandbox"
+        / "output"
+        / job_id
+        / "segments"
+        / "segment_stitch_report.v1.json"
+    )
     result_path = root / "sandbox" / "output" / job_id / "result.json"
 
     prep_cmd = [sys.executable, "-m", "repo.tools.smoke_segment_stitch_runtime"]
@@ -73,25 +80,48 @@ def main(argv: list[str]) -> int:
     env = dict(os.environ)
     env["CAF_RETRY_PLAN_PATH"] = str(retry_plan_path.resolve())
     env["CAF_RETRY_ATTEMPT_ID"] = "run-0002"
-    run_worker = [sys.executable, "-m", "repo.worker.render_ffmpeg", "--job", str(job_path)]
+    run_worker = [
+        sys.executable,
+        "-m",
+        "repo.worker.render_ffmpeg",
+        "--job",
+        str(job_path),
+    ]
     print("RUN:", " ".join(run_worker))
     subprocess.check_call(run_worker, cwd=str(root), env=env)
 
-    validate_cmd = [sys.executable, "-m", "repo.tools.validate_segment_stitch_report", str(report_path)]
+    validate_cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.validate_segment_stitch_report",
+        str(report_path),
+    ]
     print("RUN:", " ".join(validate_cmd))
     subprocess.check_call(validate_cmd, cwd=str(root))
 
     report = _load(report_path)
     hook = report.get("retry_hook_applied")
     if not isinstance(hook, dict):
-        print("ERROR: segment stitch report missing retry_hook_applied", file=sys.stderr)
+        print(
+            "ERROR: segment stitch report missing retry_hook_applied", file=sys.stderr
+        )
         return 1
     if hook.get("retry_type") != "motion":
-        print(f"ERROR: expected retry_type=motion, got {hook.get('retry_type')!r}", file=sys.stderr)
+        print(
+            f"ERROR: expected retry_type=motion, got {hook.get('retry_type')!r}",
+            file=sys.stderr,
+        )
         return 1
-    seg_ids = [str(s.get("segment_id")) for s in report.get("segments", []) if isinstance(s, dict)]
+    seg_ids = [
+        str(s.get("segment_id"))
+        for s in report.get("segments", [])
+        if isinstance(s, dict)
+    ]
     if seg_ids != ["seg_002"]:
-        print(f"ERROR: expected only seg_002 after retry-selected hook, got {seg_ids!r}", file=sys.stderr)
+        print(
+            f"ERROR: expected only seg_002 after retry-selected hook, got {seg_ids!r}",
+            file=sys.stderr,
+        )
         return 1
 
     result = _load(result_path)

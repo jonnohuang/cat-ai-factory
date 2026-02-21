@@ -2,15 +2,21 @@
 """
 Debug script to list Vertex AI operations for Veo.
 """
+
+import json
 import os
 import sys
-import requests
+
 import google.auth
 import google.auth.transport.requests
-import json
+import requests
+
 
 def load_env():
-    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env")
+    env_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        ".env",
+    )
     if os.path.exists(env_path):
         with open(env_path) as f:
             for line in f:
@@ -20,33 +26,32 @@ def load_env():
                     if key and val:
                         os.environ[key.strip()] = val.strip().strip('"').strip("'")
 
+
 def get_access_token():
     load_env()
     # Sanitize environment: if GOOGLE_APPLICATION_CREDENTIALS points to a missing file, unset it
     gac = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if gac and not os.path.exists(gac):
         del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-        
+
     scopes = [
         "https://www.googleapis.com/auth/cloud-platform",
-        "https://www.googleapis.com/auth/generative-language.retriever", # Try broad
-        "https://www.googleapis.com/auth/generative-language"
+        "https://www.googleapis.com/auth/generative-language.retriever",  # Try broad
+        "https://www.googleapis.com/auth/generative-language",
     ]
     creds, project = google.auth.default(scopes=scopes)
     auth_req = google.auth.transport.requests.Request()
     creds.refresh(auth_req)
     return creds.token, project
 
+
 def main():
     token, project = get_access_token()
     project = os.environ.get("GOOGLE_CLOUD_PROJECT") or project
     location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
     print(f"Listing operations for {project} in {location}...")
-    
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     # Try standard operations endpoint (regional)
     url = f"https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/operations"
@@ -72,7 +77,7 @@ def main():
     # No list endpoint for publishers/google/operations usually.
     # Try direct access on v1beta1 publisher path for known ID
     op_id = "74957c71-5d84-44ee-a0a3-7613adc13b5e"
-    
+
     # 1. v1beta1 Publisher Operations Collection (Direct)
     url_beta_pub = f"https://{location}-aiplatform.googleapis.com/v1beta1/projects/{project}/locations/{location}/publishers/google/operations/{op_id}"
     _check_ops(url_beta_pub, headers, "v1beta1 Publisher Direct")
@@ -103,6 +108,7 @@ def main():
     else:
         print("Skipping API Key check (GEMINI_API_KEY not set)")
 
+
 def _check_ops(url, headers, label):
     print(f"Checking {label} operations at {url}...")
     resp = requests.get(url, headers=headers)
@@ -110,12 +116,13 @@ def _check_ops(url, headers, label):
         print(f"ERROR: {resp.status_code}")
         print(resp.text)
         return
-        
+
     ops = resp.json().get("operations", [])
     print(f"Found {len(ops)} operations.")
     for op in ops[:5]:
         print(f"Name: {op.get('name')}")
         print("-" * 20)
+
 
 if __name__ == "__main__":
     main()

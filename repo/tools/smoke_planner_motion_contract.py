@@ -10,7 +10,9 @@ import sys
 
 
 def _run(cmd: list[str], *, env: dict[str, str]) -> tuple[int, str]:
-    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+    p = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env
+    )
     out = p.stdout or ""
     print(out, end="")
     return p.returncode, out
@@ -59,7 +61,9 @@ def main(argv: list[str]) -> int:
         print("ERROR: could not locate generated job path", file=sys.stderr)
         return 1
 
-    vrc, _ = _run([sys.executable, "-m", "repo.tools.validate_job", str(job_path)], env=env)
+    vrc, _ = _run(
+        [sys.executable, "-m", "repo.tools.validate_job", str(job_path)], env=env
+    )
     if vrc != 0:
         print("ERROR: generated job failed validate_job", file=sys.stderr)
         return 1
@@ -85,7 +89,10 @@ def main(argv: list[str]) -> int:
         constraints = gen.get("motion_constraints", [])
         token = f"pose_contract:{relpath}"
         if isinstance(constraints, list) and constraints and token not in constraints:
-            print("ERROR: expected pose_contract token in generation_policy.motion_constraints", file=sys.stderr)
+            print(
+                "ERROR: expected pose_contract token in generation_policy.motion_constraints",
+                file=sys.stderr,
+            )
             return 1
 
     print("OK: planner motion_contract smoke")

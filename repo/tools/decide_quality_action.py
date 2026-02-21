@@ -3,6 +3,7 @@
 Deterministic quality policy engine.
 Writes sandbox/logs/<job_id>/qc/quality_decision.v1.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,7 +33,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _load_json(path: pathlib.Path) -> Optional[Dict[str, Any]]:
@@ -69,12 +75,17 @@ def _find_segment_plan(project_root: pathlib.Path) -> Optional[pathlib.Path]:
             continue
         for f in sorted(p.rglob("*.json")):
             data = _load_json(f)
-            if isinstance(data, dict) and data.get("version") == "segment_stitch_plan.v1":
+            if (
+                isinstance(data, dict)
+                and data.get("version") == "segment_stitch_plan.v1"
+            ):
                 return f
     return None
 
 
-def _job_path_from_job_id(project_root: pathlib.Path, job_id: str) -> Optional[pathlib.Path]:
+def _job_path_from_job_id(
+    project_root: pathlib.Path, job_id: str
+) -> Optional[pathlib.Path]:
     p = project_root / "sandbox" / "jobs" / f"{job_id}.job.json"
     if p.exists():
         return p
@@ -111,13 +122,19 @@ def _load_pointer_resolution_from_job(
         return None, None, "job contract unreadable"
 
     pointer_names = ("motion_contract", "quality_target", "continuity_pack")
-    declared = [name for name in pointer_names if _job_pointer_value(job, name) is not None]
+    declared = [
+        name for name in pointer_names if _job_pointer_value(job, name) is not None
+    ]
     if not declared:
         return None, None, None
 
     resolution = job.get("pointer_resolution")
     if not isinstance(resolution, dict):
-        return None, None, f"pointer_resolution missing for declared pointers: {declared}"
+        return (
+            None,
+            None,
+            f"pointer_resolution missing for declared pointers: {declared}",
+        )
     if resolution.get("version") != "pointer_resolution.v1":
         return None, None, "pointer_resolution version mismatch"
 
@@ -129,16 +146,32 @@ def _load_pointer_resolution_from_job(
     required_set = set(required) if isinstance(required, list) else set()
     for pointer_name in declared:
         if pointer_name not in required_set:
-            return resolution, None, f"pointer_resolution.required missing '{pointer_name}'"
+            return (
+                resolution,
+                None,
+                f"pointer_resolution.required missing '{pointer_name}'",
+            )
         selected_row = selected.get(pointer_name)
         if not isinstance(selected_row, dict):
-            return resolution, None, f"pointer_resolution.selected missing '{pointer_name}'"
+            return (
+                resolution,
+                None,
+                f"pointer_resolution.selected missing '{pointer_name}'",
+            )
         selected_relpath = selected_row.get("relpath")
         if not isinstance(selected_relpath, str) or not selected_relpath:
-            return resolution, None, f"pointer_resolution.selected.{pointer_name}.relpath missing"
+            return (
+                resolution,
+                None,
+                f"pointer_resolution.selected.{pointer_name}.relpath missing",
+            )
         effective_relpath = _job_pointer_value(job, pointer_name)
         if effective_relpath is None:
-            return resolution, None, f"job pointer '{pointer_name}' missing while declared"
+            return (
+                resolution,
+                None,
+                f"job pointer '{pointer_name}' missing while declared",
+            )
         if selected_relpath != effective_relpath:
             return (
                 resolution,
@@ -159,11 +192,21 @@ def _load_qc_policy_from_job(
     job_path = _job_path_from_job_id(project_root, job_id)
     if job_path is None:
         policy_path = project_root / default_relpath
-        return default_relpath, policy_path if policy_path.exists() else None, None, default_action
+        return (
+            default_relpath,
+            policy_path if policy_path.exists() else None,
+            None,
+            default_action,
+        )
     job = _load_json(job_path)
     if not isinstance(job, dict):
         policy_path = project_root / default_relpath
-        return default_relpath, policy_path if policy_path.exists() else None, "job contract unreadable", default_action
+        return (
+            default_relpath,
+            policy_path if policy_path.exists() else None,
+            "job contract unreadable",
+            default_action,
+        )
     quality_policy = job.get("quality_policy")
     relpath = default_relpath
     if isinstance(quality_policy, dict):
@@ -177,7 +220,12 @@ def _load_qc_policy_from_job(
     if not isinstance(policy, dict):
         return relpath, policy_path, "qc policy contract unreadable", default_action
     if policy.get("version") != "qc_policy.v1":
-        return relpath, policy_path, "qc policy contract version mismatch", default_action
+        return (
+            relpath,
+            policy_path,
+            "qc policy contract version mismatch",
+            default_action,
+        )
     default_action_value = policy.get("default_action_on_missing_report")
     if isinstance(default_action_value, str):
         default_action = default_action_value
@@ -189,7 +237,9 @@ def _ensure_qc_report(
     job_id: str,
     qc_policy_relpath: str,
 ) -> Tuple[Optional[pathlib.Path], Optional[str]]:
-    report_path = project_root / "sandbox" / "logs" / job_id / "qc" / "qc_report.v1.json"
+    report_path = (
+        project_root / "sandbox" / "logs" / job_id / "qc" / "qc_report.v1.json"
+    )
     if report_path.exists():
         # If report exists, we trust the bus authority
         return report_path, None
@@ -205,7 +255,9 @@ def _ensure_qc_report(
     ]
     # In some environments, run_qc_runner might not be in the path correctly if run as module
     # We use -m to be safe.
-    proc = subprocess.run(cmd, cwd=str(project_root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.run(
+        cmd, cwd=str(project_root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
     if proc.returncode != 0:
         return None, "qc runner execution failed"
     if not report_path.exists():
@@ -224,14 +276,18 @@ def _emit_qc_route_advice(project_root: pathlib.Path, job_id: str) -> None:
         "--job-id",
         job_id,
     ]
-    _ = subprocess.run(cmd, cwd=str(project_root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _ = subprocess.run(
+        cmd, cwd=str(project_root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
 
 
 def _load_qc_route_advice(
     project_root: pathlib.Path,
     job_id: str,
 ) -> Tuple[Optional[pathlib.Path], Optional[Dict[str, Any]]]:
-    advice_path = project_root / "sandbox" / "logs" / job_id / "qc" / "qc_route_advice.v1.json"
+    advice_path = (
+        project_root / "sandbox" / "logs" / job_id / "qc" / "qc_route_advice.v1.json"
+    )
     payload = _load_json(advice_path)
     if not isinstance(payload, dict):
         return None, None
@@ -281,7 +337,11 @@ def _load_quality_targets_from_job(
             return targets, contract_path, f"quality target threshold missing: {key}"
         f = float(v)
         if not (0.0 <= f <= 1.0):
-            return targets, contract_path, f"quality target threshold out of range: {key}"
+            return (
+                targets,
+                contract_path,
+                f"quality target threshold out of range: {key}",
+            )
         parsed[key] = f
     return parsed, contract_path, None
 
@@ -322,12 +382,23 @@ def _load_continuity_pack_from_job(
     return pack, pack_path, None
 
 
-def _load_segment_report(project_root: pathlib.Path, job_id: str) -> Optional[Dict[str, Any]]:
-    path = project_root / "sandbox" / "output" / job_id / "segments" / "segment_stitch_report.v1.json"
+def _load_segment_report(
+    project_root: pathlib.Path, job_id: str
+) -> Optional[Dict[str, Any]]:
+    path = (
+        project_root
+        / "sandbox"
+        / "output"
+        / job_id
+        / "segments"
+        / "segment_stitch_report.v1.json"
+    )
     return _load_json(path)
 
 
-def _collect_tuned_failed_metrics(quality: Optional[Dict[str, Any]], quality_targets: Dict[str, float]) -> list[str]:
+def _collect_tuned_failed_metrics(
+    quality: Optional[Dict[str, Any]], quality_targets: Dict[str, float]
+) -> list[str]:
     if not isinstance(quality, dict):
         return []
     metrics = quality.get("metrics", {})
@@ -352,7 +423,7 @@ def _segment_retry_plan(
     trigger = sorted({m for m in failed_metrics if m in MOTION_METRICS})
     if not trigger:
         return {"mode": "none", "target_segments": [], "trigger_metrics": []}
-    
+
     # If we have no mapping resources, we default to full retry
     if not isinstance(segment_report, dict) and not isinstance(quality_report, dict):
         return {"mode": "retry_all", "target_segments": [], "trigger_metrics": trigger}
@@ -371,7 +442,11 @@ def _segment_retry_plan(
                 if isinstance(b, str) and b.startswith("seg_"):
                     segment_ids.append(b)
 
-    if not segment_ids and "temporal_stability" in trigger and isinstance(segment_report, dict):
+    if (
+        not segment_ids
+        and "temporal_stability" in trigger
+        and isinstance(segment_report, dict)
+    ):
         segments = segment_report.get("segments", [])
         if isinstance(segments, list):
             for seg in segments:
@@ -398,13 +473,17 @@ def _segment_retry_plan(
                             parts = m.split("_")
                             if len(parts) >= 2:
                                 shots_failed.append(f"shot_{parts[1]}")
-                     
+
         if shots_failed:
-             segment_ids.extend(shots_failed)
-             dedup = sorted(set(segment_ids))
+            segment_ids.extend(shots_failed)
+            dedup = sorted(set(segment_ids))
 
     if dedup:
-        return {"mode": "retry_selected", "target_segments": dedup, "trigger_metrics": trigger}
+        return {
+            "mode": "retry_selected",
+            "target_segments": dedup,
+            "trigger_metrics": trigger,
+        }
     return {"mode": "retry_all", "target_segments": [], "trigger_metrics": trigger}
 
 
@@ -420,7 +499,9 @@ def _as_str_list(value: Any) -> list[str]:
     return out
 
 
-def _next_provider(order: list[str], current: Optional[str]) -> tuple[Optional[str], Optional[str], Optional[int]]:
+def _next_provider(
+    order: list[str], current: Optional[str]
+) -> tuple[Optional[str], Optional[str], Optional[int]]:
     if not order:
         return None, None, None
     if current in order:
@@ -489,7 +570,9 @@ def _build_workflow_preset(
                     "preset_id": preset_id,
                     "workflow_id": workflow_id,
                     "failure_class": cls,
-                    "parameter_overrides": overrides if isinstance(overrides, dict) else {},
+                    "parameter_overrides": (
+                        overrides if isinstance(overrides, dict) else {}
+                    ),
                 }
             )
             return out
@@ -524,8 +607,12 @@ def _build_provider_switch(
     frame_order = _as_str_list(generation_policy.get("frame_provider_order"))
     selected_video = generation_policy.get("selected_video_provider")
     selected_frame = generation_policy.get("selected_frame_provider")
-    selected_video_s = selected_video if isinstance(selected_video, str) and selected_video else None
-    selected_frame_s = selected_frame if isinstance(selected_frame, str) and selected_frame else None
+    selected_video_s = (
+        selected_video if isinstance(selected_video, str) and selected_video else None
+    )
+    selected_frame_s = (
+        selected_frame if isinstance(selected_frame, str) and selected_frame else None
+    )
 
     if action == "retry_motion":
         cur, nxt, idx = _next_provider(video_order, selected_video_s)
@@ -650,7 +737,9 @@ def _build_finalize_gate(
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Deterministic quality decision engine")
+    parser = argparse.ArgumentParser(
+        description="Deterministic quality decision engine"
+    )
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--max-retries", type=int, default=2)
     args = parser.parse_args(argv[1:])
@@ -670,23 +759,45 @@ def main(argv: list[str]) -> int:
     # 2. Retry budget state
     # 3. Contract validity checks
 
-    qc_policy_relpath, qc_policy_path, qc_policy_error, qc_missing_report_action = _load_qc_policy_from_job(project_root, args.job_id)
-    qc_report_path, qc_report_error = _ensure_qc_report(project_root, args.job_id, qc_policy_relpath)
+    qc_policy_relpath, qc_policy_path, qc_policy_error, qc_missing_report_action = (
+        _load_qc_policy_from_job(project_root, args.job_id)
+    )
+    qc_report_path, qc_report_error = _ensure_qc_report(
+        project_root, args.job_id, qc_policy_relpath
+    )
     qc_report = _load_json(qc_report_path) if qc_report_path is not None else None
 
-    pointer_resolution, pointer_resolution_label, pointer_resolution_error = _load_pointer_resolution_from_job(project_root, args.job_id)
-    pointer_resolution_path = pathlib.Path(pointer_resolution_label) if pointer_resolution_label and pointer_resolution_label.startswith("/") else None
+    pointer_resolution, pointer_resolution_label, pointer_resolution_error = (
+        _load_pointer_resolution_from_job(project_root, args.job_id)
+    )
+    pointer_resolution_path = (
+        pathlib.Path(pointer_resolution_label)
+        if pointer_resolution_label and pointer_resolution_label.startswith("/")
+        else None
+    )
 
-    quality_targets, quality_targets_path, quality_target_error = _load_quality_targets_from_job(project_root, args.job_id)
-    continuity_pack, continuity_pack_path, continuity_pack_error = _load_continuity_pack_from_job(project_root, args.job_id)
+    quality_targets, quality_targets_path, quality_target_error = (
+        _load_quality_targets_from_job(project_root, args.job_id)
+    )
+    continuity_pack, continuity_pack_path, continuity_pack_error = (
+        _load_continuity_pack_from_job(project_root, args.job_id)
+    )
     advice_path, advice = _load_qc_route_advice(project_root, args.job_id)
-    advice_error = None  # Advice load doesn't return an error string in its current form
-    
+    advice_error = (
+        None  # Advice load doesn't return an error string in its current form
+    )
+
     retry_attempt = 0
     # Derive retry_attempt from existing attempts
     attempts_dir = project_root / "sandbox" / "logs" / args.job_id / "attempts"
     if attempts_dir.exists():
-        retry_attempt = len([d for d in attempts_dir.iterdir() if d.is_dir() and d.name.startswith("run-")])
+        retry_attempt = len(
+            [
+                d
+                for d in attempts_dir.iterdir()
+                if d.is_dir() and d.name.startswith("run-")
+            ]
+        )
 
     failed_metrics: list[str] = []
     failed_failure_classes: list[str] = []
@@ -700,7 +811,7 @@ def main(argv: list[str]) -> int:
                     metric = gate.get("metric")
                     if isinstance(metric, str):
                         failed_metrics.append(metric)
-        
+
         overall = qc_report.get("overall", {})
         if isinstance(overall, dict):
             failed_failure_classes = [
@@ -713,7 +824,9 @@ def main(argv: list[str]) -> int:
     failed_failure_classes = sorted(set(failed_failure_classes))
     segment_report = _load_segment_report(project_root, args.job_id)
     recast_quality_report = _load_json(quality_path) if quality_path.exists() else None
-    segment_retry = _segment_retry_plan(segment_report, failed_metrics, recast_quality_report)
+    segment_retry = _segment_retry_plan(
+        segment_report, failed_metrics, recast_quality_report
+    )
 
     # Derive pass/fail status from QC gates for retry context
     motion_status = "unknown"
@@ -721,14 +834,32 @@ def main(argv: list[str]) -> int:
     if isinstance(qc_report, dict):
         gates = qc_report.get("gates", [])
         if isinstance(gates, list):
-            motion_gates = [g for g in gates if isinstance(g, dict) and g.get("dimension") == "motion"]
-            identity_gates = [g for g in gates if isinstance(g, dict) and g.get("dimension") == "identity"]
-            
+            motion_gates = [
+                g
+                for g in gates
+                if isinstance(g, dict) and g.get("dimension") == "motion"
+            ]
+            identity_gates = [
+                g
+                for g in gates
+                if isinstance(g, dict) and g.get("dimension") == "identity"
+            ]
+
             if motion_gates:
                 # Fail-Closed: any fail or unknown in a required dimension constitutes failure
-                motion_status = "fail" if any(g.get("status") in {"fail", "unknown"} for g in motion_gates) else "pass"
+                motion_status = (
+                    "fail"
+                    if any(g.get("status") in {"fail", "unknown"} for g in motion_gates)
+                    else "pass"
+                )
             if identity_gates:
-                identity_status = "fail" if any(g.get("status") in {"fail", "unknown"} for g in identity_gates) else "pass"
+                identity_status = (
+                    "fail"
+                    if any(
+                        g.get("status") in {"fail", "unknown"} for g in identity_gates
+                    )
+                    else "pass"
+                )
 
     action = "proceed_finalize"
     reason = "No blocking quality findings."
@@ -753,17 +884,21 @@ def main(argv: list[str]) -> int:
     # Priority 1b: Verify Metric Coverage (Fail Closed if expected metrics are missing)
     elif isinstance(qc_report, dict):
         required_metrics = set(quality_targets.keys())
-        reported_gates = {g.get("metric") for g in qc_report.get("gates", []) if isinstance(g, dict) and g.get("metric")}
+        reported_gates = {
+            g.get("metric")
+            for g in qc_report.get("gates", [])
+            if isinstance(g, dict) and g.get("metric")
+        }
         missing_mandatory = required_metrics - reported_gates
         if missing_mandatory:
             action = "escalate_hitl"
             reason = f"QC report missing mandatory metrics defined in quality_target: {sorted(missing_mandatory)}"
-        
+
         else:
             # Continue to Recommendation check
             overall = qc_report.get("overall", {})
             recommended = overall.get("recommended_action")
-            
+
             if overall.get("pass") is True:
                 action = "proceed_finalize"
                 reason = "QC report passed all required gates."
@@ -799,10 +934,18 @@ def main(argv: list[str]) -> int:
                 advisory_mode_cfg = qc_policy.get("advisory_mode", {})
             if isinstance(qc_policy.get("authority_trial"), dict):
                 authority_cfg = qc_policy.get("authority_trial", {})
-    authority_trial_env = os.getenv("CAF_QC_AUTHORITY_TRIAL", "0").strip().lower() in {"1", "true", "yes", "on"}
-    advisory_enabled = bool(isinstance(advisory_mode_cfg, dict) and advisory_mode_cfg.get("enabled") is True)
+    authority_trial_env = os.getenv("CAF_QC_AUTHORITY_TRIAL", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    advisory_enabled = bool(
+        isinstance(advisory_mode_cfg, dict) and advisory_mode_cfg.get("enabled") is True
+    )
     authority_enabled = (
-        bool(isinstance(authority_cfg, dict) and authority_cfg.get("enabled") is True) and authority_trial_env
+        bool(isinstance(authority_cfg, dict) and authority_cfg.get("enabled") is True)
+        and authority_trial_env
     )
     authority_used = False
     authority_rollback = False
@@ -813,12 +956,18 @@ def main(argv: list[str]) -> int:
             advice_action = str(raw.get("recommended_action"))
     if authority_enabled and isinstance(advice_action, str):
         allowed = authority_cfg.get("allowed_actions", [])
-        allowed_actions = {str(x) for x in allowed} if isinstance(allowed, list) else set()
+        allowed_actions = (
+            {str(x) for x in allowed} if isinstance(allowed, list) else set()
+        )
         rollback_action = str(authority_cfg.get("rollback_action", "escalate_hitl"))
         if advice_action in allowed_actions:
-            if action != "proceed_finalize" and retry_attempt <= max(0, args.max_retries):
+            if action != "proceed_finalize" and retry_attempt <= max(
+                0, args.max_retries
+            ):
                 action = advice_action
-                reason = f"Authority-trial override accepted from advisory: {advice_action}."
+                reason = (
+                    f"Authority-trial override accepted from advisory: {advice_action}."
+                )
                 authority_used = True
             else:
                 action = rollback_action
@@ -833,29 +982,63 @@ def main(argv: list[str]) -> int:
         "job_id": args.job_id,
         "generated_at": _utc_now(),
         "inputs": {
-            "quality_report_relpath": _safe_rel(quality_path, project_root) if quality_path.exists() else None,
-            "costume_report_relpath": _safe_rel(costume_path, project_root) if costume_path.exists() else None,
-            "two_pass_orchestration_relpath": _safe_rel(two_pass_path, project_root) if two_pass_path.exists() else None,
-            "quality_target_relpath": _safe_rel(quality_targets_path, project_root)
-            if quality_targets_path is not None and quality_targets_path.exists()
-            else None,
+            "quality_report_relpath": (
+                _safe_rel(quality_path, project_root) if quality_path.exists() else None
+            ),
+            "costume_report_relpath": (
+                _safe_rel(costume_path, project_root) if costume_path.exists() else None
+            ),
+            "two_pass_orchestration_relpath": (
+                _safe_rel(two_pass_path, project_root)
+                if two_pass_path.exists()
+                else None
+            ),
+            "quality_target_relpath": (
+                _safe_rel(quality_targets_path, project_root)
+                if quality_targets_path is not None and quality_targets_path.exists()
+                else None
+            ),
             "quality_target_contract_error": quality_target_error,
-            "qc_policy_relpath": _safe_rel(qc_policy_path, project_root)
-            if qc_policy_path is not None and qc_policy_path.exists()
-            else qc_policy_relpath,
+            "qc_policy_relpath": (
+                _safe_rel(qc_policy_path, project_root)
+                if qc_policy_path is not None and qc_policy_path.exists()
+                else qc_policy_relpath
+            ),
             "qc_policy_error": qc_policy_error,
-            "qc_report_relpath": _safe_rel(qc_report_path, project_root) if qc_report_path is not None else None,
+            "qc_report_relpath": (
+                _safe_rel(qc_report_path, project_root)
+                if qc_report_path is not None
+                else None
+            ),
             "qc_report_error": qc_report_error,
-            "qc_route_advice_relpath": _safe_rel(advice_path, project_root) if advice_path is not None else None,
+            "qc_route_advice_relpath": (
+                _safe_rel(advice_path, project_root)
+                if advice_path is not None
+                else None
+            ),
             "qc_route_advice_error": advice_error,
-            "continuity_pack_relpath": _safe_rel(continuity_pack_path, project_root) if continuity_pack_path is not None else None,
+            "continuity_pack_relpath": (
+                _safe_rel(continuity_pack_path, project_root)
+                if continuity_pack_path is not None
+                else None
+            ),
             "continuity_pack_error": continuity_pack_error,
-            "pointer_resolution_relpath": _safe_rel(pointer_resolution_path, project_root) if pointer_resolution_path is not None else None,
+            "pointer_resolution_relpath": (
+                _safe_rel(pointer_resolution_path, project_root)
+                if pointer_resolution_path is not None
+                else None
+            ),
             "pointer_resolution_error": pointer_resolution_error,
-            "pointer_resolution_version": pointer_resolution.get("version")
-            if isinstance(pointer_resolution, dict)
-            else None,
-            "segment_stitch_plan_relpath": _safe_rel(segment_plan_path, project_root) if segment_plan_path else None,
+            "pointer_resolution_version": (
+                pointer_resolution.get("version")
+                if isinstance(pointer_resolution, dict)
+                else None
+            ),
+            "segment_stitch_plan_relpath": (
+                _safe_rel(segment_plan_path, project_root)
+                if segment_plan_path
+                else None
+            ),
             "failed_metrics": failed_metrics,
             "failed_failure_classes": failed_failure_classes,
         },
@@ -870,8 +1053,14 @@ def main(argv: list[str]) -> int:
         },
         "segment_retry": segment_retry,
         "passes": {
-            "motion_status": str(motion_status) if motion_status in {"pass", "fail"} else "unknown",
-            "identity_status": str(identity_status) if identity_status in {"pass", "fail"} else "unknown",
+            "motion_status": (
+                str(motion_status) if motion_status in {"pass", "fail"} else "unknown"
+            ),
+            "identity_status": (
+                str(identity_status)
+                if identity_status in {"pass", "fail"}
+                else "unknown"
+            ),
         },
         "decision": {
             "action": action,
@@ -889,7 +1078,9 @@ def main(argv: list[str]) -> int:
         action=action,
         reason=reason,
         segment_retry=segment_retry,
-        provider_switch=_build_provider_switch(project_root=project_root, job_id=args.job_id, action=action),
+        provider_switch=_build_provider_switch(
+            project_root=project_root, job_id=args.job_id, action=action
+        ),
         workflow_preset=_build_workflow_preset(
             project_root=project_root,
             job_id=args.job_id,

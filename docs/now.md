@@ -12,13 +12,14 @@ Update rules:
 
 ------------------------------------------------------------
 
-### 3. Current PR Status (Phase 8: Pointer Authority & QC Hardening)
+### 3. Current PR Status (Phase 7: Cloud v0.5 Migration)
+Status: **ACTIVE**
 
 | Role | Status | Blocking |
 | :--- | :--- | :--- |
 | **ARCH** | **DONE** | **NO** |
 | **CODEX** | **DONE** | **NO** |
-| **CLOUD** | **WAITING** | NO |
+| **CLOUD** | **DONE** | **NO** |
 
 #### ARCH (Architecture & Decisions)
 - **Action**: Review pending ADRs (0051..0054). [x]
@@ -29,12 +30,17 @@ Update rules:
 #### CODEX (Implementation)
 - **Status**: **DONE**
 - **Completed**:
-    - **Pointer Authority (ADR-0051)**: Hardened `PointerResolver` to be 100% manifest-driven; removed hardcoded paths.
+    - **Pointer Authority (ADR-0051)**: Hardened `PointerResolver` to be 100% manifest-driven; refactored `planner_cli.py` for strict authority.
     - **Asset RAG Manifest (PR-38)**: Authoritative media registry for all core and demo assets.
-    - **QC Routing Authority (PR-36)**: Hardened `decide_quality_action.py` with fail-closed logic for unknown gates and missing metrics.
-    - **Budget Lock**: Strict retry enforcement in quality controller.
+    - **QC Routing Authority (PR-36)**: Hardened `decide_quality_action.py` with fail-closed logic.
+    - **Budget Guardrails (PR-26)**: Centralized enforcement in `ralph_loop.py`.
+    - **CI/CD Skeleton (PR-27)**: Standardized `test_harness.py`.
+    - **Coze Wiring (PR-28)**: FastAPI ingress service for `PlanRequest.v1`.
+    - **n8n Workflows (PR-29)**: Human approval and manual publish loops with JSON exports.
+    - **Terraform Infra (PR-30)**: Initialized core cloud backbone (GCS, Firestore, Cloud Tasks, Cloud Run, Artifact Registry, Cloud Build IAM).
+    - **Environment Sync**: Updated `.env` and `.env.example` with comprehensive GCP placeholders.
     - **Veo3 Mock Mode** enabled.
-    - **End-to-End verified** with `smoke_pointer_authority.py` and `smoke_qc_strict_routing.py`.
+    - **End-to-End verified** with all 7 smoke modules passing.
 
 ### Decisions / ADRs Touched
 - ADR-0047 (Free-first engine posture)

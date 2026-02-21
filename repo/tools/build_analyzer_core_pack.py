@@ -11,6 +11,7 @@ Generates planner-side artifacts:
 - frame_labels.v1
 - segment_stitch_plan.v1
 """
+
 from __future__ import annotations
 
 import argparse
@@ -35,7 +36,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _kebab(value: str) -> str:
@@ -46,7 +52,9 @@ def _kebab(value: str) -> str:
 def _run(cmd: List[str]) -> str:
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if p.returncode != 0:
-        raise RuntimeError(f"command failed ({p.returncode}): {' '.join(cmd)}\n{p.stderr.strip()}")
+        raise RuntimeError(
+            f"command failed ({p.returncode}): {' '.join(cmd)}\n{p.stderr.strip()}"
+        )
     return p.stdout
 
 
@@ -139,16 +147,18 @@ def _infer_movenet_signature(
 
 
 def _probe(path: pathlib.Path) -> Dict[str, Any]:
-    out = _run([
-        "ffprobe",
-        "-v",
-        "error",
-        "-print_format",
-        "json",
-        "-show_streams",
-        "-show_format",
-        str(path),
-    ])
+    out = _run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-print_format",
+            "json",
+            "-show_streams",
+            "-show_format",
+            str(path),
+        ]
+    )
     data = json.loads(out)
     vstream = None
     for s in data.get("streams", []):
@@ -158,7 +168,9 @@ def _probe(path: pathlib.Path) -> Dict[str, Any]:
     if not isinstance(vstream, dict):
         raise RuntimeError("no video stream")
 
-    duration = float(vstream.get("duration") or data.get("format", {}).get("duration") or 0)
+    duration = float(
+        vstream.get("duration") or data.get("format", {}).get("duration") or 0
+    )
     fr = vstream.get("avg_frame_rate") or vstream.get("r_frame_rate") or "30/1"
     fps = 30.0
     if isinstance(fr, str) and "/" in fr:
@@ -180,7 +192,9 @@ def _probe(path: pathlib.Path) -> Dict[str, Any]:
     }
 
 
-def _extract_audio_beats(path: pathlib.Path) -> Tuple[Optional[float], List[float], str]:
+def _extract_audio_beats(
+    path: pathlib.Path,
+) -> Tuple[Optional[float], List[float], str]:
     try:
         import librosa  # type: ignore
     except Exception:
@@ -188,9 +202,21 @@ def _extract_audio_beats(path: pathlib.Path) -> Tuple[Optional[float], List[floa
 
     tmp_wav = pathlib.Path(tempfile.mkstemp(prefix="caf-audio-", suffix=".wav")[1])
     try:
-        _run([
-            "ffmpeg", "-y", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "22050", str(tmp_wav)
-        ])
+        _run(
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                str(path),
+                "-ac",
+                "1",
+                "-ar",
+                "22050",
+                str(tmp_wav),
+            ]
+        )
         y, sr = librosa.load(str(tmp_wav), sr=22050, mono=True)
         tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
         beat_times = librosa.frames_to_time(beat_frames, sr=sr)
@@ -233,28 +259,40 @@ def _classify_camera_mode(flow_rows: List[Dict[str, float]]) -> Tuple[str, float
 def _extract_video_signals(
     path: pathlib.Path,
     fps: float,
-) -> Tuple[List[Dict[str, float]], List[Tuple[float, List[float], float]], str, Dict[str, Any]]:
+) -> Tuple[
+    List[Dict[str, float]], List[Tuple[float, List[float], float]], str, Dict[str, Any]
+]:
     try:
         import cv2  # type: ignore
         import numpy as np  # type: ignore
     except Exception:
-        return [], [], "opencv_unavailable", {
-            "brightness_bucket": "unknown",
-            "luma_mean": None,
-            "palette_top_hex": ["#808080"],
-            "camera_movement_mode": "unknown",
-            "camera_movement_confidence": 0.0,
-        }
+        return (
+            [],
+            [],
+            "opencv_unavailable",
+            {
+                "brightness_bucket": "unknown",
+                "luma_mean": None,
+                "palette_top_hex": ["#808080"],
+                "camera_movement_mode": "unknown",
+                "camera_movement_confidence": 0.0,
+            },
+        )
 
     cap = cv2.VideoCapture(str(path))
     if not cap.isOpened():
-        return [], [], "opencv_open_failed", {
-            "brightness_bucket": "unknown",
-            "luma_mean": None,
-            "palette_top_hex": ["#808080"],
-            "camera_movement_mode": "unknown",
-            "camera_movement_confidence": 0.0,
-        }
+        return (
+            [],
+            [],
+            "opencv_open_failed",
+            {
+                "brightness_bucket": "unknown",
+                "luma_mean": None,
+                "palette_top_hex": ["#808080"],
+                "camera_movement_mode": "unknown",
+                "camera_movement_confidence": 0.0,
+            },
+        )
 
     # Sample at 6Hz deterministically.
     frame_step = max(1, int(round(max(fps, 1.0) / 6.0)))
@@ -299,7 +337,10 @@ def _extract_video_signals(
             luma_values.append(float(gray_small.mean()))
 
             # Deterministic coarse palette histogram (16-level RGB bins).
-            rgb_small = cv2.cvtColor(cv2.resize(frame, (64, 64), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
+            rgb_small = cv2.cvtColor(
+                cv2.resize(frame, (64, 64), interpolation=cv2.INTER_AREA),
+                cv2.COLOR_BGR2RGB,
+            )
             flat = rgb_small.reshape(-1, 3)
             for px in flat[::8]:
                 r = int((int(px[0]) // 16) * 16 + 8)
@@ -345,12 +386,18 @@ def _extract_video_signals(
                     pose_rows.append((t, [0.0] * 14, 0.0))
             elif movenet_interp is not None:
                 try:
-                    sig, conf = _infer_movenet_signature(frame, movenet_interp, movenet_in, movenet_out)
+                    sig, conf = _infer_movenet_signature(
+                        frame, movenet_interp, movenet_in, movenet_out
+                    )
                     pose_rows.append((t, sig, conf))
                 except Exception:
                     pose_rows.append((t, [0.0] * 14, 0.0))
             else:
-                vec = cv2.resize(gray, (8, 8), interpolation=cv2.INTER_AREA).flatten().astype("float32")
+                vec = (
+                    cv2.resize(gray, (8, 8), interpolation=cv2.INTER_AREA)
+                    .flatten()
+                    .astype("float32")
+                )
                 vec = (vec / 255.0).tolist()
                 sig = [round(float(x), 4) for x in vec[:16]]
                 pose_rows.append((t, sig, 0.5))
@@ -365,7 +412,9 @@ def _extract_video_signals(
                 pass
 
     camera_mode, camera_conf = _classify_camera_mode(motion)
-    luma_mean = round(sum(luma_values) / max(1, len(luma_values)), 3) if luma_values else None
+    luma_mean = (
+        round(sum(luma_values) / max(1, len(luma_values)), 3) if luma_values else None
+    )
     if luma_mean is None:
         brightness = "unknown"
     elif luma_mean < 85:
@@ -375,7 +424,9 @@ def _extract_video_signals(
     else:
         brightness = "mid"
     top_palette = sorted(palette_bins.items(), key=lambda row: (-row[1], row[0]))[:3]
-    palette_top_hex = [_hex_from_rgb_triplet(rgb) for rgb, _count in top_palette] or ["#808080"]
+    palette_top_hex = [_hex_from_rgb_triplet(rgb) for rgb, _count in top_palette] or [
+        "#808080"
+    ]
 
     visual_facts = {
         "brightness_bucket": brightness,
@@ -387,7 +438,9 @@ def _extract_video_signals(
     return motion, pose_rows, pose_mode, visual_facts
 
 
-def _pick_motion_peaks(series: List[Dict[str, float]], duration: float, limit: int = 6) -> List[float]:
+def _pick_motion_peaks(
+    series: List[Dict[str, float]], duration: float, limit: int = 6
+) -> List[float]:
     if not series:
         return [0.0, round(duration, 3)]
     vals = [row["mag"] for row in series]
@@ -407,7 +460,9 @@ def _pick_motion_peaks(series: List[Dict[str, float]], duration: float, limit: i
     return picked
 
 
-def _scene_segments(path: pathlib.Path, duration: float) -> Tuple[List[Tuple[float, float]], str]:
+def _scene_segments(
+    path: pathlib.Path, duration: float
+) -> Tuple[List[Tuple[float, float]], str]:
     try:
         from scenedetect import ContentDetector, SceneManager, open_video  # type: ignore
     except Exception:
@@ -432,7 +487,9 @@ def _scene_segments(path: pathlib.Path, duration: float) -> Tuple[List[Tuple[flo
         return [(0.0, round(duration, 3))], "scenedetect_failed"
 
 
-def _build_segments_from_shots(shots: List[Tuple[float, float]], max_len: float = 3.0) -> List[Tuple[float, float]]:
+def _build_segments_from_shots(
+    shots: List[Tuple[float, float]], max_len: float = 3.0
+) -> List[Tuple[float, float]]:
     segs: List[Tuple[float, float]] = []
     for s, e in shots:
         cur = s
@@ -465,10 +522,14 @@ def _composition_from_camera(camera_mode: str) -> str:
 
 
 def main(argv: List[str]) -> int:
-    parser = argparse.ArgumentParser(description="Build deterministic analyzer core pack")
+    parser = argparse.ArgumentParser(
+        description="Build deterministic analyzer core pack"
+    )
     parser.add_argument("--input", required=True, help="Input video path")
     parser.add_argument("--analysis-id", help="Analysis id (kebab-case)")
-    parser.add_argument("--out-dir", default="repo/canon/demo_analyses", help="Output directory")
+    parser.add_argument(
+        "--out-dir", default="repo/canon/demo_analyses", help="Output directory"
+    )
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv[1:])
 
@@ -490,7 +551,15 @@ def main(argv: List[str]) -> int:
     segment_plan_path = out_dir / f"{analysis_id}.segment_stitch_plan.v1.json"
 
     if (not args.overwrite) and any(
-        p.exists() for p in [beat_path, pose_path, keyframe_path, reverse_path, frame_labels_path, segment_plan_path]
+        p.exists()
+        for p in [
+            beat_path,
+            pose_path,
+            keyframe_path,
+            reverse_path,
+            frame_labels_path,
+            segment_plan_path,
+        ]
     ):
         eprint("ERROR: output files exist; use --overwrite")
         return 1
@@ -500,7 +569,9 @@ def main(argv: List[str]) -> int:
     fps = float(meta["fps"])
 
     bpm, beat_times, beat_source = _extract_audio_beats(in_path)
-    motion_series, pose_rows, pose_source, visual_facts = _extract_video_signals(in_path, fps)
+    motion_series, pose_rows, pose_source, visual_facts = _extract_video_signals(
+        in_path, fps
+    )
     scene_shots, scene_source = _scene_segments(in_path, duration)
     tool_versions = _collect_tool_versions()
 
@@ -512,7 +583,11 @@ def main(argv: List[str]) -> int:
         "analysis_id": analysis_id,
         "source_video_relpath": _safe_rel(in_path, root),
         "bpm_estimate": round(float(bpm or 120.0), 3),
-        "beats": [{"t_sec": round(float(t), 3), "strength": 0.8} for t in beat_times if 0 <= float(t) <= duration],
+        "beats": [
+            {"t_sec": round(float(t), 3), "strength": 0.8}
+            for t in beat_times
+            if 0 <= float(t) <= duration
+        ],
     }
 
     # Select up to 8 checkpoints by motion peaks, fallback to evenly sampled rows.
@@ -539,11 +614,13 @@ def main(argv: List[str]) -> int:
 
     keyframes = []
     for i, (s, _e) in enumerate(scene_shots, start=1):
-        keyframes.append({
-            "t_sec": round(float(s), 3),
-            "label": f"scene-{i:03d}-start",
-            "tags": ["scene", "segment", "dance"],
-        })
+        keyframes.append(
+            {
+                "t_sec": round(float(s), 3),
+                "label": f"scene-{i:03d}-start",
+                "tags": ["scene", "segment", "dance"],
+            }
+        )
     keyframe_doc = {
         "version": "keyframe_checkpoints.v1",
         "analysis_id": analysis_id,
@@ -564,7 +641,9 @@ def main(argv: List[str]) -> int:
 
         def norm(v: float) -> float:
             return max(0.0, min(1.0, (v - vmin) / rng))
+
     else:
+
         def norm(_v: float) -> float:
             return motion_default
 
@@ -574,7 +653,15 @@ def main(argv: List[str]) -> int:
         if motion_series:
             near = min(motion_series, key=lambda row: abs(row["t"] - s))["mag"]
         shot_camera = str(visual_facts.get("camera_movement_mode") or "unknown")
-        if shot_camera not in {"locked", "pan", "tilt", "push", "pull", "mixed", "unknown"}:
+        if shot_camera not in {
+            "locked",
+            "pan",
+            "tilt",
+            "push",
+            "pull",
+            "mixed",
+            "unknown",
+        }:
             shot_camera = "unknown"
         palette = visual_facts.get("palette_top_hex", [])
         palette_hint = "#808080"
@@ -588,9 +675,13 @@ def main(argv: List[str]) -> int:
                 "start_sec": round(float(s), 3),
                 "end_sec": round(float(max(s + 0.001, e)), 3),
                 "camera": shot_camera,
-                "camera_confidence": round(float(visual_facts.get("camera_movement_confidence") or 0.0), 3),
+                "camera_confidence": round(
+                    float(visual_facts.get("camera_movement_confidence") or 0.0), 3
+                ),
                 "motion_intensity": round(float(norm(near)), 3),
-                "brightness_luma_mean": round(float(visual_facts.get("luma_mean") or 0.0), 3),
+                "brightness_luma_mean": round(
+                    float(visual_facts.get("luma_mean") or 0.0), 3
+                ),
                 "palette_hint": palette_hint,
             }
         )
@@ -605,8 +696,12 @@ def main(argv: List[str]) -> int:
             "pose_checkpoints_ref": rel_pose,
             "keyframe_checkpoints_ref": rel_key,
             "visual_facts": {
-                "camera_movement_mode": visual_facts.get("camera_movement_mode", "unknown"),
-                "camera_movement_confidence": round(float(visual_facts.get("camera_movement_confidence") or 0.0), 3),
+                "camera_movement_mode": visual_facts.get(
+                    "camera_movement_mode", "unknown"
+                ),
+                "camera_movement_confidence": round(
+                    float(visual_facts.get("camera_movement_confidence") or 0.0), 3
+                ),
                 "brightness_bucket": visual_facts.get("brightness_bucket", "unknown"),
                 "luma_mean": (
                     round(float(visual_facts.get("luma_mean")), 3)

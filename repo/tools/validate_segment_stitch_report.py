@@ -28,7 +28,9 @@ def _load(path: pathlib.Path) -> Any:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_segment_stitch_report path/to/segment_stitch_report.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_segment_stitch_report path/to/segment_stitch_report.v1.json"
+        )
         return 1
 
     target = pathlib.Path(argv[1]).resolve()
@@ -36,7 +38,9 @@ def main(argv: list[str]) -> int:
         eprint(f"ERROR: file not found: {target}")
         return 1
 
-    schema = _load(_repo_root() / "repo" / "shared" / "segment_stitch_report.v1.schema.json")
+    schema = _load(
+        _repo_root() / "repo" / "shared" / "segment_stitch_report.v1.schema.json"
+    )
     data = _load(target)
     try:
         validate(instance=data, schema=schema)
@@ -56,10 +60,14 @@ def main(argv: list[str]) -> int:
         seg_ids = [str(seg.get("segment_id")) for seg in segs if isinstance(seg, dict)]
         if mode == "retry_selected":
             if not isinstance(targets, list) or len(targets) == 0:
-                eprint("SEMANTIC_ERROR: retry_selected hook requires non-empty target_segments")
+                eprint(
+                    "SEMANTIC_ERROR: retry_selected hook requires non-empty target_segments"
+                )
                 return 1
             if not set(seg_ids).issubset(set(str(x) for x in targets)):
-                eprint("SEMANTIC_ERROR: segment outputs must be subset of retry target segments")
+                eprint(
+                    "SEMANTIC_ERROR: segment outputs must be subset of retry target segments"
+                )
                 return 1
 
     print(f"OK: {target}")

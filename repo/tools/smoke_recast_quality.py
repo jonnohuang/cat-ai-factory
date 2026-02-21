@@ -4,6 +4,7 @@ smoke_recast_quality.py
 
 PR-34.4 smoke runner for deterministic recast quality scoring.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -49,4 +50,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

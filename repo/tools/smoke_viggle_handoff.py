@@ -4,6 +4,7 @@ smoke_viggle_handoff.py
 
 Smoke test for PR-34.1/34.2/34.3 external HITL recast flow artifacts.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -66,7 +67,12 @@ def main(argv: list[str]) -> int:
         subprocess.check_call(cmd, cwd=str(root))
 
     pointer = _latest_pointer(root / "sandbox/inbox", job_id)
-    process_cmd = [sys.executable, "repo/tools/process_viggle_reingest.py", "--pointer", str(pointer)]
+    process_cmd = [
+        sys.executable,
+        "repo/tools/process_viggle_reingest.py",
+        "--pointer",
+        str(pointer),
+    ]
     print("RUN:", " ".join(process_cmd))
     subprocess.check_call(process_cmd, cwd=str(root))
 
@@ -77,7 +83,10 @@ def main(argv: list[str]) -> int:
         "--pack",
         str(root / f"sandbox/dist_artifacts/{job_id}/viggle_pack/viggle_pack.v1.json"),
         "--lifecycle",
-        str(root / f"sandbox/dist_artifacts/{job_id}/viggle_pack/external_recast_lifecycle.v1.json"),
+        str(
+            root
+            / f"sandbox/dist_artifacts/{job_id}/viggle_pack/external_recast_lifecycle.v1.json"
+        ),
         "--pointer",
         str(pointer),
     ]

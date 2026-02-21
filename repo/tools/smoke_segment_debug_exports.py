@@ -22,9 +22,23 @@ def main(argv: list[str]) -> int:
     print("RUN:", " ".join(pre_cmd))
     subprocess.check_call(pre_cmd, cwd=str(root))
 
-    manifest = root / "sandbox" / "output" / "smoke-segment-stitch-runtime" / "debug" / "segment_debug_manifest.v1.json"
-    result = root / "sandbox" / "output" / "smoke-segment-stitch-runtime" / "result.json"
-    validate_cmd = [sys.executable, "-m", "repo.tools.validate_segment_debug_manifest", str(manifest)]
+    manifest = (
+        root
+        / "sandbox"
+        / "output"
+        / "smoke-segment-stitch-runtime"
+        / "debug"
+        / "segment_debug_manifest.v1.json"
+    )
+    result = (
+        root / "sandbox" / "output" / "smoke-segment-stitch-runtime" / "result.json"
+    )
+    validate_cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.validate_segment_debug_manifest",
+        str(manifest),
+    ]
     print("RUN:", " ".join(validate_cmd))
     subprocess.check_call(validate_cmd, cwd=str(root))
 

@@ -30,7 +30,10 @@ class MetaAiLabProvider(BaseProvider):
         return "meta-movie-gen-lab-stub"
 
     def __init__(self) -> None:
-        self.model = os.environ.get("META_AI_LAB_MODEL", self.default_model).strip() or self.default_model
+        self.model = (
+            os.environ.get("META_AI_LAB_MODEL", self.default_model).strip()
+            or self.default_model
+        )
         self.base_url = os.environ.get("META_AI_LAB_BASE_URL", "").strip()
 
     def generate_job(
@@ -46,9 +49,13 @@ class MetaAiLabProvider(BaseProvider):
         date = prd.get("date") if isinstance(prd.get("date"), str) else today_utc()
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
         if not os.environ.get("META_AI_LAB_API_KEY", "").strip():
-            print("WARNING planner provider=meta_ai_lab missing META_AI_LAB_API_KEY; using scaffold background")
+            print(
+                "WARNING planner provider=meta_ai_lab missing META_AI_LAB_API_KEY; using scaffold background"
+            )
         if not self.base_url:
-            print("WARNING planner provider=meta_ai_lab missing META_AI_LAB_BASE_URL; using local scaffold defaults")
+            print(
+                "WARNING planner provider=meta_ai_lab missing META_AI_LAB_BASE_URL; using local scaffold defaults"
+            )
         return {
             "job_id": f"{basename[:36]}-metalab",
             "date": date,
@@ -66,10 +73,25 @@ class MetaAiLabProvider(BaseProvider):
                 "ending": "Loop cleanly for retry checks.",
             },
             "shots": [
-                {"t": 0, "visual": "wide stage", "action": "start groove", "caption": "Mochi starts"},
-                {"t": 2, "visual": "mid shot", "action": "side step", "caption": "On beat"},
+                {
+                    "t": 0,
+                    "visual": "wide stage",
+                    "action": "start groove",
+                    "caption": "Mochi starts",
+                },
+                {
+                    "t": 2,
+                    "visual": "mid shot",
+                    "action": "side step",
+                    "caption": "On beat",
+                },
                 {"t": 4, "visual": "mid shot", "action": "spin", "caption": "Spin"},
-                {"t": 6, "visual": "wide stage", "action": "pose hit", "caption": "Pose"},
+                {
+                    "t": 6,
+                    "visual": "wide stage",
+                    "action": "pose hit",
+                    "caption": "Pose",
+                },
                 {"t": 8, "visual": "mid shot", "action": "bounce", "caption": "Bounce"},
                 {"t": 10, "visual": "wide stage", "action": "reset", "caption": "Loop"},
             ],

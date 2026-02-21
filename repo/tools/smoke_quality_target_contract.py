@@ -36,7 +36,9 @@ def main(argv: list[str]) -> int:
     original_job_text = job_path.read_text(encoding="utf-8")
     try:
         job = json.loads(original_job_text)
-        job["quality_target"] = {"relpath": "repo/examples/quality_target.motion_strict.v1.example.json"}
+        job["quality_target"] = {
+            "relpath": "repo/examples/quality_target.motion_strict.v1.example.json"
+        }
         _write(job_path, job)
 
         quality = {
@@ -45,39 +47,81 @@ def main(argv: list[str]) -> int:
             "video_relpath": f"sandbox/output/{job_id}/final.mp4",
             "generated_at": "2026-02-17T00:00:00Z",
             "metrics": {
-                "identity_consistency": {"available": True, "score": 0.8, "threshold": 0.55, "pass": True},
-                "mask_edge_bleed": {"available": True, "score": 0.76, "threshold": 0.45, "pass": True},
-                "temporal_stability": {"available": True, "score": 0.82, "threshold": 0.55, "pass": True},
-                "loop_seam": {"available": True, "score": 0.85, "threshold": 0.60, "pass": True},
+                "identity_consistency": {
+                    "available": True,
+                    "score": 0.8,
+                    "threshold": 0.55,
+                    "pass": True,
+                },
+                "mask_edge_bleed": {
+                    "available": True,
+                    "score": 0.76,
+                    "threshold": 0.45,
+                    "pass": True,
+                },
+                "temporal_stability": {
+                    "available": True,
+                    "score": 0.82,
+                    "threshold": 0.55,
+                    "pass": True,
+                },
+                "loop_seam": {
+                    "available": True,
+                    "score": 0.85,
+                    "threshold": 0.60,
+                    "pass": True,
+                },
                 "audio_video": {
                     "audio_stream_present": True,
                     "av_sync_sec": 0.0,
                     "score": 1.0,
                     "threshold": 0.95,
-                    "pass": True
-                }
+                    "pass": True,
+                },
             },
-            "overall": {"score": 0.846, "pass": True, "failed_metrics": []}
+            "overall": {"score": 0.846, "pass": True, "failed_metrics": []},
         }
         _write(quality_path, quality)
 
-        decide_cmd = [sys.executable, "-m", "repo.tools.decide_quality_action", "--job-id", job_id, "--max-retries", "2"]
+        decide_cmd = [
+            sys.executable,
+            "-m",
+            "repo.tools.decide_quality_action",
+            "--job-id",
+            job_id,
+            "--max-retries",
+            "2",
+        ]
         print("RUN:", " ".join(decide_cmd))
         subprocess.check_call(decide_cmd, cwd=str(root))
 
-        validate_cmd = [sys.executable, "-m", "repo.tools.validate_quality_decision", str(decision_path)]
+        validate_cmd = [
+            sys.executable,
+            "-m",
+            "repo.tools.validate_quality_decision",
+            str(decision_path),
+        ]
         print("RUN:", " ".join(validate_cmd))
         subprocess.check_call(validate_cmd, cwd=str(root))
 
         decision = _load(decision_path)
         action = decision.get("decision", {}).get("action")
         relpath = decision.get("inputs", {}).get("quality_target_relpath")
-        temporal_target = decision.get("policy", {}).get("quality_targets", {}).get("temporal_stability")
-        loop_target = decision.get("policy", {}).get("quality_targets", {}).get("loop_seam")
+        temporal_target = (
+            decision.get("policy", {})
+            .get("quality_targets", {})
+            .get("temporal_stability")
+        )
+        loop_target = (
+            decision.get("policy", {}).get("quality_targets", {}).get("loop_seam")
+        )
         seg_mode = decision.get("segment_retry", {}).get("mode")
 
         if relpath != "repo/examples/quality_target.motion_strict.v1.example.json":
-            print(f"ERROR: expected quality_target_relpath override, got {relpath!r}", file=sys.stderr)
+            print(
+                f"ERROR: expected quality_target_relpath override, got {relpath!r}",
+                file=sys.stderr,
+            )
             return 1
         if temporal_target != 0.9 or loop_target != 0.9:
             print(
@@ -86,10 +130,15 @@ def main(argv: list[str]) -> int:
             )
             return 1
         if action != "retry_motion":
-            print(f"ERROR: expected retry_motion under strict contract, got {action!r}", file=sys.stderr)
+            print(
+                f"ERROR: expected retry_motion under strict contract, got {action!r}",
+                file=sys.stderr,
+            )
             return 1
         if seg_mode == "none":
-            print("ERROR: expected segment retry plan for retry_motion", file=sys.stderr)
+            print(
+                "ERROR: expected segment retry plan for retry_motion", file=sys.stderr
+            )
             return 1
 
         print("OK:", decision_path)

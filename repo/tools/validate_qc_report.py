@@ -28,7 +28,9 @@ def eprint(*args: Any) -> None:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_qc_report path/to/qc_report.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_qc_report path/to/qc_report.v1.json"
+        )
         return 1
     target = pathlib.Path(argv[1]).resolve()
     if not target.exists():
@@ -64,11 +66,15 @@ def main(argv: list[str]) -> int:
     known_classes = {
         str(g.get("failure_class"))
         for g in data.get("gates", [])
-        if isinstance(g, dict) and isinstance(g.get("failure_class"), str) and g.get("status") == "fail"
+        if isinstance(g, dict)
+        and isinstance(g.get("failure_class"), str)
+        and g.get("status") == "fail"
     }
     unknown = [c for c in failed_classes if c not in known_classes]
     if unknown:
-        eprint(f"SEMANTIC_ERROR: failed_failure_classes not present in failed gate entries: {unknown}")
+        eprint(
+            f"SEMANTIC_ERROR: failed_failure_classes not present in failed gate entries: {unknown}"
+        )
         return 1
 
     print(f"OK: {target}")

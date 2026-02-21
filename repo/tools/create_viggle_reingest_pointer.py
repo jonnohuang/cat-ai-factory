@@ -5,6 +5,7 @@ create_viggle_reingest_pointer.py
 Creates an explicit inbox metadata pointer for external Viggle output:
   sandbox/inbox/viggle-reingest-<job_id>-<nonce>.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,13 +21,21 @@ def _repo_root() -> pathlib.Path:
 
 def _write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Create external recast re-ingest pointer in inbox")
+    parser = argparse.ArgumentParser(
+        description="Create external recast re-ingest pointer in inbox"
+    )
     parser.add_argument("--job-id", required=True, help="Job ID")
-    parser.add_argument("--result-video-relpath", required=True, help="Result video relpath like sandbox/inbox/viggle_results/<job_id>/viggle.mp4")
+    parser.add_argument(
+        "--result-video-relpath",
+        required=True,
+        help="Result video relpath like sandbox/inbox/viggle_results/<job_id>/viggle.mp4",
+    )
     parser.add_argument("--notes", default="", help="Optional notes")
     args = parser.parse_args()
 
@@ -51,4 +60,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

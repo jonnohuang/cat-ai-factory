@@ -26,7 +26,9 @@ def eprint(*args: object) -> None:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_qc_advisory_benchmark path/to/qc_advisory_benchmark.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_qc_advisory_benchmark path/to/qc_advisory_benchmark.v1.json"
+        )
         return 2
     root = _repo_root()
     target = root / argv[1]

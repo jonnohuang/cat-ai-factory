@@ -14,7 +14,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _load_json(path: pathlib.Path) -> Optional[Dict[str, Any]]:
@@ -71,7 +76,15 @@ def _load_quality_targets_from_job(root: pathlib.Path, job_id: str) -> Dict[str,
     if not isinstance(thresholds, dict):
         return defaults
     merged = dict(defaults)
-    for key in ("identity_consistency", "mask_edge_bleed", "temporal_stability", "loop_seam", "audio_video", "background_stability", "identity_drift"):
+    for key in (
+        "identity_consistency",
+        "mask_edge_bleed",
+        "temporal_stability",
+        "loop_seam",
+        "audio_video",
+        "background_stability",
+        "identity_drift",
+    ):
         v = thresholds.get(key)
         if isinstance(v, (int, float)):
             merged[key] = max(0.0, min(1.0, float(v)))
@@ -89,13 +102,20 @@ def _load_continuity_require_costume(root: pathlib.Path, job_id: str) -> bool:
     if not isinstance(rel, str) or not rel.startswith("repo/"):
         return False
     pack = _load_json(root / rel)
-    if not isinstance(pack, dict) or pack.get("version") != "episode_continuity_pack.v1":
+    if (
+        not isinstance(pack, dict)
+        or pack.get("version") != "episode_continuity_pack.v1"
+    ):
         return False
     rules = pack.get("rules")
-    return bool(isinstance(rules, dict) and rules.get("require_costume_fidelity") is True)
+    return bool(
+        isinstance(rules, dict) and rules.get("require_costume_fidelity") is True
+    )
 
 
-def _metric_gate_status(metric_payload: Any, threshold: float) -> tuple[str, Optional[float], str]:
+def _metric_gate_status(
+    metric_payload: Any, threshold: float
+) -> tuple[str, Optional[float], str]:
     if not isinstance(metric_payload, dict):
         return "unknown", None, "metric_missing"
     score = metric_payload.get("score")
@@ -120,9 +140,16 @@ def _choose_recommended_action(
     return fallback_action
 
 
-def _normalize_missing_report_action(policy: Dict[str, Any], fallback_action: str) -> str:
+def _normalize_missing_report_action(
+    policy: Dict[str, Any], fallback_action: str
+) -> str:
     raw = policy.get("default_action_on_missing_report")
-    if isinstance(raw, str) and raw in {"retry_motion", "retry_recast", "block_for_costume", "escalate_hitl"}:
+    if isinstance(raw, str) and raw in {
+        "retry_motion",
+        "retry_recast",
+        "block_for_costume",
+        "escalate_hitl",
+    }:
         return raw
     return fallback_action
 
@@ -154,7 +181,9 @@ def _build_failure_class_map(policy: Dict[str, Any]) -> Dict[str, Dict[str, Any]
     return out
 
 
-def _classify_failure(metric: str, class_map: Dict[str, Dict[str, Any]]) -> Optional[str]:
+def _classify_failure(
+    metric: str, class_map: Dict[str, Dict[str, Any]]
+) -> Optional[str]:
     for class_id, row in class_map.items():
         metrics = row.get("metrics")
         if isinstance(metrics, set) and metric in metrics:
@@ -163,7 +192,9 @@ def _classify_failure(metric: str, class_map: Dict[str, Dict[str, Any]]) -> Opti
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Build deterministic qc_report.v1 from policy + measured artifacts")
+    parser = argparse.ArgumentParser(
+        description="Build deterministic qc_report.v1 from policy + measured artifacts"
+    )
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--qc-policy-relpath", default="repo/shared/qc_policy.v1.json")
     args = parser.parse_args(argv[1:])
@@ -187,8 +218,14 @@ def main(argv: list[str]) -> int:
     costume = _load_json(costume_path)
 
     policy_gates = policy.get("gates", [])
-    priorities = [str(x) for x in policy.get("routing", {}).get("failure_action_priority", []) if isinstance(x, str)]
-    fallback_action = str(policy.get("routing", {}).get("fallback_action", "escalate_hitl"))
+    priorities = [
+        str(x)
+        for x in policy.get("routing", {}).get("failure_action_priority", [])
+        if isinstance(x, str)
+    ]
+    fallback_action = str(
+        policy.get("routing", {}).get("fallback_action", "escalate_hitl")
+    )
     missing_report_action = _normalize_missing_report_action(policy, fallback_action)
 
     gates: List[Dict[str, Any]] = []
@@ -258,16 +295,24 @@ def main(argv: list[str]) -> int:
             failed_gate_ids.append(gate_id)
             failed_actions.append(missing_report_action)
 
-    recommended_action = _choose_recommended_action(failed_actions, priorities, fallback_action)
+    recommended_action = _choose_recommended_action(
+        failed_actions, priorities, fallback_action
+    )
     payload: Dict[str, Any] = {
         "version": "qc_report.v1",
         "job_id": args.job_id,
         "generated_at": _utc_now(),
         "inputs": {
             "qc_policy_relpath": _safe_rel(policy_path, root),
-            "quality_report_relpath": _safe_rel(quality_path, root) if quality_path.exists() else None,
-            "costume_report_relpath": _safe_rel(costume_path, root) if costume_path.exists() else None,
-            "two_pass_orchestration_relpath": _safe_rel(two_pass_path, root) if two_pass_path.exists() else None,
+            "quality_report_relpath": (
+                _safe_rel(quality_path, root) if quality_path.exists() else None
+            ),
+            "costume_report_relpath": (
+                _safe_rel(costume_path, root) if costume_path.exists() else None
+            ),
+            "two_pass_orchestration_relpath": (
+                _safe_rel(two_pass_path, root) if two_pass_path.exists() else None
+            ),
         },
         "gates": gates,
         "overall": {

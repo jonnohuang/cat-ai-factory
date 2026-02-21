@@ -13,7 +13,9 @@ def _expect_system_exit(fn: Callable[[], Any], needle: str) -> None:
     except SystemExit as exc:
         msg = str(exc)
         if needle not in msg:
-            raise AssertionError(f"expected error containing {needle!r}, got {msg!r}") from exc
+            raise AssertionError(
+                f"expected error containing {needle!r}, got {msg!r}"
+            ) from exc
         return
     raise AssertionError("expected SystemExit, but call succeeded")
 
@@ -31,7 +33,10 @@ def main(argv: list[str]) -> int:
     original_object_info = rf._comfy_object_info
     original_resolve_checkpoint = rf._comfy_resolve_checkpoint
     try:
-        rf._comfy_object_info = lambda _base_url: {"CheckpointLoaderSimple": {}, "KSampler": {}}
+        rf._comfy_object_info = lambda _base_url: {
+            "CheckpointLoaderSimple": {},
+            "KSampler": {},
+        }
         rf._comfy_resolve_checkpoint = lambda _base_url: "smoke.safetensors"
         _expect_system_exit(
             lambda: rf._comfy_preflight_capabilities(
@@ -53,7 +58,10 @@ def main(argv: list[str]) -> int:
             "required node classes unavailable",
         )
 
-        rf._comfy_object_info = lambda _base_url: {"CheckpointLoaderSimple": {}, "KSampler": {}}
+        rf._comfy_object_info = lambda _base_url: {
+            "CheckpointLoaderSimple": {},
+            "KSampler": {},
+        }
         out = rf._comfy_preflight_capabilities(
             base_url="http://127.0.0.1:8188",
             workflow_doc=workflow_doc,

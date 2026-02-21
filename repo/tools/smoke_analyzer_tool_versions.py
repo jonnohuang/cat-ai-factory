@@ -22,7 +22,14 @@ def main() -> int:
     reverse = _load(base / f"{aid}.caf.video_reverse_prompt.v1.json")
     frame_labels = _load(base / f"{aid}.frame_labels.v1.json")
 
-    required_keys = {"python", "opencv", "mediapipe", "movenet", "librosa", "scenedetect"}
+    required_keys = {
+        "python",
+        "opencv",
+        "mediapipe",
+        "movenet",
+        "librosa",
+        "scenedetect",
+    }
     pose_versions = pose.get("tool_versions")
     reverse_versions = reverse.get("tool_versions")
     frame_versions = frame_labels.get("tool_versions")
@@ -31,13 +38,21 @@ def main() -> int:
         print("ERROR: pose.tool_versions missing", file=sys.stderr)
         return 1
     if set(pose_versions.keys()) != required_keys:
-        print(f"ERROR: pose.tool_versions keys mismatch: {sorted(pose_versions.keys())}", file=sys.stderr)
+        print(
+            f"ERROR: pose.tool_versions keys mismatch: {sorted(pose_versions.keys())}",
+            file=sys.stderr,
+        )
         return 1
     if reverse_versions != pose_versions:
-        print("ERROR: reverse.tool_versions mismatch pose.tool_versions", file=sys.stderr)
+        print(
+            "ERROR: reverse.tool_versions mismatch pose.tool_versions", file=sys.stderr
+        )
         return 1
     if frame_versions != pose_versions:
-        print("ERROR: frame_labels.tool_versions mismatch pose.tool_versions", file=sys.stderr)
+        print(
+            "ERROR: frame_labels.tool_versions mismatch pose.tool_versions",
+            file=sys.stderr,
+        )
         return 1
 
     print(f"tool_versions: {pose_versions}")

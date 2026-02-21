@@ -23,11 +23,15 @@ def run_step(name, cmd, log_path: pathlib.Path) -> float:
         result = subprocess.run(cmd, stdout=log_file, stderr=subprocess.STDOUT)
     duration = time.time() - start
     if result.returncode != 0:
-        raise RuntimeError(f"{name} failed with exit code {result.returncode}. See log: {log_path}")
+        raise RuntimeError(
+            f"{name} failed with exit code {result.returncode}. See log: {log_path}"
+        )
     return duration
 
 
-def snapshot_outputs(output_dir: pathlib.Path, label: str, logs_dir: pathlib.Path) -> pathlib.Path:
+def snapshot_outputs(
+    output_dir: pathlib.Path, label: str, logs_dir: pathlib.Path
+) -> pathlib.Path:
     if not output_dir.exists():
         raise RuntimeError(f"Expected output directory missing: {output_dir}")
     dest_dir = logs_dir / label
@@ -54,7 +58,9 @@ def load_job(job_path: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Local v0.1 determinism + lineage harness.")
+    parser = argparse.ArgumentParser(
+        description="Local v0.1 determinism + lineage harness."
+    )
     parser.add_argument("job_path", help="Path to job.json")
     parser.add_argument(
         "--sandbox-root",
@@ -64,7 +70,9 @@ def main():
     args = parser.parse_args()
 
     root = repo_root_from_here()
-    sandbox_root = pathlib.Path(args.sandbox_root) if args.sandbox_root else (root / "sandbox")
+    sandbox_root = (
+        pathlib.Path(args.sandbox_root) if args.sandbox_root else (root / "sandbox")
+    )
     logs_root = sandbox_root / "logs"
     output_root = sandbox_root / "output"
 
@@ -88,7 +96,9 @@ def main():
             ["python3", "repo/tools/validate_job.py", str(job_file)],
             tmp_validate_log,
         )
-        summary["steps"].append({"name": "validate_job", "status": "ok", "duration_sec": round(duration, 3)})
+        summary["steps"].append(
+            {"name": "validate_job", "status": "ok", "duration_sec": round(duration, 3)}
+        )
 
         # Now that validation succeeded, establish canonical logs dir.
         logs_dir = logs_root / job_id
@@ -101,43 +111,86 @@ def main():
 
         duration = run_step(
             "worker_run_1",
-            ["python3", "repo/worker/render_ffmpeg.py", "--job", str(job_file), "--sandbox-root", str(sandbox_root)],
+            [
+                "python3",
+                "repo/worker/render_ffmpeg.py",
+                "--job",
+                str(job_file),
+                "--sandbox-root",
+                str(sandbox_root),
+            ],
             logs_dir / "worker_run_1.log",
         )
-        summary["steps"].append({"name": "worker_run_1", "status": "ok", "duration_sec": round(duration, 3)})
+        summary["steps"].append(
+            {"name": "worker_run_1", "status": "ok", "duration_sec": round(duration, 3)}
+        )
 
         out_dir = output_root / job_id
         run1_dir = snapshot_outputs(out_dir, "run1", logs_dir)
 
         duration = run_step(
             "worker_run_2",
-            ["python3", "repo/worker/render_ffmpeg.py", "--job", str(job_file), "--sandbox-root", str(sandbox_root)],
+            [
+                "python3",
+                "repo/worker/render_ffmpeg.py",
+                "--job",
+                str(job_file),
+                "--sandbox-root",
+                str(sandbox_root),
+            ],
             logs_dir / "worker_run_2.log",
         )
-        summary["steps"].append({"name": "worker_run_2", "status": "ok", "duration_sec": round(duration, 3)})
+        summary["steps"].append(
+            {"name": "worker_run_2", "status": "ok", "duration_sec": round(duration, 3)}
+        )
 
         run2_dir = snapshot_outputs(out_dir, "run2", logs_dir)
 
         duration = run_step(
             "determinism_check",
-            ["python3", "repo/tools/determinism_check.py", str(run1_dir), str(run2_dir)],
+            [
+                "python3",
+                "repo/tools/determinism_check.py",
+                str(run1_dir),
+                str(run2_dir),
+            ],
             logs_dir / "determinism_check.log",
         )
-        summary["steps"].append({"name": "determinism_check", "status": "ok", "duration_sec": round(duration, 3)})
+        summary["steps"].append(
+            {
+                "name": "determinism_check",
+                "status": "ok",
+                "duration_sec": round(duration, 3),
+            }
+        )
 
         duration = run_step(
             "lineage_verify",
-            ["python3", "repo/tools/lineage_verify.py", str(job_file), "--sandbox-root", str(sandbox_root)],
+            [
+                "python3",
+                "repo/tools/lineage_verify.py",
+                str(job_file),
+                "--sandbox-root",
+                str(sandbox_root),
+            ],
             logs_dir / "lineage_verify.log",
         )
-        summary["steps"].append({"name": "lineage_verify", "status": "ok", "duration_sec": round(duration, 3)})
+        summary["steps"].append(
+            {
+                "name": "lineage_verify",
+                "status": "ok",
+                "duration_sec": round(duration, 3),
+            }
+        )
 
         summary["status"] = "ok"
 
         summary["qc"] = run_qc_step(job_id, str(job_file), sandbox_root)
 
         summary_path = logs_dir / "harness_summary.json"
-        summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+        summary_path.write_text(
+            json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8"
+        )
 
         print(f"LOCAL v0.1 harness OK for job_id={job_id}")
         print(f"Summary: {summary_path}")
@@ -148,7 +201,7 @@ def main():
         summary["error"] = str(exc)
 
         # Best-effort write summary: prefer canonical logs dir if possible, else temp.
-        logs_dir = (logs_root / job_id)
+        logs_dir = logs_root / job_id
         try:
             logs_dir.mkdir(parents=True, exist_ok=True)
             summary_path = logs_dir / "harness_summary.json"
@@ -157,7 +210,9 @@ def main():
             tmp_dir.mkdir(parents=True, exist_ok=True)
             summary_path = tmp_dir / "harness_summary.json"
 
-        summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+        summary_path.write_text(
+            json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8"
+        )
         print("Harness failed:", exc)
         print(f"Summary: {summary_path}")
         return 1
@@ -173,7 +228,14 @@ def run_qc_step(job_id: str, job_path: str, sandbox_root: pathlib.Path) -> dict:
         "details": "QC step not run",
     }
     try:
-        cmd = ["python3", "-m", "repo.tools.qc_verify", job_path, "--sandbox-root", str(sandbox_root)]
+        cmd = [
+            "python3",
+            "-m",
+            "repo.tools.qc_verify",
+            job_path,
+            "--sandbox-root",
+            str(sandbox_root),
+        ]
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
         qc_summary["exit_code"] = result.returncode
@@ -185,7 +247,9 @@ def run_qc_step(job_id: str, job_path: str, sandbox_root: pathlib.Path) -> dict:
             qc_summary["details"] = "QC checks failed."
         else:
             qc_summary["status"] = "ERROR"
-            qc_summary["details"] = f"QC tool returned an unexpected exit code. Stderr: {result.stderr.strip()}"
+            qc_summary["details"] = (
+                f"QC tool returned an unexpected exit code. Stderr: {result.stderr.strip()}"
+            )
 
     except FileNotFoundError:
         qc_summary["details"] = "QC tool not found or python3 is not in PATH."

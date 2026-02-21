@@ -22,25 +22,27 @@ class AssetResolver:
         except Exception:
             self._assets = []
 
-    def find_assets(self, tags: List[str], asset_type: Optional[str] = None) -> List[str]:
+    def find_assets(
+        self, tags: List[str], asset_type: Optional[str] = None
+    ) -> List[str]:
         """
         Finds assets matching ALL provided tags.
         Returns a list of relative paths sorted by priority (desc) then asset_id.
         """
         matches = []
         search_tags = [t.lower() for t in tags]
-        
+
         for asset in self._assets:
             if asset_type and asset.get("type") != asset_type:
                 continue
-                
+
             asset_tags = [t.lower() for t in asset.get("tags", [])]
             if all(t in asset_tags for t in search_tags):
                 matches.append(asset)
-        
+
         # Sort by priority (desc), then asset_id (asc)
         matches.sort(key=lambda x: (-x.get("priority", 50), x.get("asset_id", "")))
-        
+
         return [a.get("relpath") for a in matches]
 
     def resolve_reference_images(self, intent_text: str) -> List[str]:
@@ -49,15 +51,15 @@ class AssetResolver:
         """
         text = intent_text.lower()
         tags = []
-        
+
         if "mochi" in text:
             tags.append("mochi")
         if "dance" in text or "loop" in text:
             tags.append("dance")
-            
+
         if not tags:
             return []
-            
+
         # Find all assets that match at least one of the tags (Union for references)
         # But we sort them together.
         matches = []
@@ -67,7 +69,7 @@ class AssetResolver:
             asset_tags = [t.lower() for t in asset.get("tags", [])]
             if any(t in asset_tags for t in tags):
                 matches.append(asset)
-                
+
         matches.sort(key=lambda x: (-x.get("priority", 50), x.get("asset_id", "")))
         return [a.get("relpath") for a in matches]
 

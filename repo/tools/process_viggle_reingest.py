@@ -5,6 +5,7 @@ process_viggle_reingest.py
 Processes a viggle_reingest_pointer.v1 inbox artifact and updates
 dist_artifacts lifecycle state deterministically.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,12 +27,18 @@ def _load(path: pathlib.Path) -> Any:
 
 def _write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Process Viggle re-ingest pointer and update lifecycle")
-    parser.add_argument("--pointer", required=True, help="Path to viggle-reingest-*.json")
+    parser = argparse.ArgumentParser(
+        description="Process Viggle re-ingest pointer and update lifecycle"
+    )
+    parser.add_argument(
+        "--pointer", required=True, help="Path to viggle-reingest-*.json"
+    )
     args = parser.parse_args()
 
     root = _repo_root()
@@ -72,4 +79,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

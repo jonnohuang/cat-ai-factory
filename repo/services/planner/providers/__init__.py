@@ -9,10 +9,9 @@ from .grok_image import GrokImageProvider
 from .langgraph_demo import LangGraphDemoProvider
 from .meta_ai_lab import MetaAiLabProvider
 from .sora_lab import SoraLabProvider
+from .vertex_ai import VertexImagenProvider, VertexVeoProvider
 from .wan_2_2 import WanLocalProvider
 from .wan_dashscope import WanDashScopeProvider
-from .vertex_ai import VertexImagenProvider, VertexVeoProvider
-
 
 PROVIDERS: Dict[str, Type[BaseProvider]] = {
     "ai_studio": GeminiAIStudioProvider,

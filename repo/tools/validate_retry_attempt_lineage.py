@@ -28,7 +28,9 @@ def _load(path: pathlib.Path) -> Any:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_retry_attempt_lineage path/to/retry_attempt_lineage.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_retry_attempt_lineage path/to/retry_attempt_lineage.v1.json"
+        )
         return 1
     target = pathlib.Path(argv[1]).resolve()
     if not target.exists():
@@ -56,13 +58,19 @@ def main(argv: list[str]) -> int:
         resolution = str(item.get("resolution", ""))
         retry_type = item.get("retry_type")
         if resolution == "retry" and retry_type not in {"motion", "recast"}:
-            eprint(f"SEMANTIC_ERROR: attempt[{i}] retry resolution requires retry_type motion/recast")
+            eprint(
+                f"SEMANTIC_ERROR: attempt[{i}] retry resolution requires retry_type motion/recast"
+            )
             return 1
         if resolution == "finalize" and retry_type not in {"none", None}:
-            eprint(f"SEMANTIC_ERROR: attempt[{i}] finalize resolution requires retry_type none/null")
+            eprint(
+                f"SEMANTIC_ERROR: attempt[{i}] finalize resolution requires retry_type none/null"
+            )
             return 1
         if resolution == "escalate" and retry_type not in {"none", None}:
-            eprint(f"SEMANTIC_ERROR: attempt[{i}] escalate resolution requires retry_type none/null")
+            eprint(
+                f"SEMANTIC_ERROR: attempt[{i}] escalate resolution requires retry_type none/null"
+            )
             return 1
 
     print(f"OK: {target}")

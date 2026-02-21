@@ -5,6 +5,7 @@ export_viggle_pack.py
 Exports deterministic external HITL recast pack artifacts under:
   sandbox/dist_artifacts/<job_id>/viggle_pack/**
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,7 +27,9 @@ def _load(path: pathlib.Path) -> Any:
 
 def _write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def _write_text(path: pathlib.Path, text: str) -> None:
@@ -53,15 +56,25 @@ def _load_costume_profiles(root: pathlib.Path) -> dict[str, Any]:
     return _load(p) if p.exists() else {}
 
 
-def _resolve_hero_image_from_id(hero_id: str, root: pathlib.Path, sandbox: pathlib.Path) -> pathlib.Path:
+def _resolve_hero_image_from_id(
+    hero_id: str, root: pathlib.Path, sandbox: pathlib.Path
+) -> pathlib.Path:
     reg = _load_hero_registry(root)
     heroes = reg.get("heroes", []) if isinstance(reg, dict) else []
-    row = next((h for h in heroes if isinstance(h, dict) and h.get("hero_id") == hero_id), None)
+    row = next(
+        (h for h in heroes if isinstance(h, dict) and h.get("hero_id") == hero_id), None
+    )
     if not row:
         raise SystemExit(f"hero_id not found in hero registry: {hero_id}")
 
-    hints = row.get("asset_hints", {}) if isinstance(row.get("asset_hints"), dict) else {}
-    seeds = hints.get("seed_frames", []) if isinstance(hints.get("seed_frames"), list) else []
+    hints = (
+        row.get("asset_hints", {}) if isinstance(row.get("asset_hints"), dict) else {}
+    )
+    seeds = (
+        hints.get("seed_frames", [])
+        if isinstance(hints.get("seed_frames"), list)
+        else []
+    )
     for seed in seeds:
         if not isinstance(seed, str):
             continue
@@ -80,7 +93,10 @@ def _resolve_costume_specific_hero_image(
         return None
     # Deterministic local mapping for known demo costume references.
     mapping = {
-        ("mochi-grey-tabby", "dance_loop_dino_onesie"): "assets/demo/mochi_dino_frame_for_key.png",
+        (
+            "mochi-grey-tabby",
+            "dance_loop_dino_onesie",
+        ): "assets/demo/mochi_dino_frame_for_key.png",
     }
     rel = mapping.get((hero_id, costume_profile_id))
     if not rel:
@@ -92,9 +108,14 @@ def _resolve_costume_specific_hero_image(
 def _costume_cue_text(root: pathlib.Path, costume_profile_id: str) -> str:
     profiles = _load_costume_profiles(root)
     rows = profiles.get("profiles", []) if isinstance(profiles, dict) else []
-    row = next((r for r in rows if isinstance(r, dict) and r.get("id") == costume_profile_id), None)
+    row = next(
+        (r for r in rows if isinstance(r, dict) and r.get("id") == costume_profile_id),
+        None,
+    )
     if not row:
-        raise SystemExit(f"costume_profile_id not found in costume_profiles.v1.json: {costume_profile_id}")
+        raise SystemExit(
+            f"costume_profile_id not found in costume_profiles.v1.json: {costume_profile_id}"
+        )
     cues = row.get("cues", []) if isinstance(row.get("cues"), list) else []
     cleaned = [str(c).strip() for c in cues if isinstance(c, str) and str(c).strip()]
     if not cleaned:
@@ -103,13 +124,29 @@ def _costume_cue_text(root: pathlib.Path, costume_profile_id: str) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export viggle pack under dist_artifacts")
+    parser = argparse.ArgumentParser(
+        description="Export viggle pack under dist_artifacts"
+    )
     parser.add_argument("--job", required=True, help="Path to job JSON")
-    parser.add_argument("--hero-image", help="Hero image asset path (relative to sandbox or sandbox/*)")
-    parser.add_argument("--hero-id", help="Hero id from hero_registry.v1.json; auto-resolves hero image from seed frames")
-    parser.add_argument("--motion-video", required=True, help="Motion source video asset path (relative to sandbox or sandbox/*)")
-    parser.add_argument("--prompt", required=True, help="Prompt text for external recast tool")
-    parser.add_argument("--costume-profile-id", help="Optional costume profile id from costume_profiles.v1.json")
+    parser.add_argument(
+        "--hero-image", help="Hero image asset path (relative to sandbox or sandbox/*)"
+    )
+    parser.add_argument(
+        "--hero-id",
+        help="Hero id from hero_registry.v1.json; auto-resolves hero image from seed frames",
+    )
+    parser.add_argument(
+        "--motion-video",
+        required=True,
+        help="Motion source video asset path (relative to sandbox or sandbox/*)",
+    )
+    parser.add_argument(
+        "--prompt", required=True, help="Prompt text for external recast tool"
+    )
+    parser.add_argument(
+        "--costume-profile-id",
+        help="Optional costume profile id from costume_profiles.v1.json",
+    )
     args = parser.parse_args()
 
     root = _repo_root()
@@ -120,7 +157,9 @@ def main() -> int:
     if args.hero_image:
         hero_src = _resolve_asset(args.hero_image, sandbox)
     elif args.hero_id:
-        hero_src = _resolve_costume_specific_hero_image(args.hero_id, args.costume_profile_id, sandbox)
+        hero_src = _resolve_costume_specific_hero_image(
+            args.hero_id, args.costume_profile_id, sandbox
+        )
         if hero_src is None:
             hero_src = _resolve_hero_image_from_id(args.hero_id, root, sandbox)
     else:

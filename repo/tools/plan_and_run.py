@@ -35,15 +35,23 @@ def _run(cmd: List[str]) -> subprocess.CompletedProcess[str]:
 
 
 def main(argv: List[str]) -> int:
-    parser = argparse.ArgumentParser(description="One-command planner -> orchestrator runner.")
+    parser = argparse.ArgumentParser(
+        description="One-command planner -> orchestrator runner."
+    )
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--prompt", help="Prompt to send to planner")
     source.add_argument("--prd", help="Path to PRD json")
     parser.add_argument("--provider", default="ai_studio", help="Planner provider")
     parser.add_argument("--inbox", default="sandbox/inbox", help="Inbox directory")
-    parser.add_argument("--out", default="sandbox/jobs", help="Planner output directory")
+    parser.add_argument(
+        "--out", default="sandbox/jobs", help="Planner output directory"
+    )
     parser.add_argument("--job-id", default=None, help="Optional job_id override")
-    parser.add_argument("--dry-run", action="store_true", help="Generate job only; skip orchestrator run")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Generate job only; skip orchestrator run",
+    )
     args = parser.parse_args(argv)
 
     root = _repo_root()
@@ -54,7 +62,14 @@ def main(argv: List[str]) -> int:
         planner_cmd += ["--prompt", args.prompt]
     else:
         planner_cmd += ["--prd", args.prd]
-    planner_cmd += ["--provider", args.provider, "--inbox", args.inbox, "--out", args.out]
+    planner_cmd += [
+        "--provider",
+        args.provider,
+        "--inbox",
+        args.inbox,
+        "--out",
+        args.out,
+    ]
     if args.job_id:
         planner_cmd += ["--job-id", args.job_id]
 
@@ -67,7 +82,9 @@ def main(argv: List[str]) -> int:
     if planner_res.returncode != 0:
         return planner_res.returncode
 
-    job_path = _extract_written_job_path(planner_res.stdout) or _latest_job_path(args.out)
+    job_path = _extract_written_job_path(planner_res.stdout) or _latest_job_path(
+        args.out
+    )
     if not job_path:
         print("ERROR: planner succeeded but no job.json path found", file=sys.stderr)
         return 1
@@ -89,4 +106,3 @@ def main(argv: List[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

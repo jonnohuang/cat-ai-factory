@@ -761,7 +761,7 @@ Outcome:
 ---
 
 ### PR-26 — Budget guardrails + enforcement (local + cloud)
-Status: **DEFERRED**
+Status: **COMPLETED**
 
 Scope:
 - Cost estimation and caps (hard stop) before spending
@@ -773,7 +773,7 @@ Outcome:
 ---
 
 ### PR-27 — CI/CD skeleton
-Status: **DEFERRED**
+Status: **COMPLETED**
 
 Scope:
 - Lint + harness execution
@@ -785,7 +785,7 @@ Outcome:
 ---
 
 ### PR-28 — Coze wiring (Cloud Run ingress client; PlanRequest.v1 → Firestore/GCS)
-Status: **DEFERRED**
+Status: **COMPLETED**
 
 Scope:
 - Wire Coze to call CAF Cloud Run ingress endpoint (e.g., `/ingress/plan`).
@@ -799,7 +799,7 @@ Outcome:
 ---
 
 ### PR-29 — n8n workflows (post-cloud ops layer; human approval + manual publish)
-Status: **DEFERRED**
+Status: **COMPLETED**
 
 Scope:
 - Introduce n8n as an ops/workflow client layer after cloud state exists (Firestore/GCS).
@@ -815,13 +815,14 @@ Outcome:
 
 ---
 
-### PR-30 — Terraform infra (live GCP provisioning; required, Phase 7 infra track)
-Status: **DEFERRED**
+### PR-30 — Terraform infra
+Status: **ACTIVE**
 
 Scope:
 - Terraform for Cloud Run + Cloud Tasks + Firestore + GCS (placeholders only in repo)
 - No real project IDs or bucket names committed
 - Live provisioning is explicit and opt-in
+- (live GCP provisioning; required, Phase 7 infra track)
 
 Outcome:
 - Reproducible, reviewable infra provisioning without polluting core docs or contracts

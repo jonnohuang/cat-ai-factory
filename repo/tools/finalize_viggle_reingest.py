@@ -5,6 +5,7 @@ finalize_viggle_reingest.py
 Deterministically finalize an external Viggle re-ingest video into CAF output path:
   sandbox/output/<job_id>/final.mp4
 """
+
 from __future__ import annotations
 
 import argparse
@@ -15,7 +16,6 @@ import subprocess
 import sys
 import time
 from typing import Any
-
 
 PADDING_PX = 24
 OPACITY = 0.35
@@ -37,7 +37,9 @@ def _sha256_file(path: pathlib.Path) -> str:
 def _atomic_write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     tmp.replace(path)
 
 
@@ -133,7 +135,9 @@ def _run_costume_gate(
     subject_id: str | None,
     threshold: float,
 ) -> dict[str, Any]:
-    report = root / "sandbox" / "logs" / job_id / "qc" / "costume_fidelity_report.v1.json"
+    report = (
+        root / "sandbox" / "logs" / job_id / "qc" / "costume_fidelity_report.v1.json"
+    )
     cmd = [
         sys.executable,
         "-m",
@@ -159,7 +163,9 @@ def _run_costume_gate(
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Finalize external Viggle output into CAF final output path")
+    parser = argparse.ArgumentParser(
+        description="Finalize external Viggle output into CAF final output path"
+    )
     parser.add_argument("--job-id", required=True, help="Job ID")
     parser.add_argument(
         "--input-relpath",
@@ -182,13 +188,23 @@ def main(argv: list[str]) -> int:
         default="mild",
         help="Enhancement preset used when --enhance is enabled.",
     )
-    parser.add_argument("--costume-ref-relpath", help="Optional costume reference image relpath for fidelity gate")
+    parser.add_argument(
+        "--costume-ref-relpath",
+        help="Optional costume reference image relpath for fidelity gate",
+    )
     parser.add_argument(
         "--tracks-relpath",
         help="Optional tracks artifact relpath; default sandbox/output/<job_id>/contracts/tracks.json when available",
     )
-    parser.add_argument("--subject-id", help="Optional tracked subject id for costume gate")
-    parser.add_argument("--costume-threshold", type=float, default=0.52, help="Pass threshold for costume gate")
+    parser.add_argument(
+        "--subject-id", help="Optional tracked subject id for costume gate"
+    )
+    parser.add_argument(
+        "--costume-threshold",
+        type=float,
+        default=0.52,
+        help="Pass threshold for costume gate",
+    )
     parser.add_argument(
         "--require-costume-pass",
         action="store_true",
@@ -198,7 +214,9 @@ def main(argv: list[str]) -> int:
 
     root = _repo_root()
     job_id = args.job_id
-    input_rel = args.input_relpath or f"sandbox/inbox/viggle_results/{job_id}/viggle.mp4"
+    input_rel = (
+        args.input_relpath or f"sandbox/inbox/viggle_results/{job_id}/viggle.mp4"
+    )
     in_video = _resolve_input(root, input_rel)
     if not in_video.exists():
         raise SystemExit(f"Input video not found: {in_video}")
@@ -290,7 +308,9 @@ def main(argv: list[str]) -> int:
 
     costume_gate: dict[str, Any] | None = None
     if args.costume_ref_relpath:
-        tracks_rel = args.tracks_relpath or f"sandbox/output/{job_id}/contracts/tracks.json"
+        tracks_rel = (
+            args.tracks_relpath or f"sandbox/output/{job_id}/contracts/tracks.json"
+        )
         costume_gate = _run_costume_gate(
             root=root,
             job_id=job_id,
@@ -335,8 +355,14 @@ def main(argv: list[str]) -> int:
             "reason": costume_gate.get("reason"),
         }
     _atomic_write_json(result_json, result)
-    if args.require_costume_pass and costume_gate is not None and not bool(costume_gate.get("pass")):
-        raise SystemExit("Costume fidelity gate failed; finalize aborted by --require-costume-pass")
+    if (
+        args.require_costume_pass
+        and costume_gate is not None
+        and not bool(costume_gate.get("pass"))
+    ):
+        raise SystemExit(
+            "Costume fidelity gate failed; finalize aborted by --require-costume-pass"
+        )
     print("Wrote", out_mp4)
     print("Wrote", out_srt)
     print("Wrote", result_json)

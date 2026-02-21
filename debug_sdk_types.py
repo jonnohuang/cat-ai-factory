@@ -1,5 +1,5 @@
-
 from google.genai import types
+
 try:
     print("types.Image fields:")
     if hasattr(types.Image, "model_fields"):

@@ -7,6 +7,7 @@ Validates a style_registry.v1.json against schema and semantic checks.
 Usage:
   python -m repo.tools.validate_style_registry path/to/style_registry.v1.json
 """
+
 from __future__ import annotations
 
 import json
@@ -50,19 +51,25 @@ def _semantic_check(data: dict[str, Any], costume_ids: set[str]) -> list[str]:
 
         key = (provider, workflow_ref)
         if key in seen_refs:
-            errors.append(f"styles[{i}]: duplicate provider+workflow_ref '{provider}:{workflow_ref}'")
+            errors.append(
+                f"styles[{i}]: duplicate provider+workflow_ref '{provider}:{workflow_ref}'"
+            )
         seen_refs.add(key)
 
         for cid in row.get("costume_profile_ids", []):
             if cid not in costume_ids:
-                errors.append(f"styles[{i}]: costume_profile_id '{cid}' not found in costume_profiles.v1.json")
+                errors.append(
+                    f"styles[{i}]: costume_profile_id '{cid}' not found in costume_profiles.v1.json"
+                )
 
     return errors
 
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_style_registry path/to/style_registry.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_style_registry path/to/style_registry.v1.json"
+        )
         return 1
 
     target = pathlib.Path(argv[1]).resolve()
@@ -91,7 +98,9 @@ def main(argv: list[str]) -> int:
             eprint("Path:", " -> ".join(str(p) for p in ex.path))
         return 1
 
-    costume_ids = {p.get("id") for p in costumes.get("profiles", []) if isinstance(p, dict)}
+    costume_ids = {
+        p.get("id") for p in costumes.get("profiles", []) if isinstance(p, dict)
+    }
     errors = _semantic_check(data, {x for x in costume_ids if isinstance(x, str)})
     if errors:
         eprint(f"SEMANTIC_ERROR: {target}")

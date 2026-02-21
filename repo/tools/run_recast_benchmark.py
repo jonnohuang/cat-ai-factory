@@ -4,6 +4,7 @@ run_recast_benchmark.py
 
 Runs deterministic recast quality scoring across a fixed benchmark suite.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,12 +27,18 @@ def _load(path: pathlib.Path) -> Any:
 
 def _write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Run deterministic recast benchmark suite")
-    parser.add_argument("--suite", required=True, help="Path to recast_benchmark_suite.v1 JSON")
+    parser = argparse.ArgumentParser(
+        description="Run deterministic recast benchmark suite"
+    )
+    parser.add_argument(
+        "--suite", required=True, help="Path to recast_benchmark_suite.v1 JSON"
+    )
     parser.add_argument("--out", help="Output benchmark report JSON path")
     args = parser.parse_args(argv[1:])
 
@@ -103,7 +110,11 @@ def main(argv: list[str]) -> int:
         "cases": case_results,
         "summary": summary,
     }
-    out_path = pathlib.Path(args.out).resolve() if args.out else (bench_dir / "recast_benchmark_report.v1.json")
+    out_path = (
+        pathlib.Path(args.out).resolve()
+        if args.out
+        else (bench_dir / "recast_benchmark_report.v1.json")
+    )
     _write_json(out_path, report)
     print("Wrote", out_path)
     print("summary.avg_overall_score", summary["avg_overall_score"])
@@ -113,4 +124,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-
