@@ -13,6 +13,12 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+# repo/services/orchestrator/ralph_loop.py -> <repo_root>
+repo_root = pathlib.Path(__file__).resolve().parents[3]
+sys.path.append(str(repo_root))
+
+from repo.services.budget.tracker import BudgetTracker
+
 
 def repo_root_from_here() -> pathlib.Path:
     # repo/services/orchestrator/ralph_loop.py -> <repo_root>
@@ -283,6 +289,24 @@ def main(argv: List[str]) -> int:
     attempts_root = logs_dir / "attempts"
 
     logs_dir.mkdir(parents=True, exist_ok=True)
+
+    # PR-26: Pre-flight Budget Check
+    budget = BudgetTracker(str(sandbox_root))
+    if not budget.check_budget(0.0): # Zero cost just to check caps
+        summary = budget.get_usage_summary()
+        append_event(
+            events_path,
+            "BUDGET_EXCEEDED",
+            None,
+            "FAILED",
+            None,
+            {
+                "reason": "Budget limits exceeded at start",
+                "summary": summary
+            }
+        )
+        print(f"FATAL: Budget exceeded. Daily: {summary['daily_spent']}/{summary['daily_limit']}, Total: {summary['total_spent']}/{summary['total_limit']}")
+        return 1
 
     try:
         os.mkdir(lock_dir)

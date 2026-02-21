@@ -1,0 +1,69 @@
+{
+    "name": "CAF Manual Publish v1",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "webhook/publish",
+                "options": {}
+            },
+            "name": "Webhook Publish",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                400,
+                300
+            ],
+            "id": "webhook-publish"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=http://local-ingress:8080/ops/publish/{{ $json.query.job_id }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $node[\"Auth Provider\"].json.token }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "publisher",
+                            "value": "n8n-manual-ui"
+                        },
+                        {
+                            "name": "channel",
+                            "value": "manual"
+                        }
+                    ]
+                }
+            },
+            "name": "CAF Ingress Publish",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                600,
+                300
+            ],
+            "id": "caf-ingress-publish"
+        }
+    ],
+    "connections": {
+        "Webhook Publish": {
+            "main": [
+                [
+                    {
+                        "node": "CAF Ingress Publish",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

@@ -9,7 +9,9 @@ import sys
 import tempfile
 from typing import Any, Dict, List, Optional, Tuple
 
+import pathlib
 from .providers import get_provider, list_providers
+from .pointer_resolver import PointerResolver
 from .util.engine_routing import route_engine_policy
 from .util.redact import redact_text
 
@@ -595,40 +597,6 @@ def _load_promotion_registry(project_root: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _resolve_pointer_overrides(
-    project_root: str,
-    prd: Dict[str, Any],
-    inbox_list: List[Dict[str, Any]],
-    selected_analysis: Optional[Dict[str, Any]],
-) -> Dict[str, Any]:
-    analysis_id = None
-    if isinstance(selected_analysis, dict):
-        raw_id = selected_analysis.get("analysis_id")
-        if isinstance(raw_id, str) and raw_id:
-            analysis_id = raw_id
-
-    out: Dict[str, Any] = {}
-    manifest = _select_sample_ingest_manifest(project_root, prd, inbox_list, analysis_id)
-    if isinstance(manifest, dict):
-        data = manifest.get("data", {})
-        contracts = data.get("contracts", {}) if isinstance(data, dict) else {}
-        if isinstance(contracts, dict):
-            out["sample_ingest_manifest_relpath"] = manifest.get("relpath")
-            out["contracts"] = contracts
-
-    registry = _load_promotion_registry(project_root)
-    if isinstance(registry, dict):
-        approved = registry.get("approved", [])
-        if isinstance(approved, list):
-            for row in reversed(approved):
-                if not isinstance(row, dict):
-                    continue
-                proposal = row.get("proposal", {})
-                pointers = proposal.get("contract_pointers", {}) if isinstance(proposal, dict) else {}
-                if isinstance(pointers, dict) and pointers:
-                    out["promoted_contract_pointers"] = pointers
-                    break
-    return out
 
 
 def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -1215,49 +1183,34 @@ def _apply_motion_contract_hints(job: Dict[str, Any], quality_context: Dict[str,
 def _apply_pointer_resolver_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(quality_context, dict):
         return job
-    resolver = quality_context.get("pointer_resolver")
-    if not isinstance(resolver, dict):
+    resolver_artifact = quality_context.get("pointer_resolver")
+    if not isinstance(resolver_artifact, dict):
         return job
-    contracts = resolver.get("contracts", {})
-    if isinstance(contracts, dict):
-        # Manifest-derived pointers are explicit operator/promoted intent.
-        # They should take precedence over provider defaults or generic fallbacks.
-        rel = contracts.get("quality_target_relpath")
-        if isinstance(rel, str) and rel:
-            job["quality_target"] = {"relpath": rel}
-        rel = contracts.get("continuity_pack_relpath")
-        if isinstance(rel, str) and rel and not isinstance(job.get("continuity_pack"), dict):
-            job["continuity_pack"] = {"relpath": rel}
-        rel = contracts.get("pose_checkpoints_relpath")
-        if isinstance(rel, str) and rel:
-            job["motion_contract"] = {"relpath": rel, "contract_version": "pose_checkpoints.v1"}
-        rel = contracts.get("segment_stitch_plan_relpath")
-        if isinstance(rel, str) and rel:
-            job["segment_stitch"] = {"plan_relpath": rel, "enabled": True}
-    promoted = resolver.get("promoted_contract_pointers", {})
-    if isinstance(promoted, dict):
-        if not isinstance(job.get("motion_contract"), dict):
-            mc = promoted.get("motion_contract")
-            if isinstance(mc, dict) and isinstance(mc.get("relpath"), str):
-                job["motion_contract"] = {
-                    "relpath": mc.get("relpath"),
-                    "contract_version": str(mc.get("contract_version", "pose_checkpoints.v1")),
-                }
-        if not isinstance(job.get("quality_target"), dict):
-            qt = promoted.get("quality_target")
-            if isinstance(qt, dict) and isinstance(qt.get("relpath"), str):
-                job["quality_target"] = {"relpath": qt.get("relpath")}
-        if not isinstance(job.get("continuity_pack"), dict):
-            cp = promoted.get("continuity_pack")
-            if isinstance(cp, dict) and isinstance(cp.get("relpath"), str):
-                job["continuity_pack"] = {"relpath": cp.get("relpath")}
-        if not isinstance(job.get("segment_stitch"), dict):
-            seg = promoted.get("segment_stitch")
-            if isinstance(seg, dict) and isinstance(seg.get("plan_relpath"), str):
-                job["segment_stitch"] = {
-                    "plan_relpath": seg.get("plan_relpath"),
-                    "enabled": bool(seg.get("enabled", True)),
-                }
+    
+    pointers = resolver_artifact.get("pointers", {})
+    if not isinstance(pointers, dict):
+        return job
+
+    # 1. Quality Target
+    rel = pointers.get("quality_target")
+    if isinstance(rel, str) and rel:
+        job["quality_target"] = {"relpath": rel}
+
+    # 2. Continuity Pack
+    rel = pointers.get("continuity_pack")
+    if isinstance(rel, str) and rel and not isinstance(job.get("continuity_pack"), dict):
+        job["continuity_pack"] = {"relpath": rel}
+
+    # 3. Motion / Pose Checkpoints
+    rel = pointers.get("pose_checkpoint")
+    if isinstance(rel, str) and rel:
+        job["motion_contract"] = {"relpath": rel, "contract_version": "pose_checkpoints.v1"}
+
+    # 4. Engine Adapter Registry
+    rel = pointers.get("engine_adapter_registry")
+    if isinstance(rel, str) and rel:
+         job["engine_adapter_registry"] = {"relpath": rel}
+
     return job
 
 
@@ -1296,214 +1249,7 @@ def _is_existing_relpath(project_root: str, relpath: str) -> bool:
     return os.path.exists(abs_path)
 
 
-def _append_pointer_candidate(
-    candidates: Dict[str, List[Dict[str, Any]]],
-    pointer: str,
-    relpath: Any,
-    source: str,
-    priority: int,
-    project_root: str,
-) -> None:
-    if pointer not in candidates:
-        return
-    if not isinstance(relpath, str) or not relpath.strip():
-        return
-    rel = relpath.strip()
-    candidates[pointer].append(
-        {
-            "relpath": rel,
-            "source": source,
-            "priority": int(priority),
-            "exists": _is_existing_relpath(project_root, rel),
-        }
-    )
 
-
-def _required_pointer_keys(
-    prd: Dict[str, Any],
-    inbox_list: List[Dict[str, Any]],
-    job: Dict[str, Any],
-    quality_context: Dict[str, Any],
-) -> List[str]:
-    blob = json.dumps({"prd": prd, "inbox": inbox_list, "job": job}, sort_keys=True, ensure_ascii=True).lower()
-    is_motion_identity_context = any(
-        tok in blob
-        for tok in (
-            "dance",
-            "loop",
-            "choreo",
-            "choreography",
-            "pose",
-            "motion",
-            "mochi",
-            "costume",
-            "identity",
-        )
-    )
-
-    resolver = quality_context.get("pointer_resolver")
-    has_resolver_context = isinstance(resolver, dict) and (
-        isinstance(resolver.get("contracts"), dict) or isinstance(resolver.get("promoted_contract_pointers"), dict)
-    )
-    has_reverse = isinstance(quality_context.get("reverse_analysis"), dict)
-    if not is_motion_identity_context or not (has_resolver_context or has_reverse):
-        return []
-
-    required = ["motion_contract", "quality_target", "segment_stitch"]
-    if any(tok in blob for tok in ("continuity", "canon", "same")):
-        required.append("continuity_pack")
-    return required
-
-
-def _build_pointer_resolution_artifact(
-    job: Dict[str, Any],
-    prd: Dict[str, Any],
-    inbox_list: List[Dict[str, Any]],
-    quality_context: Dict[str, Any],
-    project_root: str,
-) -> Tuple[Dict[str, Any], List[str]]:
-    resolver = quality_context.get("pointer_resolver", {})
-    contracts = resolver.get("contracts", {}) if isinstance(resolver, dict) else {}
-    promoted = resolver.get("promoted_contract_pointers", {}) if isinstance(resolver, dict) else {}
-    reverse = quality_context.get("reverse_analysis", {}) if isinstance(quality_context, dict) else {}
-    segment = quality_context.get("segment_stitch_plan", {}) if isinstance(quality_context, dict) else {}
-    quality_target = quality_context.get("quality_target", {}) if isinstance(quality_context, dict) else {}
-    continuity = quality_context.get("continuity_pack", {}) if isinstance(quality_context, dict) else {}
-
-    candidates: Dict[str, List[Dict[str, Any]]] = {
-        "motion_contract": [],
-        "quality_target": [],
-        "segment_stitch": [],
-        "continuity_pack": [],
-    }
-    _append_pointer_candidate(candidates, "motion_contract", contracts.get("pose_checkpoints_relpath"), "sample_manifest", 300, project_root)
-    _append_pointer_candidate(candidates, "quality_target", contracts.get("quality_target_relpath"), "sample_manifest", 300, project_root)
-    _append_pointer_candidate(candidates, "segment_stitch", contracts.get("segment_stitch_plan_relpath"), "sample_manifest", 300, project_root)
-    _append_pointer_candidate(candidates, "continuity_pack", contracts.get("continuity_pack_relpath"), "sample_manifest", 300, project_root)
-
-    if isinstance(promoted, dict):
-        mc = promoted.get("motion_contract", {})
-        qt = promoted.get("quality_target", {})
-        seg = promoted.get("segment_stitch", {})
-        cp = promoted.get("continuity_pack", {})
-        _append_pointer_candidate(candidates, "motion_contract", mc.get("relpath") if isinstance(mc, dict) else None, "promotion_registry", 250, project_root)
-        _append_pointer_candidate(candidates, "quality_target", qt.get("relpath") if isinstance(qt, dict) else None, "promotion_registry", 250, project_root)
-        _append_pointer_candidate(candidates, "segment_stitch", seg.get("plan_relpath") if isinstance(seg, dict) else None, "promotion_registry", 250, project_root)
-        _append_pointer_candidate(candidates, "continuity_pack", cp.get("relpath") if isinstance(cp, dict) else None, "promotion_registry", 250, project_root)
-
-    if isinstance(reverse, dict):
-        _append_pointer_candidate(candidates, "motion_contract", reverse.get("pose_checkpoints_relpath"), "analysis_context", 200, project_root)
-    if isinstance(segment, dict):
-        _append_pointer_candidate(candidates, "segment_stitch", segment.get("relpath"), "analysis_context", 200, project_root)
-    if isinstance(quality_target, dict):
-        _append_pointer_candidate(candidates, "quality_target", quality_target.get("relpath"), "analysis_context", 200, project_root)
-    if isinstance(continuity, dict):
-        _append_pointer_candidate(candidates, "continuity_pack", continuity.get("relpath"), "analysis_context", 200, project_root)
-
-    _append_pointer_candidate(
-        candidates,
-        "motion_contract",
-        "repo/examples/pose_checkpoints.v1.example.json",
-        "fallback_example",
-        100,
-        project_root,
-    )
-    _append_pointer_candidate(
-        candidates,
-        "quality_target",
-        "repo/examples/quality_target.motion_strict.v1.example.json",
-        "fallback_example",
-        100,
-        project_root,
-    )
-    _append_pointer_candidate(
-        candidates,
-        "quality_target",
-        "repo/examples/quality_target.v1.example.json",
-        "fallback_example",
-        90,
-        project_root,
-    )
-
-    normalized_candidates: Dict[str, List[Dict[str, Any]]] = {}
-    for pointer, rows in candidates.items():
-        best_by_rel: Dict[str, Dict[str, Any]] = {}
-        for row in rows:
-            rel = row["relpath"]
-            cur = best_by_rel.get(rel)
-            if cur is None or int(row["priority"]) > int(cur["priority"]) or (
-                int(row["priority"]) == int(cur["priority"]) and str(row["source"]) < str(cur["source"])
-            ):
-                best_by_rel[rel] = row
-        ordered = sorted(best_by_rel.values(), key=lambda x: (-int(x["priority"]), str(x["relpath"]), str(x["source"])))
-        normalized_candidates[pointer] = ordered
-
-    selected: Dict[str, Dict[str, Any]] = {}
-    rejected: List[Dict[str, Any]] = []
-    fallback_used: List[str] = []
-    unresolved: List[str] = []
-    required = _required_pointer_keys(prd, inbox_list, job, quality_context)
-
-    for pointer in ("motion_contract", "quality_target", "segment_stitch", "continuity_pack"):
-        selected_rel = _job_pointer_relpath(job, pointer)
-        selected_row: Optional[Dict[str, Any]] = None
-        if isinstance(selected_rel, str) and selected_rel:
-            for row in normalized_candidates.get(pointer, []):
-                if row.get("relpath") == selected_rel:
-                    selected_row = row
-                    break
-            if selected_row is None:
-                selected_row = {
-                    "relpath": selected_rel,
-                    "source": "job_existing",
-                    "priority": 0,
-                    "exists": _is_existing_relpath(project_root, selected_rel),
-                }
-            selected[pointer] = selected_row
-            if selected_row.get("source") == "fallback_example":
-                fallback_used.append(pointer)
-
-        for row in normalized_candidates.get(pointer, []):
-            if selected_row and row.get("relpath") == selected_row.get("relpath"):
-                continue
-            reason = "lower_priority_than_selected"
-            if not bool(row.get("exists")):
-                reason = "path_not_found"
-            rejected.append(
-                {
-                    "pointer": pointer,
-                    "relpath": row.get("relpath"),
-                    "source": row.get("source"),
-                    "priority": row.get("priority"),
-                    "reason": reason,
-                }
-            )
-
-        if pointer in required:
-            if selected_row is None:
-                unresolved.append(f"{pointer}:missing_selected")
-            elif not bool(selected_row.get("exists")):
-                unresolved.append(f"{pointer}:selected_path_not_found")
-
-    analysis_id = None
-    if isinstance(reverse, dict):
-        raw_id = reverse.get("analysis_id")
-        if isinstance(raw_id, str) and raw_id:
-            analysis_id = raw_id
-
-    artifact: Dict[str, Any] = {
-        "version": "pointer_resolution.v1",
-        "analysis_id": analysis_id,
-        "required": required,
-        "selection_policy": {
-            "source_precedence": ["sample_manifest", "promotion_registry", "analysis_context", "fallback_example", "job_existing"],
-            "tie_break": "priority_desc_relpath_asc_source_asc",
-        },
-        "selected": selected,
-        "rejected": rejected,
-        "fallback_used": sorted(set(fallback_used)),
-    }
-    return artifact, unresolved
 
 
 def main(argv: List[str]) -> int:
@@ -1593,7 +1339,13 @@ def main(argv: List[str]) -> int:
             forced_analysis_id=args.analysis_id,
         )
         quality_context = _load_quality_context(project_root, video_analysis)
-        quality_context["pointer_resolver"] = _resolve_pointer_overrides(project_root, prd, inbox_list, video_analysis)
+
+        # PR-30/ADR-0051: Authoritative Pointer Resolution
+        # Use a temporary job_id if not yet determined; the artifact will stay in quality_context.
+        job_id_for_resolution = args.job_id or "job-resolving"
+        resolver = PointerResolver(pathlib.Path(project_root))
+        pointer_resolution = resolver.resolve(job_id_for_resolution, prd)
+        quality_context["pointer_resolver"] = pointer_resolution
 
         job = provider.generate_job(
             prd,
@@ -1609,6 +1361,7 @@ def main(argv: List[str]) -> int:
             selected_id = video_analysis.get("analysis_id")
             if isinstance(selected_id, str) and selected_id:
                 print(f"INFO planner video_analysis_applied={selected_id}", file=sys.stderr)
+        
         job = _apply_reverse_analysis_hints(job, quality_context)
         job = _apply_pointer_resolver_hints(job, quality_context)
         job = _apply_segment_stitch_hints(job, quality_context, project_root)
@@ -1618,19 +1371,13 @@ def main(argv: List[str]) -> int:
         job = _apply_engine_adapter_hints(job, quality_context)
         job = _apply_quality_policy_hints(job, quality_context)
         job = _apply_facts_only_guard(job, quality_context)
+        
         facts_errors = _validate_facts_only_guard(job, quality_context)
         if facts_errors:
             raise RuntimeError("facts-only guard failed: " + "; ".join(facts_errors[:3]))
-        pointer_resolution, pointer_errors = _build_pointer_resolution_artifact(
-            job=job,
-            prd=prd,
-            inbox_list=inbox_list,
-            quality_context=quality_context,
-            project_root=project_root,
-        )
+
+        # Pointer resolution artifact is officially committed to the job
         job["pointer_resolution"] = pointer_resolution
-        if pointer_errors:
-            raise RuntimeError("pointer resolution failed: " + "; ".join(pointer_errors[:3]))
 
         base_job_id = _choose_job_id(args.job_id, job.get("job_id"), prd, inbox_with_names)
         final_path = _final_job_path(args.out, base_job_id)

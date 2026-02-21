@@ -42,8 +42,15 @@ class BudgetTracker:
     def _save(self) -> None:
         # Ensure directory exists
         self.usage_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.usage_file, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=2, sort_keys=True)
+        # Atomic write
+        tmp_path = self.usage_file.with_suffix(".tmp")
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(self.data, f, indent=2, sort_keys=True)
+            tmp_path.replace(self.usage_file)
+        except Exception:
+            if tmp_path.exists():
+                tmp_path.unlink()
 
     def check_budget(self, estimated_cost: float) -> bool:
         """
@@ -70,3 +77,15 @@ class BudgetTracker:
         self.data["total_usage"] += cost
         self.data["transactions"][transaction_id] = cost
         self._save()
+
+    def get_usage_summary(self) -> Dict[str, Any]:
+        """Returns a summary of current usage."""
+        today = today_utc()
+        return {
+            "daily_limit": self.daily_limit,
+            "daily_spent": self.data["daily_usage"].get(today, 0.0),
+            "total_limit": self.total_limit,
+            "total_spent": self.data["total_usage"],
+            "remaining_daily": max(0, self.daily_limit - self.data["daily_usage"].get(today, 0.0)),
+            "remaining_total": max(0, self.total_limit - self.data["total_usage"]),
+        }
