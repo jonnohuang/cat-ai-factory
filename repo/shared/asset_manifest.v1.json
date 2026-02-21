@@ -1,6 +1,6 @@
 {
     "version": "asset_manifest.v1",
-    "generated_at": "2026-02-20T14:05:00Z",
+    "generated_at": "2026-02-20T14:40:00Z",
     "assets": [
         {
             "asset_id": "mochi-front",
@@ -120,6 +120,81 @@
                 "loop",
                 "beat",
                 "contract"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "hero-registry",
+            "type": "contract",
+            "relpath": "repo/shared/hero_registry.v1.json",
+            "tags": [
+                "hero",
+                "registry",
+                "canon"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "series-bible",
+            "type": "contract",
+            "relpath": "repo/shared/series_bible.v1.json",
+            "tags": [
+                "bible",
+                "series",
+                "canon"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "engine-adapter-registry",
+            "type": "contract",
+            "relpath": "repo/shared/engine_adapter_registry.v1.json",
+            "tags": [
+                "engine",
+                "registry",
+                "adapter"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "promotion-registry",
+            "type": "contract",
+            "relpath": "repo/shared/promotion_registry.v1.json",
+            "tags": [
+                "promotion",
+                "registry",
+                "canon"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "quality-target-strict",
+            "type": "contract",
+            "relpath": "repo/examples/quality_target.motion_strict.v1.example.json",
+            "tags": [
+                "quality",
+                "target",
+                "strict"
+            ],
+            "priority": 110
+        },
+        {
+            "asset_id": "quality-target-standard",
+            "type": "contract",
+            "relpath": "repo/examples/quality_target.v1.example.json",
+            "tags": [
+                "quality",
+                "target"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "audio-manifest-demo",
+            "type": "contract",
+            "relpath": "sandbox/assets/audio/audio_manifest.v1.json",
+            "tags": [
+                "audio",
+                "manifest"
             ],
             "priority": 100
         }

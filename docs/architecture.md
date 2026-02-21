@@ -35,6 +35,10 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
   - canonical path: sample dance -> pose/motion contract -> pose-conditioned hero frames -> animation -> assembly.
   - prompt-only generation is fallback, not default, for choreography-critical contexts.
 
+- Pointer Resolution is the authoritative input map:
+  - Downstream components MUST derive all asset and contract paths from the `pointer_resolution.v1` artifact.
+  - No hardcoded asset fallbacks are permitted in Worker or Provider implementations.
+
 - Verification agents are deterministic QC only:
   - Read-only evaluation of contracts and outputs
   - May emit logs/results, but do not modify artifacts
