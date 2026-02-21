@@ -43,13 +43,17 @@ def _validate_required_artifact_classes(data: Any) -> list[str]:
         if required and not present:
             errors.append(f"SEMANTIC_ERROR: required artifact class missing: {name}")
         if present and (not isinstance(evidence, list) or len(evidence) == 0):
-            errors.append(f"SEMANTIC_ERROR: present artifact class must include evidence: {name}")
+            errors.append(
+                f"SEMANTIC_ERROR: present artifact class must include evidence: {name}"
+            )
     return errors
 
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_sample_ingest_manifest path/to/sample_ingest_manifest.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_sample_ingest_manifest path/to/sample_ingest_manifest.v1.json"
+        )
         return 1
     target = pathlib.Path(argv[1]).resolve()
     if not target.exists():

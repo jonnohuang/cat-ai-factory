@@ -55,7 +55,10 @@ class GrokImageProvider(BaseProvider):
     def __init__(self) -> None:
         self.model = self.default_model
         # Prefer dedicated Grok key; keep OPENAI_API_KEY fallback for backward compatibility.
-        self.api_key = os.environ.get("GROK_API_KEY", "").strip() or os.environ.get("OPENAI_API_KEY", "").strip()
+        self.api_key = (
+            os.environ.get("GROK_API_KEY", "").strip()
+            or os.environ.get("OPENAI_API_KEY", "").strip()
+        )
 
     def generate_job(
         self,
@@ -67,7 +70,9 @@ class GrokImageProvider(BaseProvider):
         _ = inbox, hero_registry
         prompt = _prompt_text(prd)
         if not self.api_key:
-            print("WARNING planner provider=grok_image missing GROK_API_KEY (and OPENAI_API_KEY fallback)")
+            print(
+                "WARNING planner provider=grok_image missing GROK_API_KEY (and OPENAI_API_KEY fallback)"
+            )
         basename = _slug(prompt)
         date = prd.get("date") if isinstance(prd.get("date"), str) else today_utc()
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
@@ -75,7 +80,10 @@ class GrokImageProvider(BaseProvider):
         if not seeds:
             seeds = ["assets/demo/fight_composite.mp4"]
         background_asset = seeds[0]
-        if not (background_asset.startswith("assets/") or background_asset.startswith("sandbox/assets/")):
+        if not (
+            background_asset.startswith("assets/")
+            or background_asset.startswith("sandbox/assets/")
+        ):
             background_asset = "assets/demo/fight_composite.mp4"
         job: Dict[str, Any] = {
             "job_id": f"{basename[:33]}-grokimg",
@@ -94,11 +102,31 @@ class GrokImageProvider(BaseProvider):
                 "ending": "Use frame-guided loop continuity.",
             },
             "shots": [
-                {"t": 0, "visual": "seed frame one", "action": "establish", "caption": "Seed 1"},
-                {"t": 2, "visual": "seed frame two", "action": "move", "caption": "Seed 2"},
-                {"t": 4, "visual": "seed frame three", "action": "accent", "caption": "Seed 3"},
+                {
+                    "t": 0,
+                    "visual": "seed frame one",
+                    "action": "establish",
+                    "caption": "Seed 1",
+                },
+                {
+                    "t": 2,
+                    "visual": "seed frame two",
+                    "action": "move",
+                    "caption": "Seed 2",
+                },
+                {
+                    "t": 4,
+                    "visual": "seed frame three",
+                    "action": "accent",
+                    "caption": "Seed 3",
+                },
                 {"t": 6, "visual": "hero close", "action": "hold", "caption": "Hero"},
-                {"t": 8, "visual": "hero mid", "action": "turn", "caption": "Continuity"},
+                {
+                    "t": 8,
+                    "visual": "hero mid",
+                    "action": "turn",
+                    "caption": "Continuity",
+                },
                 {"t": 10, "visual": "loop seam", "action": "reset", "caption": "Loop"},
             ],
             "captions": ["Seeded", "Framed", "Stable", "Loop"],

@@ -36,10 +36,30 @@ def main(argv: list[str]) -> int:
         "video_relpath": f"sandbox/output/{job_id}/final.mp4",
         "generated_at": "2026-02-18T00:00:00Z",
         "metrics": {
-            "identity_consistency": {"available": True, "score": 0.9, "threshold": 0.7, "pass": True},
-            "mask_edge_bleed": {"available": True, "score": 0.9, "threshold": 0.6, "pass": True},
-            "temporal_stability": {"available": True, "score": 0.52, "threshold": 0.7, "pass": False},
-            "loop_seam": {"available": True, "score": 0.5, "threshold": 0.7, "pass": False},
+            "identity_consistency": {
+                "available": True,
+                "score": 0.9,
+                "threshold": 0.7,
+                "pass": True,
+            },
+            "mask_edge_bleed": {
+                "available": True,
+                "score": 0.9,
+                "threshold": 0.6,
+                "pass": True,
+            },
+            "temporal_stability": {
+                "available": True,
+                "score": 0.52,
+                "threshold": 0.7,
+                "pass": False,
+            },
+            "loop_seam": {
+                "available": True,
+                "score": 0.5,
+                "threshold": 0.7,
+                "pass": False,
+            },
             "audio_video": {
                 "audio_stream_present": True,
                 "av_sync_sec": 0.0,
@@ -48,7 +68,11 @@ def main(argv: list[str]) -> int:
                 "pass": True,
             },
         },
-        "overall": {"score": 0.764, "pass": False, "failed_metrics": ["temporal_stability", "loop_seam"]},
+        "overall": {
+            "score": 0.764,
+            "pass": False,
+            "failed_metrics": ["temporal_stability", "loop_seam"],
+        },
     }
     two_pass = {
         "version": "two_pass_orchestration.v1",
@@ -60,11 +84,32 @@ def main(argv: list[str]) -> int:
     _write_json(qc_dir / "two_pass_orchestration.v1.json", two_pass)
 
     steps = [
-        [sys.executable, "-m", "repo.tools.validate_qc_policy", "repo/shared/qc_policy.v1.json"],
+        [
+            sys.executable,
+            "-m",
+            "repo.tools.validate_qc_policy",
+            "repo/shared/qc_policy.v1.json",
+        ],
         [sys.executable, "-m", "repo.tools.run_qc_runner", "--job-id", job_id],
-        [sys.executable, "-m", "repo.tools.validate_qc_report", str(qc_dir / "qc_report.v1.json")],
-        [sys.executable, "-m", "repo.tools.generate_qc_route_advice", "--job-id", job_id],
-        [sys.executable, "-m", "repo.tools.validate_qc_route_advice", str(qc_dir / "qc_route_advice.v1.json")],
+        [
+            sys.executable,
+            "-m",
+            "repo.tools.validate_qc_report",
+            str(qc_dir / "qc_report.v1.json"),
+        ],
+        [
+            sys.executable,
+            "-m",
+            "repo.tools.generate_qc_route_advice",
+            "--job-id",
+            job_id,
+        ],
+        [
+            sys.executable,
+            "-m",
+            "repo.tools.validate_qc_route_advice",
+            str(qc_dir / "qc_route_advice.v1.json"),
+        ],
     ]
     for cmd in steps:
         print("RUN:", " ".join(cmd))
@@ -73,7 +118,10 @@ def main(argv: list[str]) -> int:
     report = _load(qc_dir / "qc_report.v1.json")
     action = report.get("overall", {}).get("recommended_action")
     if action != "retry_motion":
-        print(f"ERROR: expected retry_motion recommendation, got {action!r}", file=sys.stderr)
+        print(
+            f"ERROR: expected retry_motion recommendation, got {action!r}",
+            file=sys.stderr,
+        )
         return 1
 
     print("recommended_action:", action)

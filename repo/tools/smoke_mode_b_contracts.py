@@ -4,6 +4,7 @@ smoke_mode_b_contracts.py
 
 PR-33.3 smoke runner for Mode B optional contracts.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -37,4 +38,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

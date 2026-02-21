@@ -5,6 +5,7 @@ score_recast_quality.py
 Deterministic quality-gate scoring for recast videos.
 Writes recast_quality_report.v1 JSON (default under sandbox/logs/<job_id>/qc/).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -61,7 +62,9 @@ def _load(path: pathlib.Path) -> Any:
 
 def _write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def _ffprobe_streams(video_path: pathlib.Path) -> dict[str, Any]:
@@ -105,7 +108,12 @@ def _hist_similarity(a_bgr: np.ndarray, b_bgr: np.ndarray) -> float:
     return max(0.0, min(1.0, (corr + 1.0) / 2.0))
 
 
-def _score_identity(video_path: pathlib.Path, hero_image: pathlib.Path | None, tracks_path: pathlib.Path | None, subject_id: str | None) -> Metric:
+def _score_identity(
+    video_path: pathlib.Path,
+    hero_image: pathlib.Path | None,
+    tracks_path: pathlib.Path | None,
+    subject_id: str | None,
+) -> Metric:
     if cv2 is None:
         return Metric(False, None, THRESH_IDENTITY, False, "opencv_not_available")
     if hero_image is None or not hero_image.exists():
@@ -177,7 +185,9 @@ def _score_temporal(video_path: pathlib.Path) -> Metric:
         if idx % sample_step != 0:
             continue
         g = cv2.cvtColor(cv2.resize(frame, (160, 90)), cv2.COLOR_BGR2GRAY)
-        diffs.append(float(np.mean(np.abs(g.astype(np.float32) - prev_g.astype(np.float32)))))
+        diffs.append(
+            float(np.mean(np.abs(g.astype(np.float32) - prev_g.astype(np.float32))))
+        )
         prev_g = g
     cap.release()
 
@@ -188,7 +198,9 @@ def _score_temporal(video_path: pathlib.Path) -> Metric:
     return Metric(True, score, THRESH_TEMPORAL, score >= THRESH_TEMPORAL)
 
 
-def _score_loop_seam(video_path: pathlib.Path, loop_start: int | None, loop_end: int | None) -> Metric:
+def _score_loop_seam(
+    video_path: pathlib.Path, loop_start: int | None, loop_end: int | None
+) -> Metric:
     if cv2 is None:
         return Metric(False, None, THRESH_LOOP_SEAM, False, "opencv_not_available")
     cap = cv2.VideoCapture(str(video_path))
@@ -216,7 +228,9 @@ def _score_loop_seam(video_path: pathlib.Path, loop_start: int | None, loop_end:
     return Metric(True, score, THRESH_LOOP_SEAM, score >= THRESH_LOOP_SEAM)
 
 
-def _score_mask_bleed(video_path: pathlib.Path, tracks_path: pathlib.Path | None, subject_id: str | None) -> Metric:
+def _score_mask_bleed(
+    video_path: pathlib.Path, tracks_path: pathlib.Path | None, subject_id: str | None
+) -> Metric:
     if cv2 is None:
         return Metric(False, None, THRESH_MASK_BLEED, False, "opencv_not_available")
     if tracks_path is None or not tracks_path.exists():
@@ -252,9 +266,13 @@ def _score_mask_bleed(video_path: pathlib.Path, tracks_path: pathlib.Path | None
         if mask is None:
             continue
         if mask.shape[:2] != frame.shape[:2]:
-            mask = cv2.resize(mask, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_NEAREST)
+            mask = cv2.resize(
+                mask, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_NEAREST
+            )
         _, bin_mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
-        boundary = cv2.morphologyEx(bin_mask, cv2.MORPH_GRADIENT, np.ones((3, 3), np.uint8))
+        boundary = cv2.morphologyEx(
+            bin_mask, cv2.MORPH_GRADIENT, np.ones((3, 3), np.uint8)
+        )
         if int(np.count_nonzero(boundary)) == 0:
             continue
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -267,7 +285,9 @@ def _score_mask_bleed(video_path: pathlib.Path, tracks_path: pathlib.Path | None
     cap.release()
 
     if not edge_energies:
-        return Metric(False, None, THRESH_MASK_BLEED, False, "no_valid_masks_for_scoring")
+        return Metric(
+            False, None, THRESH_MASK_BLEED, False, "no_valid_masks_for_scoring"
+        )
     bleed = float(np.mean(np.array(edge_energies, dtype=np.float32)))
     score = float(max(0.0, min(1.0, 1.0 - (bleed / 120.0))))
     return Metric(True, score, THRESH_MASK_BLEED, score >= THRESH_MASK_BLEED)
@@ -304,15 +324,28 @@ def _resolve(path_str: str) -> pathlib.Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Score deterministic recast quality gates")
+    parser = argparse.ArgumentParser(
+        description="Score deterministic recast quality gates"
+    )
     parser.add_argument("--job-id", required=True, help="Job ID")
-    parser.add_argument("--video-relpath", required=True, help="Video path under sandbox, e.g. sandbox/output/<job_id>/final.mp4")
-    parser.add_argument("--hero-image-relpath", help="Optional hero image path under sandbox/assets")
+    parser.add_argument(
+        "--video-relpath",
+        required=True,
+        help="Video path under sandbox, e.g. sandbox/output/<job_id>/final.mp4",
+    )
+    parser.add_argument(
+        "--hero-image-relpath", help="Optional hero image path under sandbox/assets"
+    )
     parser.add_argument("--tracks-relpath", help="Optional dance_swap_tracks JSON path")
     parser.add_argument("--subject-id", help="Optional subject_id for tracks lookup")
-    parser.add_argument("--loop-start-frame", type=int, help="Optional loop start frame")
+    parser.add_argument(
+        "--loop-start-frame", type=int, help="Optional loop start frame"
+    )
     parser.add_argument("--loop-end-frame", type=int, help="Optional loop end frame")
-    parser.add_argument("--out", help="Output report path; default sandbox/logs/<job_id>/qc/recast_quality_report.v1.json")
+    parser.add_argument(
+        "--out",
+        help="Output report path; default sandbox/logs/<job_id>/qc/recast_quality_report.v1.json",
+    )
     args = parser.parse_args()
 
     video = _resolve(args.video_relpath)
@@ -338,7 +371,12 @@ def main() -> int:
 
     scores = []
     failed: list[str] = []
-    for name in ("identity_consistency", "mask_edge_bleed", "temporal_stability", "loop_seam"):
+    for name in (
+        "identity_consistency",
+        "mask_edge_bleed",
+        "temporal_stability",
+        "loop_seam",
+    ):
         m = metric_rows[name]
         if m["available"] and m["score"] is not None:
             scores.append(float(m["score"]))
@@ -348,7 +386,9 @@ def main() -> int:
     if not av["pass"]:
         failed.append("audio_video")
 
-    overall_score = float(np.mean(np.array(scores, dtype=np.float32))) if scores else 0.0
+    overall_score = (
+        float(np.mean(np.array(scores, dtype=np.float32))) if scores else 0.0
+    )
     report = {
         "version": "recast_quality_report.v1",
         "job_id": args.job_id,
@@ -365,7 +405,12 @@ def main() -> int:
     out_path = (
         _resolve(args.out)
         if args.out
-        else _repo_root() / "sandbox" / "logs" / args.job_id / "qc" / "recast_quality_report.v1.json"
+        else _repo_root()
+        / "sandbox"
+        / "logs"
+        / args.job_id
+        / "qc"
+        / "recast_quality_report.v1.json"
     )
     _write_json(out_path, report)
     print("Wrote", out_path)
@@ -376,4 +421,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

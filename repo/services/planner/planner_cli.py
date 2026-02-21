@@ -4,14 +4,14 @@ import argparse
 import hashlib
 import json
 import os
+import pathlib
 import re
 import sys
 import tempfile
 from typing import Any, Dict, List, Optional, Tuple
 
-import pathlib
-from .providers import get_provider, list_providers
 from .pointer_resolver import PointerResolver
+from .providers import get_provider, list_providers
 from .util.engine_routing import route_engine_policy
 from .util.redact import redact_text
 
@@ -47,7 +47,9 @@ def _load_inbox(inbox_dir: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, An
     return inbox_list, inbox_with_names
 
 
-def _canonical_payload(prd: Dict[str, Any], inbox_with_names: List[Dict[str, Any]]) -> str:
+def _canonical_payload(
+    prd: Dict[str, Any], inbox_with_names: List[Dict[str, Any]]
+) -> str:
     payload = {"prd": prd, "inbox": inbox_with_names}
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
 
@@ -87,6 +89,7 @@ def _stem_from_job_path(path: str) -> str:
 
 def _validate_job(temp_path: str) -> None:
     import subprocess
+
     validate_script = os.path.join(_repo_root(), "repo", "tools", "validate_job.py")
     result = subprocess.run(
         ["python3", validate_script, temp_path],
@@ -122,7 +125,11 @@ def _choose_job_id(
 ) -> str:
     if args_job_id:
         return _sanitize_job_id(args_job_id)
-    if returned_job_id and isinstance(returned_job_id, str) and len(returned_job_id.strip()) >= 6:
+    if (
+        returned_job_id
+        and isinstance(returned_job_id, str)
+        and len(returned_job_id.strip()) >= 6
+    ):
         return _sanitize_job_id(returned_job_id)
     return _derive_job_id(prd, inbox_with_names)
 
@@ -158,7 +165,9 @@ def _load_video_analysis_selection(
     inbox_list: List[Dict[str, Any]],
     forced_analysis_id: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
-    index_path = os.path.join(project_root, "repo", "canon", "demo_analyses", "video_analysis_index.v1.json")
+    index_path = os.path.join(
+        project_root, "repo", "canon", "demo_analyses", "video_analysis_index.v1.json"
+    )
     if not os.path.exists(index_path):
         return None
     try:
@@ -176,25 +185,37 @@ def _load_video_analysis_selection(
                     continue
                 relpath = item.get("relpath")
                 if not isinstance(relpath, str) or not relpath:
-                    raise RuntimeError(f"analysis_id={target_id} missing relpath in index")
+                    raise RuntimeError(
+                        f"analysis_id={target_id} missing relpath in index"
+                    )
                 analysis_path = os.path.join(project_root, relpath)
                 if not os.path.exists(analysis_path):
-                    raise RuntimeError(f"analysis_id={target_id} relpath not found: {relpath}")
+                    raise RuntimeError(
+                        f"analysis_id={target_id} relpath not found: {relpath}"
+                    )
                 analysis_data = _load_json(analysis_path)
                 if not isinstance(analysis_data, dict):
-                    raise RuntimeError(f"analysis_id={target_id} relpath unreadable JSON: {relpath}")
+                    raise RuntimeError(
+                        f"analysis_id={target_id} relpath unreadable JSON: {relpath}"
+                    )
                 return analysis_data
             raise RuntimeError(f"analysis_id not found in index: {target_id}")
 
-        context_blob = json.dumps({"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True).lower()
-        is_dance_context = any(tok in context_blob for tok in ("dance", "loop", "choreo", "groove", "beat"))
+        context_blob = json.dumps(
+            {"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True
+        ).lower()
+        is_dance_context = any(
+            tok in context_blob for tok in ("dance", "loop", "choreo", "groove", "beat")
+        )
 
         ranked: List[Tuple[int, int, Dict[str, Any]]] = []
         for item in analyses:
             if not isinstance(item, dict):
                 continue
             tags = [str(t).lower() for t in item.get("tags", []) if isinstance(t, str)]
-            lane_hints = [str(x) for x in item.get("lane_hints", []) if isinstance(x, str)]
+            lane_hints = [
+                str(x) for x in item.get("lane_hints", []) if isinstance(x, str)
+            ]
             score = 0
             for tag in tags:
                 if tag and tag in context_blob:
@@ -202,13 +223,18 @@ def _load_video_analysis_selection(
                 parts = [p for p in tag.split("-") if p]
                 if parts and any(p in context_blob for p in parts):
                     score += 1
-            if is_dance_context and any(x in ("dance_swap", "template_remix", "image_motion") for x in lane_hints):
+            if is_dance_context and any(
+                x in ("dance_swap", "template_remix", "image_motion")
+                for x in lane_hints
+            ):
                 score += 3
             priority = int(item.get("priority", 0))
             ranked.append((score, priority, item))
         if not ranked:
             return None
-        ranked.sort(key=lambda row: (-row[0], -row[1], str(row[2].get("analysis_id", ""))))
+        ranked.sort(
+            key=lambda row: (-row[0], -row[1], str(row[2].get("analysis_id", "")))
+        )
         selected = ranked[0][2]
         relpath = selected.get("relpath")
         if not isinstance(relpath, str) or not relpath:
@@ -221,11 +247,16 @@ def _load_video_analysis_selection(
             return None
         return analysis_data
     except Exception as ex:
-        print(f"WARNING: Failed to load planner video analysis references: {ex}", file=sys.stderr)
+        print(
+            f"WARNING: Failed to load planner video analysis references: {ex}",
+            file=sys.stderr,
+        )
         return None
 
 
-def _apply_video_analysis_hints(job: Dict[str, Any], analysis: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_video_analysis_hints(
+    job: Dict[str, Any], analysis: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(analysis, dict):
         return job
 
@@ -349,6 +380,7 @@ def _find_contract_docs(
                     candidates.append((p, doc))
                 elif not analysis_id:
                     candidates.append((p, doc))
+
     def _sort_key(row: Tuple[str, Dict[str, Any]]) -> Tuple[int, float, str]:
         path = row[0]
         rel = _safe_rel(path, project_root)
@@ -365,7 +397,9 @@ def _find_contract_docs(
     return candidates
 
 
-def _select_reverse_contracts(project_root: str, selected_analysis: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def _select_reverse_contracts(
+    project_root: str, selected_analysis: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
     analysis_id = None
     if isinstance(selected_analysis, dict):
         aid = selected_analysis.get("analysis_id")
@@ -380,23 +414,36 @@ def _select_reverse_contracts(project_root: str, selected_analysis: Optional[Dic
         "keyframe_checkpoints": None,
     }
 
-    reverse_rows = _find_contract_docs(project_root, "caf.video_reverse_prompt.v1", analysis_id)
+    reverse_rows = _find_contract_docs(
+        project_root, "caf.video_reverse_prompt.v1", analysis_id
+    )
     beat_rows = _find_contract_docs(project_root, "beat_grid.v1", analysis_id)
     pose_rows = _find_contract_docs(project_root, "pose_checkpoints.v1", analysis_id)
-    keyframe_rows = _find_contract_docs(project_root, "keyframe_checkpoints.v1", analysis_id)
+    keyframe_rows = _find_contract_docs(
+        project_root, "keyframe_checkpoints.v1", analysis_id
+    )
 
     if reverse_rows:
         path, doc = reverse_rows[0]
-        result["reverse_prompt"] = {"relpath": _safe_rel(path, project_root), "data": doc}
+        result["reverse_prompt"] = {
+            "relpath": _safe_rel(path, project_root),
+            "data": doc,
+        }
     if beat_rows:
         path, doc = beat_rows[0]
         result["beat_grid"] = {"relpath": _safe_rel(path, project_root), "data": doc}
     if pose_rows:
         path, doc = pose_rows[0]
-        result["pose_checkpoints"] = {"relpath": _safe_rel(path, project_root), "data": doc}
+        result["pose_checkpoints"] = {
+            "relpath": _safe_rel(path, project_root),
+            "data": doc,
+        }
     if keyframe_rows:
         path, doc = keyframe_rows[0]
-        result["keyframe_checkpoints"] = {"relpath": _safe_rel(path, project_root), "data": doc}
+        result["keyframe_checkpoints"] = {
+            "relpath": _safe_rel(path, project_root),
+            "data": doc,
+        }
     return result
 
 
@@ -455,7 +502,9 @@ def _extract_reverse_timestamps(reverse_contracts: Dict[str, Any]) -> List[float
     return [float(v) for v in unique]
 
 
-def _select_segment_stitch_plan(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+def _select_segment_stitch_plan(
+    project_root: str, analysis_id: Optional[str]
+) -> Optional[Dict[str, Any]]:
     rows = _find_contract_docs(project_root, "segment_stitch_plan.v1", analysis_id)
     if not rows:
         return None
@@ -463,7 +512,9 @@ def _select_segment_stitch_plan(project_root: str, analysis_id: Optional[str]) -
     return {"relpath": _safe_rel(path, project_root), "data": doc}
 
 
-def _select_continuity_pack(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+def _select_continuity_pack(
+    project_root: str, analysis_id: Optional[str]
+) -> Optional[Dict[str, Any]]:
     rows = _find_contract_docs(project_root, "episode_continuity_pack.v1", analysis_id)
     if not rows:
         return None
@@ -471,7 +522,9 @@ def _select_continuity_pack(project_root: str, analysis_id: Optional[str]) -> Op
     return {"relpath": _safe_rel(path, project_root), "data": doc}
 
 
-def _select_storyboard(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+def _select_storyboard(
+    project_root: str, analysis_id: Optional[str]
+) -> Optional[Dict[str, Any]]:
     rows = _find_contract_docs(project_root, "storyboard.v1", analysis_id)
     if not rows:
         return None
@@ -479,7 +532,9 @@ def _select_storyboard(project_root: str, analysis_id: Optional[str]) -> Optiona
     return {"relpath": _safe_rel(path, project_root), "data": doc}
 
 
-def _select_frame_labels(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+def _select_frame_labels(
+    project_root: str, analysis_id: Optional[str]
+) -> Optional[Dict[str, Any]]:
     rows = _find_contract_docs(project_root, "frame_labels.v1", analysis_id)
     if not rows:
         return None
@@ -487,7 +542,9 @@ def _select_frame_labels(project_root: str, analysis_id: Optional[str]) -> Optio
     return {"relpath": _safe_rel(path, project_root), "data": doc}
 
 
-def _select_quality_target_contract(project_root: str, analysis_id: Optional[str]) -> Optional[Dict[str, Any]]:
+def _select_quality_target_contract(
+    project_root: str, analysis_id: Optional[str]
+) -> Optional[Dict[str, Any]]:
     rows = _find_contract_docs(project_root, "quality_target.v1", analysis_id)
     if rows:
         path, doc = rows[0]
@@ -537,7 +594,9 @@ def _select_engine_adapter_registry(project_root: str) -> Optional[Dict[str, Any
 
 
 def _collect_terms(prd: Dict[str, Any], inbox_list: List[Dict[str, Any]]) -> set[str]:
-    blob = json.dumps({"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True).lower()
+    blob = json.dumps(
+        {"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True
+    ).lower()
     parts = re.split(r"[^a-z0-9]+", blob)
     return {p for p in parts if len(p) >= 3}
 
@@ -553,26 +612,39 @@ def _select_sample_ingest_manifest(
         return None
     rows: List[Tuple[int, str, Dict[str, Any]]] = []
     terms = _collect_terms(prd, inbox_list)
-    context_blob = json.dumps({"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True).lower()
+    context_blob = json.dumps(
+        {"prd": prd, "inbox": inbox_list}, sort_keys=True, ensure_ascii=True
+    ).lower()
     for root, _dirs, files in os.walk(base):
         for name in sorted(files):
             if not name.endswith(".sample_ingest_manifest.v1.json"):
                 continue
             p = os.path.join(root, name)
             doc = _load_json_if_exists(p)
-            if not isinstance(doc, dict) or doc.get("version") != "sample_ingest_manifest.v1":
+            if (
+                not isinstance(doc, dict)
+                or doc.get("version") != "sample_ingest_manifest.v1"
+            ):
                 continue
             score = 0
             doc_analysis_id = doc.get("analysis_id")
-            if isinstance(analysis_id, str) and analysis_id and doc_analysis_id == analysis_id:
+            if (
+                isinstance(analysis_id, str)
+                and analysis_id
+                and doc_analysis_id == analysis_id
+            ):
                 score += 100
             source = doc.get("source", {})
-            aliases = source.get("reference_aliases", []) if isinstance(source, dict) else []
+            aliases = (
+                source.get("reference_aliases", []) if isinstance(source, dict) else []
+            )
             if isinstance(aliases, list):
                 for alias in aliases:
                     if not isinstance(alias, str):
                         continue
-                    alias_norm = " ".join([t for t in re.split(r"[^a-z0-9]+", alias.lower()) if t])
+                    alias_norm = " ".join(
+                        [t for t in re.split(r"[^a-z0-9]+", alias.lower()) if t]
+                    )
                     if alias_norm and alias_norm in context_blob:
                         score += 200
                     tokens = [t for t in re.split(r"[^a-z0-9]+", alias.lower()) if t]
@@ -597,19 +669,26 @@ def _load_promotion_registry(project_root: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-
-
-def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def _load_quality_context(
+    project_root: str, selected_analysis: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
     ctx: Dict[str, Any] = {}
 
     if selected_analysis:
         ctx["video_analysis"] = {
             "analysis_id": selected_analysis.get("analysis_id"),
-            "duration_bucket": selected_analysis.get("pattern", {}).get("duration_bucket"),
+            "duration_bucket": selected_analysis.get("pattern", {}).get(
+                "duration_bucket"
+            ),
             "lane_hints": selected_analysis.get("pattern", {}).get("lane_hints", []),
             "tags": selected_analysis.get("pattern", {}).get("tags", []),
             "looping": selected_analysis.get("pattern", {}).get("looping", {}),
-            "beat_count": len(selected_analysis.get("pattern", {}).get("choreography", {}).get("beats", []) or []),
+            "beat_count": len(
+                selected_analysis.get("pattern", {})
+                .get("choreography", {})
+                .get("beats", [])
+                or []
+            ),
         }
 
     reverse_contracts = _select_reverse_contracts(project_root, selected_analysis)
@@ -618,8 +697,13 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
     pose_doc = reverse_contracts.get("pose_checkpoints", {})
     keyframe_doc = reverse_contracts.get("keyframe_checkpoints", {})
     reverse_timestamps = _extract_reverse_timestamps(reverse_contracts)
-    if any(isinstance(x, dict) and x.get("data") for x in (reverse_prompt, beat_grid, pose_doc, keyframe_doc)):
-        reverse_data = reverse_prompt.get("data", {}) if isinstance(reverse_prompt, dict) else {}
+    if any(
+        isinstance(x, dict) and x.get("data")
+        for x in (reverse_prompt, beat_grid, pose_doc, keyframe_doc)
+    ):
+        reverse_data = (
+            reverse_prompt.get("data", {}) if isinstance(reverse_prompt, dict) else {}
+        )
         truth = reverse_data.get("truth", {}) if isinstance(reverse_data, dict) else {}
         visual_facts = truth.get("visual_facts", {}) if isinstance(truth, dict) else {}
         ctx["reverse_analysis"] = {
@@ -633,7 +717,9 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "visual_facts": visual_facts if isinstance(visual_facts, dict) else {},
             "facts_only_mode": _facts_only_enabled(),
         }
-    frame_labels = _select_frame_labels(project_root, reverse_contracts.get("analysis_id"))
+    frame_labels = _select_frame_labels(
+        project_root, reverse_contracts.get("analysis_id")
+    )
     if isinstance(frame_labels, dict):
         fl_doc = frame_labels.get("data", {})
         frames = fl_doc.get("frames", []) if isinstance(fl_doc, dict) else []
@@ -641,14 +727,26 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
         ctx["frame_labeling"] = {
             "relpath": frame_labels.get("relpath"),
             "frame_count": len(frames) if isinstance(frames, list) else 0,
-            "facts_only_or_unknown": bool(policy.get("facts_only_or_unknown")) if isinstance(policy, dict) else False,
-            "enrichment_provider": policy.get("enrichment_provider") if isinstance(policy, dict) else None,
+            "facts_only_or_unknown": (
+                bool(policy.get("facts_only_or_unknown"))
+                if isinstance(policy, dict)
+                else False
+            ),
+            "enrichment_provider": (
+                policy.get("enrichment_provider") if isinstance(policy, dict) else None
+            ),
         }
-    segment_plan = _select_segment_stitch_plan(project_root, reverse_contracts.get("analysis_id"))
+    segment_plan = _select_segment_stitch_plan(
+        project_root, reverse_contracts.get("analysis_id")
+    )
     if isinstance(segment_plan, dict):
         segment_doc = segment_plan.get("data", {})
-        segments = segment_doc.get("segments", []) if isinstance(segment_doc, dict) else []
-        stitch_order = segment_doc.get("stitch_order", []) if isinstance(segment_doc, dict) else []
+        segments = (
+            segment_doc.get("segments", []) if isinstance(segment_doc, dict) else []
+        )
+        stitch_order = (
+            segment_doc.get("stitch_order", []) if isinstance(segment_doc, dict) else []
+        )
         retries = 0
         if isinstance(segments, list):
             retries = sum(
@@ -658,14 +756,28 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             )
         ctx["segment_stitch_plan"] = {
             "relpath": segment_plan.get("relpath"),
-            "plan_id": segment_doc.get("plan_id") if isinstance(segment_doc, dict) else None,
-            "analysis_id": segment_doc.get("analysis_id") if isinstance(segment_doc, dict) else None,
+            "plan_id": (
+                segment_doc.get("plan_id") if isinstance(segment_doc, dict) else None
+            ),
+            "analysis_id": (
+                segment_doc.get("analysis_id")
+                if isinstance(segment_doc, dict)
+                else None
+            ),
             "segment_count": len(segments) if isinstance(segments, list) else 0,
-            "stitch_order_count": len(stitch_order) if isinstance(stitch_order, list) else 0,
+            "stitch_order_count": (
+                len(stitch_order) if isinstance(stitch_order, list) else 0
+            ),
             "total_retry_budget": retries,
-            "constraints": segment_doc.get("constraints", {}) if isinstance(segment_doc, dict) else {},
+            "constraints": (
+                segment_doc.get("constraints", {})
+                if isinstance(segment_doc, dict)
+                else {}
+            ),
         }
-    continuity_pack = _select_continuity_pack(project_root, reverse_contracts.get("analysis_id"))
+    continuity_pack = _select_continuity_pack(
+        project_root, reverse_contracts.get("analysis_id")
+    )
     if isinstance(continuity_pack, dict):
         cp_doc = continuity_pack.get("data", {})
         hero_id = None
@@ -694,7 +806,9 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "costume_profile_id": costume_id,
             "rules": rules,
         }
-    quality_target = _select_quality_target_contract(project_root, reverse_contracts.get("analysis_id"))
+    quality_target = _select_quality_target_contract(
+        project_root, reverse_contracts.get("analysis_id")
+    )
     if isinstance(quality_target, dict):
         qt_doc = quality_target.get("data", {})
         thresholds = qt_doc.get("thresholds", {}) if isinstance(qt_doc, dict) else {}
@@ -702,7 +816,9 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             thresholds = {}
         ctx["quality_target"] = {
             "relpath": quality_target.get("relpath"),
-            "profile_name": qt_doc.get("profile_name") if isinstance(qt_doc, dict) else None,
+            "profile_name": (
+                qt_doc.get("profile_name") if isinstance(qt_doc, dict) else None
+            ),
             "thresholds": thresholds,
         }
     storyboard = _select_storyboard(project_root, reverse_contracts.get("analysis_id"))
@@ -732,7 +848,12 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
         }
 
     bench_report_path = os.path.join(
-        project_root, "sandbox", "logs", "benchmarks", "recast-regression-smoke", "recast_benchmark_report.v1.json"
+        project_root,
+        "sandbox",
+        "logs",
+        "benchmarks",
+        "recast-regression-smoke",
+        "recast_benchmark_report.v1.json",
     )
     bench = _load_json_if_exists(bench_report_path)
     if bench:
@@ -758,7 +879,9 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "baseline_score": baseline_score,
         }
 
-    latest_quality = _latest_matching_file(os.path.join(project_root, "sandbox", "logs"), "recast_quality_report.v1.json")
+    latest_quality = _latest_matching_file(
+        os.path.join(project_root, "sandbox", "logs"), "recast_quality_report.v1.json"
+    )
     if latest_quality:
         qual = _load_json_if_exists(latest_quality)
         if qual:
@@ -770,7 +893,9 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
                 "failed_metrics": overall.get("failed_metrics", []),
             }
 
-    latest_render_manifest = _latest_matching_file(os.path.join(project_root, "sandbox", "output"), "render_manifest.v1.json")
+    latest_render_manifest = _latest_matching_file(
+        os.path.join(project_root, "sandbox", "output"), "render_manifest.v1.json"
+    )
     if latest_render_manifest:
         render = _load_json_if_exists(latest_render_manifest) or {}
         root_dir = os.path.dirname(os.path.dirname(latest_render_manifest))
@@ -799,7 +924,9 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             routing = {}
         ctx["engine_adapter_policy"] = {
             "relpath": registry.get("relpath"),
-            "registry_id": reg_doc.get("registry_id") if isinstance(reg_doc, dict) else None,
+            "registry_id": (
+                reg_doc.get("registry_id") if isinstance(reg_doc, dict) else None
+            ),
             "baseline_video_provider": baseline.get("video_provider"),
             "baseline_frame_provider": baseline.get("frame_provider"),
             "video_provider_order": routing.get("video_provider_order", []),
@@ -807,12 +934,16 @@ def _load_quality_context(project_root: str, selected_analysis: Optional[Dict[st
             "lab_challenger_order": routing.get("lab_challenger_order", []),
             "motion_constraints": routing.get("motion_constraints", []),
             "post_process_order": routing.get("post_process_order", []),
-            "providers": reg_doc.get("providers", []) if isinstance(reg_doc, dict) else [],
+            "providers": (
+                reg_doc.get("providers", []) if isinstance(reg_doc, dict) else []
+            ),
         }
     return ctx
 
 
-def _apply_quality_policy_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_quality_policy_hints(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict):
         return job
     bench = quality_context.get("recast_benchmark")
@@ -825,7 +956,9 @@ def _apply_quality_policy_hints(job: Dict[str, Any], quality_context: Dict[str, 
     return job
 
 
-def _apply_engine_adapter_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_engine_adapter_hints(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(quality_context, dict):
         return job
     if isinstance(job.get("generation_policy"), dict):
@@ -853,7 +986,9 @@ def _apply_engine_adapter_hints(job: Dict[str, Any], quality_context: Dict[str, 
         rel = mc.get("relpath")
         if isinstance(rel, str) and rel:
             motion_contract_relpath = rel
-    motion_constraints_list = [str(x) for x in (motion_constraints or []) if isinstance(x, str)]
+    motion_constraints_list = [
+        str(x) for x in (motion_constraints or []) if isinstance(x, str)
+    ]
     if motion_contract_relpath:
         token = f"pose_contract:{motion_contract_relpath}"
         if token not in motion_constraints_list:
@@ -865,16 +1000,26 @@ def _apply_engine_adapter_hints(job: Dict[str, Any], quality_context: Dict[str, 
         "route_mode": route.get("mode"),
         "selected_video_provider": route.get("selected_video_provider"),
         "selected_frame_provider": route.get("selected_frame_provider"),
-        "video_provider_order": [str(x) for x in route.get("video_candidates", []) if isinstance(x, str)],
-        "frame_provider_order": [str(x) for x in route.get("frame_candidates", []) if isinstance(x, str)],
-        "lab_challenger_order": [str(x) for x in (lab_order or []) if isinstance(x, str)],
+        "video_provider_order": [
+            str(x) for x in route.get("video_candidates", []) if isinstance(x, str)
+        ],
+        "frame_provider_order": [
+            str(x) for x in route.get("frame_candidates", []) if isinstance(x, str)
+        ],
+        "lab_challenger_order": [
+            str(x) for x in (lab_order or []) if isinstance(x, str)
+        ],
         "motion_constraints": motion_constraints_list,
-        "post_process_order": [str(x) for x in (post_process or []) if isinstance(x, str)],
+        "post_process_order": [
+            str(x) for x in (post_process or []) if isinstance(x, str)
+        ],
     }
     return job
 
 
-def _apply_reverse_analysis_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_reverse_analysis_hints(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict):
         return job
     if not isinstance(quality_context, dict):
@@ -926,7 +1071,9 @@ def _apply_reverse_analysis_hints(job: Dict[str, Any], quality_context: Dict[str
     return job
 
 
-def _apply_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_facts_only_guard(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(quality_context, dict):
         return job
     reverse = quality_context.get("reverse_analysis")
@@ -960,16 +1107,32 @@ def _apply_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, Any]
                     continue
                 txt = val
                 if camera_mode == "unknown":
-                    txt = _replace_word_insensitive(txt, r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b", "unknown")
+                    txt = _replace_word_insensitive(
+                        txt,
+                        r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b",
+                        "unknown",
+                    )
                 elif camera_mode == "locked":
-                    txt = _replace_word_insensitive(txt, r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld)\\b", "unknown")
+                    txt = _replace_word_insensitive(
+                        txt,
+                        r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld)\\b",
+                        "unknown",
+                    )
                 elif camera_mode == "pan":
-                    txt = _replace_word_insensitive(txt, r"\\b(tilt|zoom|dolly|push|pull|handheld)\\b", "unknown")
+                    txt = _replace_word_insensitive(
+                        txt, r"\\b(tilt|zoom|dolly|push|pull|handheld)\\b", "unknown"
+                    )
                 elif camera_mode == "tilt":
-                    txt = _replace_word_insensitive(txt, r"\\b(pan|zoom|dolly|push|pull|tracking|handheld)\\b", "unknown")
+                    txt = _replace_word_insensitive(
+                        txt,
+                        r"\\b(pan|zoom|dolly|push|pull|tracking|handheld)\\b",
+                        "unknown",
+                    )
 
                 if brightness_bucket == "unknown":
-                    txt = _replace_word_insensitive(txt, r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", "unknown")
+                    txt = _replace_word_insensitive(
+                        txt, r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", "unknown"
+                    )
                 shot[key] = txt
 
             # Deterministic fact stamp for downstream audit in existing schema fields.
@@ -984,17 +1147,29 @@ def _apply_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, Any]
         if isinstance(voice, str):
             txt = voice
             if camera_mode == "unknown":
-                txt = _replace_word_insensitive(txt, r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b", "unknown")
+                txt = _replace_word_insensitive(
+                    txt,
+                    r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b",
+                    "unknown",
+                )
             if brightness_bucket == "unknown":
-                txt = _replace_word_insensitive(txt, r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", "unknown")
+                txt = _replace_word_insensitive(
+                    txt, r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", "unknown"
+                )
             script["voiceover"] = txt
 
     return job
 
 
-def _validate_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, Any]) -> List[str]:
+def _validate_facts_only_guard(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> List[str]:
     errors: List[str] = []
-    reverse = quality_context.get("reverse_analysis", {}) if isinstance(quality_context, dict) else {}
+    reverse = (
+        quality_context.get("reverse_analysis", {})
+        if isinstance(quality_context, dict)
+        else {}
+    )
     if not isinstance(reverse, dict) or not bool(reverse.get("facts_only_mode")):
         return errors
     visual_facts = reverse.get("visual_facts", {}) if isinstance(reverse, dict) else {}
@@ -1003,8 +1178,13 @@ def _validate_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, A
     camera_mode = str(visual_facts.get("camera_movement_mode") or "unknown").lower()
     brightness_bucket = str(visual_facts.get("brightness_bucket") or "unknown").lower()
 
-    camera_terms = re.compile(r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b", re.IGNORECASE)
-    brightness_terms = re.compile(r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", re.IGNORECASE)
+    camera_terms = re.compile(
+        r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b",
+        re.IGNORECASE,
+    )
+    brightness_terms = re.compile(
+        r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", re.IGNORECASE
+    )
     allowed_camera: Dict[str, set[str]] = {
         "unknown": set(),
         "locked": {"locked", "static"},
@@ -1012,7 +1192,18 @@ def _validate_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, A
         "tilt": {"tilt"},
         "push": {"push"},
         "pull": {"pull"},
-        "mixed": {"pan", "tilt", "zoom", "dolly", "push", "pull", "tracking", "handheld", "static", "locked"},
+        "mixed": {
+            "pan",
+            "tilt",
+            "zoom",
+            "dolly",
+            "push",
+            "pull",
+            "tracking",
+            "handheld",
+            "static",
+            "locked",
+        },
     }
 
     texts: List[Tuple[str, str]] = []
@@ -1036,14 +1227,20 @@ def _validate_facts_only_guard(job: Dict[str, Any], quality_context: Dict[str, A
         for m in camera_terms.finditer(text):
             token = m.group(1).lower()
             if token not in allowed_camera.get(camera_mode, set()):
-                errors.append(f"{label}: camera claim '{token}' not supported by camera_movement_mode={camera_mode}")
+                errors.append(
+                    f"{label}: camera claim '{token}' not supported by camera_movement_mode={camera_mode}"
+                )
                 break
         if brightness_bucket == "unknown" and brightness_terms.search(text):
-            errors.append(f"{label}: brightness claim not allowed when brightness_bucket=unknown")
+            errors.append(
+                f"{label}: brightness claim not allowed when brightness_bucket=unknown"
+            )
     return errors
 
 
-def _apply_segment_stitch_hints(job: Dict[str, Any], quality_context: Dict[str, Any], project_root: str) -> Dict[str, Any]:
+def _apply_segment_stitch_hints(
+    job: Dict[str, Any], quality_context: Dict[str, Any], project_root: str
+) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(quality_context, dict):
         return job
     plan_ctx = quality_context.get("segment_stitch_plan")
@@ -1059,7 +1256,9 @@ def _apply_segment_stitch_hints(job: Dict[str, Any], quality_context: Dict[str, 
     enabled = True
     existing = job.get("segment_stitch")
     if isinstance(existing, dict):
-        if isinstance(existing.get("plan_relpath"), str) and existing.get("plan_relpath"):
+        if isinstance(existing.get("plan_relpath"), str) and existing.get(
+            "plan_relpath"
+        ):
             return job
         if isinstance(existing.get("enabled"), bool):
             enabled = existing["enabled"]
@@ -1111,7 +1310,9 @@ def _apply_segment_stitch_hints(job: Dict[str, Any], quality_context: Dict[str, 
     return job
 
 
-def _apply_continuity_pack_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_continuity_pack_hints(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(quality_context, dict):
         return job
     continuity = quality_context.get("continuity_pack")
@@ -1121,17 +1322,27 @@ def _apply_continuity_pack_hints(job: Dict[str, Any], quality_context: Dict[str,
     if not isinstance(relpath, str) or not relpath:
         return job
     existing = job.get("continuity_pack")
-    if isinstance(existing, dict) and isinstance(existing.get("relpath"), str) and existing.get("relpath"):
+    if (
+        isinstance(existing, dict)
+        and isinstance(existing.get("relpath"), str)
+        and existing.get("relpath")
+    ):
         return job
     job["continuity_pack"] = {"relpath": relpath}
     return job
 
 
-def _apply_quality_target_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_quality_target_hints(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(quality_context, dict):
         return job
     existing = job.get("quality_target")
-    if isinstance(existing, dict) and isinstance(existing.get("relpath"), str) and existing.get("relpath"):
+    if (
+        isinstance(existing, dict)
+        and isinstance(existing.get("relpath"), str)
+        and existing.get("relpath")
+    ):
         return job
 
     quality_target = quality_context.get("quality_target")
@@ -1153,11 +1364,17 @@ def _apply_quality_target_hints(job: Dict[str, Any], quality_context: Dict[str, 
     return job
 
 
-def _apply_motion_contract_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_motion_contract_hints(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(quality_context, dict):
         return job
     existing = job.get("motion_contract")
-    if isinstance(existing, dict) and isinstance(existing.get("relpath"), str) and existing.get("relpath"):
+    if (
+        isinstance(existing, dict)
+        and isinstance(existing.get("relpath"), str)
+        and existing.get("relpath")
+    ):
         return job
 
     relpath: Optional[str] = None
@@ -1180,13 +1397,15 @@ def _apply_motion_contract_hints(job: Dict[str, Any], quality_context: Dict[str,
     return job
 
 
-def _apply_pointer_resolver_hints(job: Dict[str, Any], quality_context: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_pointer_resolver_hints(
+    job: Dict[str, Any], quality_context: Dict[str, Any]
+) -> Dict[str, Any]:
     if not isinstance(job, dict) or not isinstance(quality_context, dict):
         return job
     resolver_artifact = quality_context.get("pointer_resolver")
     if not isinstance(resolver_artifact, dict):
         return job
-    
+
     pointers = resolver_artifact.get("pointers", {})
     if not isinstance(pointers, dict):
         return job
@@ -1198,18 +1417,25 @@ def _apply_pointer_resolver_hints(job: Dict[str, Any], quality_context: Dict[str
 
     # 2. Continuity Pack
     rel = pointers.get("continuity_pack")
-    if isinstance(rel, str) and rel and not isinstance(job.get("continuity_pack"), dict):
+    if (
+        isinstance(rel, str)
+        and rel
+        and not isinstance(job.get("continuity_pack"), dict)
+    ):
         job["continuity_pack"] = {"relpath": rel}
 
     # 3. Motion / Pose Checkpoints
     rel = pointers.get("pose_checkpoint")
     if isinstance(rel, str) and rel:
-        job["motion_contract"] = {"relpath": rel, "contract_version": "pose_checkpoints.v1"}
+        job["motion_contract"] = {
+            "relpath": rel,
+            "contract_version": "pose_checkpoints.v1",
+        }
 
     # 4. Engine Adapter Registry
     rel = pointers.get("engine_adapter_registry")
     if isinstance(rel, str) and rel:
-         job["engine_adapter_registry"] = {"relpath": rel}
+        job["engine_adapter_registry"] = {"relpath": rel}
 
     return job
 
@@ -1249,18 +1475,24 @@ def _is_existing_relpath(project_root: str, relpath: str) -> bool:
     return os.path.exists(abs_path)
 
 
-
-
-
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Cat AI Factory planner CLI")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--prd", help="Path to PRD.json")
     group.add_argument("--prompt", help="A simple text prompt to generate a job from")
 
-    parser.add_argument("--inbox", default="sandbox/inbox", help="Inbox directory (optional)")
-    parser.add_argument("--out", default="sandbox/jobs", help="Output directory for job.json")
-    parser.add_argument("--provider", default="ai_studio", choices=list_providers(), help="Planner provider")
+    parser.add_argument(
+        "--inbox", default="sandbox/inbox", help="Inbox directory (optional)"
+    )
+    parser.add_argument(
+        "--out", default="sandbox/jobs", help="Output directory for job.json"
+    )
+    parser.add_argument(
+        "--provider",
+        default="ai_studio",
+        choices=list_providers(),
+        help="Planner provider",
+    )
     parser.add_argument("--job-id", default=None, help="Optional job_id override")
     parser.add_argument(
         "--analysis-id",
@@ -1290,12 +1522,16 @@ def main(argv: List[str]) -> int:
 
         # PR21: Load hero registry (reference only)
         hero_registry = None
-        
+
         # _repo_root() returns project root (directory containing 'repo' package)
         project_root = _repo_root()
-        registry_path = os.path.join(project_root, "repo", "shared", "hero_registry.v1.json")
-        schema_path = os.path.join(project_root, "repo", "shared", "hero_registry.v1.schema.json")
-        
+        registry_path = os.path.join(
+            project_root, "repo", "shared", "hero_registry.v1.json"
+        )
+        schema_path = os.path.join(
+            project_root, "repo", "shared", "hero_registry.v1.schema.json"
+        )
+
         # Validate existence of registry file first to avoid noise if it's plainly missing
         if os.path.exists(registry_path):
             try:
@@ -1304,19 +1540,22 @@ def main(argv: List[str]) -> int:
                     sys.path.insert(0, project_root)
 
                 from repo.shared.hero_registry_validate import validate_registry_data
-                
+
                 # Single-pass load and validate
                 reg_data = _load_json(registry_path)
-                
+
                 # Schema might strictly exist if registry does (co-located), but safely check
                 if os.path.exists(schema_path):
                     schema_data = _load_json(schema_path)
                     is_valid, errs = validate_registry_data(reg_data, schema_data)
-                    
+
                     if is_valid:
                         hero_registry = reg_data
                     else:
-                        print(f"WARNING: Hero registry found but invalid. Proceeding without it.", file=sys.stderr)
+                        print(
+                            "WARNING: Hero registry found but invalid. Proceeding without it.",
+                            file=sys.stderr,
+                        )
                         # Show first few errors to avoid log noise
                         for i, e in enumerate(errs):
                             if i >= 5:
@@ -1324,12 +1563,21 @@ def main(argv: List[str]) -> int:
                                 break
                             print(f"  - {e}", file=sys.stderr)
                 else:
-                     print(f"WARNING: Hero registry schema not found at {schema_path}. Ignoring registry.", file=sys.stderr)
+                    print(
+                        f"WARNING: Hero registry schema not found at {schema_path}. Ignoring registry.",
+                        file=sys.stderr,
+                    )
 
             except ImportError as ie:
-                print(f"WARNING: Hero registry validation unavailable; ignoring registry. (Error: {ie})", file=sys.stderr)
+                print(
+                    f"WARNING: Hero registry validation unavailable; ignoring registry. (Error: {ie})",
+                    file=sys.stderr,
+                )
             except Exception as ex:
-                print(f"WARNING: Failed to load/validate hero registry: {ex}", file=sys.stderr)
+                print(
+                    f"WARNING: Failed to load/validate hero registry: {ex}",
+                    file=sys.stderr,
+                )
 
         provider = get_provider(args.provider)
         video_analysis = _load_video_analysis_selection(
@@ -1360,8 +1608,11 @@ def main(argv: List[str]) -> int:
             job = _apply_video_analysis_hints(job, video_analysis)
             selected_id = video_analysis.get("analysis_id")
             if isinstance(selected_id, str) and selected_id:
-                print(f"INFO planner video_analysis_applied={selected_id}", file=sys.stderr)
-        
+                print(
+                    f"INFO planner video_analysis_applied={selected_id}",
+                    file=sys.stderr,
+                )
+
         job = _apply_reverse_analysis_hints(job, quality_context)
         job = _apply_pointer_resolver_hints(job, quality_context)
         job = _apply_segment_stitch_hints(job, quality_context, project_root)
@@ -1371,15 +1622,19 @@ def main(argv: List[str]) -> int:
         job = _apply_engine_adapter_hints(job, quality_context)
         job = _apply_quality_policy_hints(job, quality_context)
         job = _apply_facts_only_guard(job, quality_context)
-        
+
         facts_errors = _validate_facts_only_guard(job, quality_context)
         if facts_errors:
-            raise RuntimeError("facts-only guard failed: " + "; ".join(facts_errors[:3]))
+            raise RuntimeError(
+                "facts-only guard failed: " + "; ".join(facts_errors[:3])
+            )
 
         # Pointer resolution artifact is officially committed to the job
         job["pointer_resolution"] = pointer_resolution
 
-        base_job_id = _choose_job_id(args.job_id, job.get("job_id"), prd, inbox_with_names)
+        base_job_id = _choose_job_id(
+            args.job_id, job.get("job_id"), prd, inbox_with_names
+        )
         final_path = _final_job_path(args.out, base_job_id)
         stem = _stem_from_job_path(final_path)
         job["job_id"] = stem

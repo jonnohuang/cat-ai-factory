@@ -19,7 +19,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _kebab(value: str) -> str:
@@ -27,7 +32,9 @@ def _kebab(value: str) -> str:
 
 
 def _run(cmd: List[str], cwd: pathlib.Path) -> subprocess.CompletedProcess[str]:
-    proc = subprocess.run(cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.run(
+        cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     print(proc.stdout, end="")
     return proc
 
@@ -153,29 +160,69 @@ def main(argv: List[str]) -> int:
     )
     parser.add_argument("--prompt", required=True, help="High-level user brief.")
     parser.add_argument("--provider", default="comfyui_video", help="Planner provider.")
-    parser.add_argument("--analysis-id", default=None, help="Optional deterministic analysis_id override.")
+    parser.add_argument(
+        "--analysis-id",
+        default=None,
+        help="Optional deterministic analysis_id override.",
+    )
     parser.add_argument("--inbox", default="sandbox/inbox")
     parser.add_argument("--out", default="sandbox/jobs")
-    parser.add_argument("--ignore-inbox", action="store_true", help="Ignore inbox for planner context.")
-    parser.add_argument("--max-retries", type=int, default=1, help="Controller max retries.")
-    parser.add_argument("--worker-timeout-sec", type=int, default=900, help="Controller worker timeout.")
-    parser.add_argument("--bootstrap-on-pointer-fail", action="store_true", help="Run lab bootstrap if planner pointer resolution fails.")
-    parser.add_argument("--auto-start-comfy", action="store_true", help="Attempt managed Comfy start if unreachable.")
-    parser.add_argument("--dry-run", action="store_true", help="Stop after planner success and lifecycle write.")
+    parser.add_argument(
+        "--ignore-inbox", action="store_true", help="Ignore inbox for planner context."
+    )
+    parser.add_argument(
+        "--max-retries", type=int, default=1, help="Controller max retries."
+    )
+    parser.add_argument(
+        "--worker-timeout-sec", type=int, default=900, help="Controller worker timeout."
+    )
+    parser.add_argument(
+        "--bootstrap-on-pointer-fail",
+        action="store_true",
+        help="Run lab bootstrap if planner pointer resolution fails.",
+    )
+    parser.add_argument(
+        "--auto-start-comfy",
+        action="store_true",
+        help="Attempt managed Comfy start if unreachable.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Stop after planner success and lifecycle write.",
+    )
 
     parser.add_argument("--incoming-dir", default="sandbox/assets/demo/incoming")
     parser.add_argument("--processed-dir", default="sandbox/assets/demo/processed")
     parser.add_argument("--canon-dir", default="repo/canon/demo_analyses")
-    parser.add_argument("--analysis-index", default="repo/canon/demo_analyses/video_analysis_index.v1.json")
-    parser.add_argument("--quality-target-relpath", default="repo/examples/quality_target.motion_strict.v1.example.json")
-    parser.add_argument("--continuity-pack-relpath", default="repo/examples/episode_continuity_pack.v1.example.json")
-    parser.add_argument("--storyboard-relpath", default="repo/examples/storyboard.v1.example.json")
+    parser.add_argument(
+        "--analysis-index",
+        default="repo/canon/demo_analyses/video_analysis_index.v1.json",
+    )
+    parser.add_argument(
+        "--quality-target-relpath",
+        default="repo/examples/quality_target.motion_strict.v1.example.json",
+    )
+    parser.add_argument(
+        "--continuity-pack-relpath",
+        default="repo/examples/episode_continuity_pack.v1.example.json",
+    )
+    parser.add_argument(
+        "--storyboard-relpath", default="repo/examples/storyboard.v1.example.json"
+    )
 
     args = parser.parse_args(argv)
     root = _repo_root()
 
     run_id = f"autonomous-brief-{_kebab(args.prompt)[:48] or 'run'}-{int(dt.datetime.now().timestamp())}"
-    lifecycle_path = root / "sandbox" / "logs" / "lab" / "autonomous_brief_runs" / f"{run_id}.autonomous_brief_run.v1.json"
+    lifecycle_path = (
+        root
+        / "sandbox"
+        / "logs"
+        / "lab"
+        / "autonomous_brief_runs"
+        / f"{run_id}.autonomous_brief_run.v1.json"
+    )
     run_doc: Dict[str, Any] = {
         "version": "autonomous_brief_run.v1",
         "run_id": run_id,
@@ -188,7 +235,12 @@ def main(argv: List[str]) -> int:
         "job_id": None,
         "events": [],
     }
-    _event(run_doc, state="PLANNER_START", step="planner", message="Running planner for brief.")
+    _event(
+        run_doc,
+        state="PLANNER_START",
+        step="planner",
+        message="Running planner for brief.",
+    )
     _write_json(lifecycle_path, run_doc)
 
     if args.provider.strip().lower() == "comfyui_video":
@@ -206,14 +258,20 @@ def main(argv: List[str]) -> int:
                     extra={"comfy_base_url": base_url},
                 )
                 _write_json(lifecycle_path, run_doc)
-                start_proc = _run([sys.executable, "-m", "repo.tools.manage_comfy_runtime", "start"], root)
+                start_proc = _run(
+                    [sys.executable, "-m", "repo.tools.manage_comfy_runtime", "start"],
+                    root,
+                )
                 if start_proc.returncode != 0 or not _comfy_reachable(base_url):
                     _event(
                         run_doc,
                         state="FAILED_PREFLIGHT",
                         step="preflight",
                         message="ComfyUI preflight failed after auto-start attempt.",
-                        extra={"comfy_base_url": base_url, "start_exit_code": start_proc.returncode},
+                        extra={
+                            "comfy_base_url": base_url,
+                            "start_exit_code": start_proc.returncode,
+                        },
                     )
                     _write_json(lifecycle_path, run_doc)
                     return 2
@@ -231,7 +289,9 @@ def main(argv: List[str]) -> int:
     planner_proc = _run(_planner_cmd(args), root)
     planner_out = planner_proc.stdout or ""
     if planner_proc.returncode != 0:
-        if args.bootstrap_on_pointer_fail and _is_pointer_resolution_failure(planner_out):
+        if args.bootstrap_on_pointer_fail and _is_pointer_resolution_failure(
+            planner_out
+        ):
             _event(
                 run_doc,
                 state="BOOTSTRAP_START",
@@ -251,7 +311,12 @@ def main(argv: List[str]) -> int:
                 _write_json(lifecycle_path, run_doc)
                 return ingest_proc.returncode
 
-            _event(run_doc, state="PLANNER_RETRY", step="planner", message="Retrying planner after bootstrap ingest.")
+            _event(
+                run_doc,
+                state="PLANNER_RETRY",
+                step="planner",
+                message="Retrying planner after bootstrap ingest.",
+            )
             _write_json(lifecycle_path, run_doc)
             planner_proc = _run(_planner_cmd(args), root)
             planner_out = planner_proc.stdout or ""
@@ -269,13 +334,23 @@ def main(argv: List[str]) -> int:
 
     job_path = _extract_job_path(planner_out)
     if job_path is None:
-        _event(run_doc, state="FAILED_PLANNER_NO_JOB", step="planner", message="Planner succeeded but no job path emitted.")
+        _event(
+            run_doc,
+            state="FAILED_PLANNER_NO_JOB",
+            step="planner",
+            message="Planner succeeded but no job path emitted.",
+        )
         _write_json(lifecycle_path, run_doc)
         return 1
     if not job_path.is_absolute():
         job_path = (root / job_path).resolve()
     if not job_path.exists():
-        _event(run_doc, state="FAILED_MISSING_JOB", step="planner", message=f"Planner job file missing: {job_path}")
+        _event(
+            run_doc,
+            state="FAILED_MISSING_JOB",
+            step="planner",
+            message=f"Planner job file missing: {job_path}",
+        )
         _write_json(lifecycle_path, run_doc)
         return 1
 
@@ -284,16 +359,31 @@ def main(argv: List[str]) -> int:
     job_id = str(job_payload.get("job_id") or job_path.name.replace(".job.json", ""))
     run_doc["job_relpath"] = job_rel
     run_doc["job_id"] = job_id
-    _event(run_doc, state="PLANNER_DONE", step="planner", message="Planner completed and job contract written.")
+    _event(
+        run_doc,
+        state="PLANNER_DONE",
+        step="planner",
+        message="Planner completed and job contract written.",
+    )
     _write_json(lifecycle_path, run_doc)
 
     if args.dry_run:
-        _event(run_doc, state="COMPLETED_DRY_RUN", step="runner", message="Dry run complete; orchestrator skipped.")
+        _event(
+            run_doc,
+            state="COMPLETED_DRY_RUN",
+            step="runner",
+            message="Dry run complete; orchestrator skipped.",
+        )
         _write_json(lifecycle_path, run_doc)
         print(f"Wrote {lifecycle_path}")
         return 0
 
-    _event(run_doc, state="ORCHESTRATOR_START", step="orchestrator", message="Running Ralph loop.")
+    _event(
+        run_doc,
+        state="ORCHESTRATOR_START",
+        step="orchestrator",
+        message="Running Ralph loop.",
+    )
     _write_json(lifecycle_path, run_doc)
     orch_proc = _run(_orchestrator_cmd(args, job_path), root)
     if orch_proc.returncode != 0:

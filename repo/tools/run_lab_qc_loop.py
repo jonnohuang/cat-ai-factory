@@ -17,11 +17,25 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
-def _run(cmd: List[str], *, cwd: pathlib.Path, env: Dict[str, str]) -> subprocess.CompletedProcess[str]:
-    proc = subprocess.run(cmd, cwd=str(cwd), env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+def _run(
+    cmd: List[str], *, cwd: pathlib.Path, env: Dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    proc = subprocess.run(
+        cmd,
+        cwd=str(cwd),
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
     print(proc.stdout, end="")
     return proc
 
@@ -50,9 +64,13 @@ def _write_json(path: pathlib.Path, payload: Dict[str, Any]) -> None:
 
 
 def _read_qc_action(repo_root: pathlib.Path, job_id: str) -> tuple[str, str]:
-    decision_path = repo_root / "sandbox" / "logs" / job_id / "qc" / "quality_decision.v1.json"
+    decision_path = (
+        repo_root / "sandbox" / "logs" / job_id / "qc" / "quality_decision.v1.json"
+    )
     payload = _load_json(decision_path) or {}
-    decision = payload.get("decision") if isinstance(payload.get("decision"), dict) else {}
+    decision = (
+        payload.get("decision") if isinstance(payload.get("decision"), dict) else {}
+    )
     action = str(decision.get("action", "unknown"))
     reason = str(decision.get("reason", ""))
     return action, reason
@@ -84,18 +102,32 @@ def _action_score(action: str) -> int:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Run bounded autonomous lab QC loop (planner + controller).")
-    parser.add_argument("--prompt", required=True, help="Planner prompt for this lab run.")
-    parser.add_argument("--provider", default="vertex_veo", help="Planner provider (e.g., vertex_veo, wan_dashscope).")
+    parser = argparse.ArgumentParser(
+        description="Run bounded autonomous lab QC loop (planner + controller)."
+    )
+    parser.add_argument(
+        "--prompt", required=True, help="Planner prompt for this lab run."
+    )
+    parser.add_argument(
+        "--provider",
+        default="vertex_veo",
+        help="Planner provider (e.g., vertex_veo, wan_dashscope).",
+    )
     parser.add_argument(
         "--providers",
         default="",
         help="Comma-separated provider matrix (e.g., vertex_veo,wan_dashscope,sora_lab,meta_ai_lab).",
     )
     parser.add_argument("--inbox", default="sandbox/inbox", help="Planner inbox path.")
-    parser.add_argument("--out", default="sandbox/jobs", help="Planner jobs output directory.")
-    parser.add_argument("--max-attempts", type=int, default=5, help="Max controller loop attempts.")
-    parser.add_argument("--max-retries", type=int, default=2, help="Controller max retries per run.")
+    parser.add_argument(
+        "--out", default="sandbox/jobs", help="Planner jobs output directory."
+    )
+    parser.add_argument(
+        "--max-attempts", type=int, default=5, help="Max controller loop attempts."
+    )
+    parser.add_argument(
+        "--max-retries", type=int, default=2, help="Controller max retries per run."
+    )
     parser.add_argument(
         "--route-mode",
         choices=["production", "lab"],
@@ -147,24 +179,44 @@ def main(argv: list[str]) -> int:
 
         job_path = _extract_job_path(planner_proc.stdout)
         if job_path is None:
-            run_summaries.append({"provider": provider_name, "status": "planner_no_job_path", "attempts": []})
+            run_summaries.append(
+                {
+                    "provider": provider_name,
+                    "status": "planner_no_job_path",
+                    "attempts": [],
+                }
+            )
             continue
         if not job_path.is_absolute():
             job_path = (root / job_path).resolve()
         if not job_path.exists():
-            run_summaries.append({"provider": provider_name, "status": "planner_missing_job", "attempts": []})
+            run_summaries.append(
+                {
+                    "provider": provider_name,
+                    "status": "planner_missing_job",
+                    "attempts": [],
+                }
+            )
             continue
 
         job_payload = _load_json(job_path)
         job_id = str(job_payload.get("job_id")) if isinstance(job_payload, dict) else ""
         if not job_id:
-            run_summaries.append({"provider": provider_name, "status": "planner_missing_job_id", "attempts": []})
+            run_summaries.append(
+                {
+                    "provider": provider_name,
+                    "status": "planner_missing_job_id",
+                    "attempts": [],
+                }
+            )
             continue
 
         attempt_rows: List[Dict[str, Any]] = []
         final_status = "max_attempts_reached"
         for idx in range(1, max(1, args.max_attempts) + 1):
-            print(f"INFO lab_loop provider={provider_name} attempt={idx}/{args.max_attempts} job_id={job_id}")
+            print(
+                f"INFO lab_loop provider={provider_name} attempt={idx}/{args.max_attempts} job_id={job_id}"
+            )
             ctrl_cmd = [
                 sys.executable,
                 "-m",
@@ -198,7 +250,9 @@ def main(argv: list[str]) -> int:
             {
                 "provider": provider_name,
                 "job_id": job_id,
-                "job_relpath": str(job_path.resolve().relative_to(root.resolve())).replace("\\", "/"),
+                "job_relpath": str(
+                    job_path.resolve().relative_to(root.resolve())
+                ).replace("\\", "/"),
                 "status": final_status,
                 "attempts": attempt_rows,
             }
@@ -235,7 +289,14 @@ def main(argv: list[str]) -> int:
     }
 
     if best_job_id:
-        out_path = root / "sandbox" / "logs" / best_job_id / "qc" / "lab_qc_loop_summary.v1.json"
+        out_path = (
+            root
+            / "sandbox"
+            / "logs"
+            / best_job_id
+            / "qc"
+            / "lab_qc_loop_summary.v1.json"
+        )
     else:
         out_path = root / "sandbox" / "logs" / "lab_qc_loop_summary.v1.json"
     _write_json(out_path, summary)

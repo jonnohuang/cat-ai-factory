@@ -43,10 +43,30 @@ def main(argv: list[str]) -> int:
         "video_relpath": f"sandbox/output/{job_id}/final.mp4",
         "generated_at": "2026-02-17T00:00:00Z",
         "metrics": {
-            "identity_consistency": {"available": True, "score": 0.85, "threshold": 0.55, "pass": True},
-            "mask_edge_bleed": {"available": True, "score": 0.78, "threshold": 0.45, "pass": True},
-            "temporal_stability": {"available": True, "score": 0.66, "threshold": 0.55, "pass": True},
-            "loop_seam": {"available": True, "score": 0.67, "threshold": 0.60, "pass": True},
+            "identity_consistency": {
+                "available": True,
+                "score": 0.85,
+                "threshold": 0.55,
+                "pass": True,
+            },
+            "mask_edge_bleed": {
+                "available": True,
+                "score": 0.78,
+                "threshold": 0.45,
+                "pass": True,
+            },
+            "temporal_stability": {
+                "available": True,
+                "score": 0.66,
+                "threshold": 0.55,
+                "pass": True,
+            },
+            "loop_seam": {
+                "available": True,
+                "score": 0.67,
+                "threshold": 0.60,
+                "pass": True,
+            },
             "audio_video": {
                 "audio_stream_present": True,
                 "av_sync_sec": 0.0,
@@ -69,11 +89,24 @@ def main(argv: list[str]) -> int:
     }
     _write_json(two_pass_path, two_pass)
 
-    decide_cmd = [sys.executable, "-m", "repo.tools.decide_quality_action", "--job-id", job_id, "--max-retries", "2"]
+    decide_cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.decide_quality_action",
+        "--job-id",
+        job_id,
+        "--max-retries",
+        "2",
+    ]
     print("RUN:", " ".join(decide_cmd))
     subprocess.check_call(decide_cmd, cwd=str(root))
 
-    validate_cmd = [sys.executable, "-m", "repo.tools.validate_quality_decision", str(decision_path)]
+    validate_cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.validate_quality_decision",
+        str(decision_path),
+    ]
     print("RUN:", " ".join(validate_cmd))
     subprocess.check_call(validate_cmd, cwd=str(root))
 
@@ -93,8 +126,14 @@ def main(argv: list[str]) -> int:
     if mode == "retry_selected" and not targets:
         print("ERROR: retry_selected requires target segments", file=sys.stderr)
         return 1
-    if "temporal_stability" not in trigger_metrics and "loop_seam" not in trigger_metrics:
-        print("ERROR: expected motion trigger metrics in segment retry plan", file=sys.stderr)
+    if (
+        "temporal_stability" not in trigger_metrics
+        and "loop_seam" not in trigger_metrics
+    ):
+        print(
+            "ERROR: expected motion trigger metrics in segment retry plan",
+            file=sys.stderr,
+        )
         return 1
 
     print("OK:", decision_path)

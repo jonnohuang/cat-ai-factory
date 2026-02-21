@@ -14,7 +14,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _load(path: pathlib.Path) -> Optional[Dict[str, Any]]:
@@ -33,7 +38,9 @@ def _save(path: pathlib.Path, payload: Dict[str, Any]) -> None:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Replay benchmark for baseline vs advisory route alignment.")
+    parser = argparse.ArgumentParser(
+        description="Replay benchmark for baseline vs advisory route alignment."
+    )
     parser.add_argument("--job-ids", nargs="+", required=True)
     parser.add_argument(
         "--out-relpath",
@@ -54,14 +61,18 @@ def main(argv: list[str]) -> int:
         if not isinstance(decision, dict) or not isinstance(report, dict):
             continue
         baseline_action = str(decision.get("decision", {}).get("action", "unknown"))
-        policy_action = str(report.get("overall", {}).get("recommended_action", "unknown"))
+        policy_action = str(
+            report.get("overall", {}).get("recommended_action", "unknown")
+        )
         advisory_action = None
         if isinstance(advice, dict):
             raw = advice.get("advice", {})
             if isinstance(raw, dict) and isinstance(raw.get("recommended_action"), str):
                 advisory_action = str(raw.get("recommended_action"))
         baseline_aligned = baseline_action == policy_action
-        advisory_aligned = advisory_action == policy_action if advisory_action is not None else False
+        advisory_aligned = (
+            advisory_action == policy_action if advisory_action is not None else False
+        )
         baseline_hits += 1 if baseline_aligned else 0
         advisory_hits += 1 if advisory_aligned else 0
         rows.append(

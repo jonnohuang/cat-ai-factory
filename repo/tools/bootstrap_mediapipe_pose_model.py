@@ -7,7 +7,6 @@ import pathlib
 import sys
 import urllib.request
 
-
 DEFAULT_URL = (
     "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
     "pose_landmarker_lite/float16/latest/pose_landmarker_lite.task"
@@ -37,7 +36,8 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument(
         "--url",
-        default=os.environ.get("CAF_MEDIAPIPE_POSE_MODEL_URL", "").strip() or DEFAULT_URL,
+        default=os.environ.get("CAF_MEDIAPIPE_POSE_MODEL_URL", "").strip()
+        or DEFAULT_URL,
     )
     parser.add_argument(
         "--out",
@@ -47,8 +47,17 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     root = _repo_root()
-    out = pathlib.Path(args.out) if args.out else (
-        root / "sandbox" / "assets" / "models" / "mediapipe" / "pose_landmarker_lite.task"
+    out = (
+        pathlib.Path(args.out)
+        if args.out
+        else (
+            root
+            / "sandbox"
+            / "assets"
+            / "models"
+            / "mediapipe"
+            / "pose_landmarker_lite.task"
+        )
     )
     if not out.is_absolute():
         out = (root / out).resolve()
@@ -66,4 +75,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

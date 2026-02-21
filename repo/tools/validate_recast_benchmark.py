@@ -4,6 +4,7 @@ validate_recast_benchmark.py
 
 Validates recast benchmark suite/report schemas and consistency.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,14 +30,24 @@ def _load(path: pathlib.Path) -> Any:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Validate recast benchmark suite/report")
-    parser.add_argument("--suite", required=True, help="Path to recast_benchmark_suite.v1 JSON")
-    parser.add_argument("--report", required=True, help="Path to recast_benchmark_report.v1 JSON")
+    parser = argparse.ArgumentParser(
+        description="Validate recast benchmark suite/report"
+    )
+    parser.add_argument(
+        "--suite", required=True, help="Path to recast_benchmark_suite.v1 JSON"
+    )
+    parser.add_argument(
+        "--report", required=True, help="Path to recast_benchmark_report.v1 JSON"
+    )
     args = parser.parse_args(argv[1:])
 
     root = _repo_root()
-    suite_schema = _load(root / "repo" / "shared" / "recast_benchmark_suite.v1.schema.json")
-    report_schema = _load(root / "repo" / "shared" / "recast_benchmark_report.v1.schema.json")
+    suite_schema = _load(
+        root / "repo" / "shared" / "recast_benchmark_suite.v1.schema.json"
+    )
+    report_schema = _load(
+        root / "repo" / "shared" / "recast_benchmark_report.v1.schema.json"
+    )
     suite = _load(pathlib.Path(args.suite).resolve())
     report = _load(pathlib.Path(args.report).resolve())
 
@@ -56,7 +67,9 @@ def main(argv: list[str]) -> int:
     suite_case_ids = {c["case_id"] for c in suite.get("cases", [])}
     report_case_ids = {c["case_id"] for c in report.get("cases", [])}
     if suite_case_ids != report_case_ids:
-        errors.append(f"case_id mismatch between suite/report: suite={sorted(suite_case_ids)} report={sorted(report_case_ids)}")
+        errors.append(
+            f"case_id mismatch between suite/report: suite={sorted(suite_case_ids)} report={sorted(report_case_ids)}"
+        )
 
     for c in report.get("cases", []):
         report_path = root / c["report_path"]
@@ -82,4 +95,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

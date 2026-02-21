@@ -24,7 +24,10 @@ def _load(path: pathlib.Path) -> Any:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        print("Usage: python -m repo.tools.validate_segment_debug_manifest path/to/segment_debug_manifest.v1.json", file=sys.stderr)
+        print(
+            "Usage: python -m repo.tools.validate_segment_debug_manifest path/to/segment_debug_manifest.v1.json",
+            file=sys.stderr,
+        )
         return 1
     target = pathlib.Path(argv[1]).resolve()
     if not target.exists():

@@ -12,7 +12,9 @@ import urllib.request
 
 
 def _run(cmd: list[str], cwd: pathlib.Path) -> tuple[int, str]:
-    p = subprocess.run(cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.run(
+        cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     out = p.stdout or ""
     print(out, end="")
     return p.returncode, out
@@ -42,13 +44,23 @@ def main(argv: list[str]) -> int:
         description="One-command Comfy planner+orchestrator runner pinned to demo dance-loop analysis."
     )
     parser.add_argument("--prompt", required=True, help="User brief/prompt")
-    parser.add_argument("--provider", default="comfyui_video", help="Planner provider (default: comfyui_video)")
-    parser.add_argument("--analysis-id", default="dance-loop", help="Analysis id (default: dance-loop)")
+    parser.add_argument(
+        "--provider",
+        default="comfyui_video",
+        help="Planner provider (default: comfyui_video)",
+    )
+    parser.add_argument(
+        "--analysis-id", default="dance-loop", help="Analysis id (default: dance-loop)"
+    )
     parser.add_argument("--inbox", default="sandbox/inbox")
     parser.add_argument("--out", default="sandbox/jobs")
     parser.add_argument("--max-retries", type=int, default=0)
     parser.add_argument("--worker-timeout-sec", type=int, default=300)
-    parser.add_argument("--auto-start-comfy", action="store_true", help="Attempt CAF-managed Comfy start if unreachable.")
+    parser.add_argument(
+        "--auto-start-comfy",
+        action="store_true",
+        help="Attempt CAF-managed Comfy start if unreachable.",
+    )
     parser.add_argument(
         "--allow-inbox",
         action="store_true",
@@ -57,10 +69,15 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     root = _repo_root()
-    base_url = os.environ.get("COMFYUI_BASE_URL", "http://127.0.0.1:8188").strip() or "http://127.0.0.1:8188"
+    base_url = (
+        os.environ.get("COMFYUI_BASE_URL", "http://127.0.0.1:8188").strip()
+        or "http://127.0.0.1:8188"
+    )
     if not _comfy_reachable(base_url):
         if args.auto_start_comfy:
-            rc, _ = _run([sys.executable, "-m", "repo.tools.manage_comfy_runtime", "start"], root)
+            rc, _ = _run(
+                [sys.executable, "-m", "repo.tools.manage_comfy_runtime", "start"], root
+            )
             if rc != 0 or not _comfy_reachable(base_url):
                 print(
                     "ERROR: ComfyUI still unreachable after auto-start. "

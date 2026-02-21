@@ -5,6 +5,7 @@ score_costume_fidelity.py
 Deterministic costume fidelity scoring for recast outputs.
 Writes costume_fidelity_report.v1 JSON.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,7 +34,9 @@ def _load(path: pathlib.Path) -> Any:
 
 def _write(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def _resolve(rel_or_abs: str) -> pathlib.Path:
@@ -55,7 +58,9 @@ def _hist_similarity(a_bgr: np.ndarray, b_bgr: np.ndarray) -> float:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Deterministically score costume fidelity from recast output")
+    parser = argparse.ArgumentParser(
+        description="Deterministically score costume fidelity from recast output"
+    )
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--video-relpath", required=True)
     parser.add_argument("--costume-image-relpath", required=True)
@@ -68,7 +73,12 @@ def main(argv: list[str]) -> int:
     out_path = (
         pathlib.Path(args.out).resolve()
         if args.out
-        else _repo_root() / "sandbox" / "logs" / args.job_id / "qc" / "costume_fidelity_report.v1.json"
+        else _repo_root()
+        / "sandbox"
+        / "logs"
+        / args.job_id
+        / "qc"
+        / "costume_fidelity_report.v1.json"
     )
 
     report: dict[str, Any] = {
@@ -96,7 +106,11 @@ def main(argv: list[str]) -> int:
     video_path = _resolve(args.video_relpath)
     costume_path = _resolve(args.costume_image_relpath)
     tracks_path = _resolve(args.tracks_relpath)
-    for p, label in ((video_path, "video"), (costume_path, "costume_image"), (tracks_path, "tracks")):
+    for p, label in (
+        (video_path, "video"),
+        (costume_path, "costume_image"),
+        (tracks_path, "tracks"),
+    ):
         if not p.exists():
             report["available"] = False
             report["pass"] = False
@@ -124,7 +138,9 @@ def main(argv: list[str]) -> int:
     subjects = tracks.get("subjects", []) if isinstance(tracks, dict) else []
     target = None
     if args.subject_id:
-        target = next((s for s in subjects if s.get("subject_id") == args.subject_id), None)
+        target = next(
+            (s for s in subjects if s.get("subject_id") == args.subject_id), None
+        )
     if target is None and subjects:
         target = subjects[0]
     if target is None:

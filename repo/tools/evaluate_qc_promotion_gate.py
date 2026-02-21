@@ -14,7 +14,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _load(path: pathlib.Path) -> Dict[str, Any]:
@@ -35,10 +40,17 @@ def _rel(path: pathlib.Path, root: pathlib.Path) -> str:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Evaluate benchmark against promotion gate thresholds.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate benchmark against promotion gate thresholds."
+    )
     parser.add_argument("--benchmark-relpath", required=True)
-    parser.add_argument("--promotion-gate-relpath", default="repo/shared/qc_promotion_gate.v1.json")
-    parser.add_argument("--out-relpath", default="sandbox/logs/qc/benchmarks/qc_promotion_decision.v1.json")
+    parser.add_argument(
+        "--promotion-gate-relpath", default="repo/shared/qc_promotion_gate.v1.json"
+    )
+    parser.add_argument(
+        "--out-relpath",
+        default="sandbox/logs/qc/benchmarks/qc_promotion_decision.v1.json",
+    )
     args = parser.parse_args(argv[1:])
 
     root = _repo_root()
@@ -53,7 +65,11 @@ def main(argv: list[str]) -> int:
     max_negative = float(thresholds.get("max_negative_lift", -0.05))
 
     promote = lift >= min_lift and lift >= max_negative
-    reason = "Alignment lift meets configured threshold." if promote else "Alignment lift below promotion gate."
+    reason = (
+        "Alignment lift meets configured threshold."
+        if promote
+        else "Alignment lift below promotion gate."
+    )
     payload = {
         "version": "qc_promotion_decision.v1",
         "generated_at": _utc_now(),

@@ -18,8 +18,12 @@ from repo.services.planner.pointer_resolver import PointerResolver
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Resolve pointers for a brief")
     parser.add_argument("--job-id", required=True, help="Job ID")
-    parser.add_argument("--brief", required=True, help="Path to brief JSON or raw JSON string")
-    parser.add_argument("--policy", default="prefer_canon_strict_motion", help="Resolution policy")
+    parser.add_argument(
+        "--brief", required=True, help="Path to brief JSON or raw JSON string"
+    )
+    parser.add_argument(
+        "--policy", default="prefer_canon_strict_motion", help="Resolution policy"
+    )
     parser.add_argument("--out", help="Output path for pointer_resolution.v1.json")
     args = parser.parse_args(argv[1:])
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import pathlib
 import subprocess
 import sys
-import pathlib
 import time
 
 # repo/tools/test_harness.py -> <repo_root>
@@ -17,16 +17,13 @@ TESTS = [
     ("n8n Ops Triggers", ["python3", "repo/tools/smoke_ops_triggers.py"]),
 ]
 
+
 def run_test(name, cmd):
     print(f"Running: {name}...", end="", flush=True)
     start_time = time.time()
     try:
         result = subprocess.run(
-            cmd,
-            cwd=str(repo_root),
-            capture_output=True,
-            text=True,
-            timeout=120
+            cmd, cwd=str(repo_root), capture_output=True, text=True, timeout=120
         )
         duration = time.time() - start_time
         if result.returncode == 0:
@@ -36,8 +33,9 @@ def run_test(name, cmd):
             print(f" [FAIL] ({duration:.2f}s)")
             return False, result.stdout + result.stderr
     except Exception as e:
-        print(f" [ERROR]")
+        print(" [ERROR]")
         return False, str(e)
+
 
 def main():
     print("=== Cat AI Factory Test Harness ===\n")
@@ -55,16 +53,17 @@ def main():
     print(f"Total: {len(TESTS)}")
     print(f"Passed: {len(passed)}")
     print(f"Failed: {len(failed)}")
-    
+
     if failed:
         print("\n=== Failures ===")
         for name, err in failed:
             print(f"\n--- {name} ---")
             print(err)
         sys.exit(1)
-    
+
     print("\nAll tests PASSED!")
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

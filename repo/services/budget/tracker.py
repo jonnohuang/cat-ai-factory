@@ -73,7 +73,9 @@ class BudgetTracker:
             return  # Idempotent
 
         today = today_utc()
-        self.data["daily_usage"][today] = self.data["daily_usage"].get(today, 0.0) + cost
+        self.data["daily_usage"][today] = (
+            self.data["daily_usage"].get(today, 0.0) + cost
+        )
         self.data["total_usage"] += cost
         self.data["transactions"][transaction_id] = cost
         self._save()
@@ -86,6 +88,8 @@ class BudgetTracker:
             "daily_spent": self.data["daily_usage"].get(today, 0.0),
             "total_limit": self.total_limit,
             "total_spent": self.data["total_usage"],
-            "remaining_daily": max(0, self.daily_limit - self.data["daily_usage"].get(today, 0.0)),
+            "remaining_daily": max(
+                0, self.daily_limit - self.data["daily_usage"].get(today, 0.0)
+            ),
             "remaining_total": max(0, self.total_limit - self.data["total_usage"]),
         }

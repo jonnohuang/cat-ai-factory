@@ -3,14 +3,20 @@
 Test script for Generating Video via google-genai SDK (Veo)
 Requires: pip install google-genai
 """
-import os
+
 import json
+import os
 import time
+
 from google import genai
 from google.genai import types
 
+
 def load_env():
-    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env")
+    env_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        ".env",
+    )
     if os.path.exists(env_path):
         with open(env_path) as f:
             for line in f:
@@ -19,6 +25,7 @@ def load_env():
                     key, _, val = line.partition("=")
                     if key and val:
                         os.environ[key.strip()] = val.strip().strip('"').strip("'")
+
 
 def main():
     load_env()
@@ -29,39 +36,42 @@ def main():
 
     project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCP_PROJECT_ID")
     location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-    
+
     if not project:
         print("ERROR: GOOGLE_CLOUD_PROJECT not found in .env")
         return
 
     print(f"Initializing google-genai client for project={project} location={location}")
-    
+
     # Initialize client
     client = genai.Client(vertexai=True, project=project, location=location)
-    
+
     prompt = "A cinematic shot of a cute grey tabby kitten in a green dinosaur costume, dancing joyfully in a studio setting, high quality, 4k."
-    
-    print(f"Generating video with veo-2.0-generate-001...")
-    
+
+    print("Generating video with veo-2.0-generate-001...")
+
     try:
         response = client.models.generate_videos(
-            model='veo-2.0-generate-001',
+            model="veo-2.0-generate-001",
             prompt=prompt,
         )
-        
+
         print("Response received!")
         print(f"Operation Name: {response.name}")
-        
+
         import inspect
-        print(f"Signature of client.operations.get: {inspect.signature(client.operations.get)}")
+
+        print(
+            f"Signature of client.operations.get: {inspect.signature(client.operations.get)}"
+        )
 
         while True:
             # Try passing the response object itself
             current_op = client.operations.get(operation=response)
-            
+
             print(f"current_op type: {type(current_op)}")
             # print(current_op)
-            
+
             if hasattr(current_op, "done") and current_op.done:
                 print("Operation done!")
                 if current_op.error:
@@ -84,12 +94,13 @@ def main():
                     else:
                         print("No video in result.")
                 break
-            
+
             print(".", end="", flush=True)
             time.sleep(5)
-            
+
     except Exception as e:
         print(f"ERROR: {e}")
+
 
 if __name__ == "__main__":
     main()

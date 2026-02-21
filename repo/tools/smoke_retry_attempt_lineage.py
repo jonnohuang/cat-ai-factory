@@ -19,7 +19,9 @@ def _load(path: pathlib.Path) -> dict:
 def main(argv: list[str]) -> int:
     root = _repo_root()
     job_id = "smoke-segment-stitch-runtime"
-    lineage_path = root / "sandbox" / "logs" / job_id / "qc" / "retry_attempt_lineage.v1.json"
+    lineage_path = (
+        root / "sandbox" / "logs" / job_id / "qc" / "retry_attempt_lineage.v1.json"
+    )
 
     pre_cmd = [sys.executable, "-m", "repo.tools.smoke_controller_retry_execution"]
     print("RUN:", " ".join(pre_cmd))
@@ -29,7 +31,12 @@ def main(argv: list[str]) -> int:
         print(f"ERROR: missing lineage contract: {lineage_path}", file=sys.stderr)
         return 1
 
-    val_cmd = [sys.executable, "-m", "repo.tools.validate_retry_attempt_lineage", str(lineage_path)]
+    val_cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.validate_retry_attempt_lineage",
+        str(lineage_path),
+    ]
     print("RUN:", " ".join(val_cmd))
     subprocess.check_call(val_cmd, cwd=str(root))
 
@@ -38,8 +45,12 @@ def main(argv: list[str]) -> int:
     if not isinstance(attempts, list) or len(attempts) == 0:
         print("ERROR: expected non-empty attempt lineage list", file=sys.stderr)
         return 1
-    if not any(isinstance(a, dict) and a.get("resolution") == "retry" for a in attempts):
-        print("ERROR: expected at least one retry resolution in lineage", file=sys.stderr)
+    if not any(
+        isinstance(a, dict) and a.get("resolution") == "retry" for a in attempts
+    ):
+        print(
+            "ERROR: expected at least one retry resolution in lineage", file=sys.stderr
+        )
         return 1
 
     print("OK:", lineage_path)

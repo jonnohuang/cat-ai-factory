@@ -8,6 +8,7 @@ Usage:
   python -m repo.tools.validate_segment_stitch_plan \
     repo/examples/segment_stitch_plan.v1.example.json
 """
+
 from __future__ import annotations
 
 import json
@@ -57,7 +58,9 @@ def _semantic_validate(data: dict[str, Any]) -> list[str]:
         if end <= start:
             errors.append(f"segments[{i}].end_sec must be > start_sec")
         if (end - start) > max_len:
-            errors.append(f"segments[{i}] duration must be <= constraints.max_shot_length_sec")
+            errors.append(
+                f"segments[{i}] duration must be <= constraints.max_shot_length_sec"
+            )
         seg_by_id[seg_id] = seg
         orders.append(order)
         starts.append(start)
@@ -70,7 +73,9 @@ def _semantic_validate(data: dict[str, Any]) -> list[str]:
 
     stitch_order = data.get("stitch_order", [])
     if isinstance(stitch_order, list):
-        seg_ids = [str(s.get("segment_id", "")) for s in segments if isinstance(s, dict)]
+        seg_ids = [
+            str(s.get("segment_id", "")) for s in segments if isinstance(s, dict)
+        ]
         if sorted(stitch_order) != sorted(seg_ids):
             errors.append("stitch_order must contain exactly all segment_ids")
 
@@ -80,14 +85,18 @@ def _semantic_validate(data: dict[str, Any]) -> list[str]:
             continue
         prev = seam.get("prev_segment_id")
         if isinstance(prev, str) and prev and prev not in seg_by_id:
-            errors.append(f"segments[{i}].seam.prev_segment_id must reference an existing segment_id")
+            errors.append(
+                f"segments[{i}].seam.prev_segment_id must reference an existing segment_id"
+            )
 
     return errors
 
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_segment_stitch_plan path/to/segment_stitch_plan.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_segment_stitch_plan path/to/segment_stitch_plan.v1.json"
+        )
         return 1
 
     target = pathlib.Path(argv[1]).resolve()

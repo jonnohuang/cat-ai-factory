@@ -14,15 +14,17 @@ from repo.services.ingress.persistence import LocalFilePersistence
 # Try importing jsonschema, or skip if not available
 try:
     import jsonschema
+
     HAS_JSONSCHEMA = True
 except ImportError:
     HAS_JSONSCHEMA = False
 
 SCHEMA_PATH = repo_root / "repo" / "shared" / "plan_request.v1.schema.json"
 
+
 def test_validation():
     print("Testing Ingress Validation...")
-    
+
     with open(SCHEMA_PATH, "r") as f:
         schema = json.load(f)
 
@@ -34,7 +36,7 @@ def test_validation():
         "nonce": "smoke-nonce-123",
         "type": "daily_plan",
         "brief_text": "Mochi dino dancing in the park",
-        "lanes": {"a": 1, "b": 1, "c": 1}
+        "lanes": {"a": 1, "b": 1, "c": 1},
     }
 
     if HAS_JSONSCHEMA:
@@ -48,11 +50,8 @@ def test_validation():
         print("  [SKIP] jsonschema not installed, skipping schema validation.")
 
     # 2. Invalid Payload (missing version)
-    invalid_payload = {
-        "source": "smoke_test",
-        "received_at": "invalid-date"
-    }
-    
+    invalid_payload = {"source": "smoke_test", "received_at": "invalid-date"}
+
     if HAS_JSONSCHEMA:
         try:
             jsonschema.validate(instance=invalid_payload, schema=schema)
@@ -64,7 +63,7 @@ def test_validation():
     # 3. Persistence Test
     persistence = LocalFilePersistence(str(repo_root / "sandbox"))
     location = persistence.save_request(valid_payload)
-    
+
     path = pathlib.Path(location)
     if path.exists():
         print(f"  [PASS] Payload persisted to: {location}")
@@ -79,6 +78,7 @@ def test_validation():
         sys.exit(1)
 
     print("Ingress validation smoke test PASSED!")
+
 
 if __name__ == "__main__":
     test_validation()

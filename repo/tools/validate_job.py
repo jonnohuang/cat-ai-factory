@@ -15,13 +15,13 @@ Exit codes:
   0 = valid
   1 = invalid / error
 """
+
 from __future__ import annotations
 
 import json
 import os
 import sys
 from typing import Any, Dict, List, Tuple
-
 
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "shared", "job.schema.json")
 SCHEMA_PATH = os.path.normpath(SCHEMA_PATH)
@@ -103,13 +103,17 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             mode = creativity.get("mode")
             if mode is not None:
                 if mode not in ("canon", "balanced", "experimental"):
-                    errors.append(f"creativity.mode must be one of ['canon', 'balanced', 'experimental'] (got {mode!r})")
+                    errors.append(
+                        f"creativity.mode must be one of ['canon', 'balanced', 'experimental'] (got {mode!r})"
+                    )
 
             # canon_fidelity
             fidelity = creativity.get("canon_fidelity")
             if fidelity is not None:
                 if fidelity not in ("high", "medium"):
-                    errors.append(f"creativity.canon_fidelity must be one of ['high', 'medium'] (got {fidelity!r})")
+                    errors.append(
+                        f"creativity.canon_fidelity must be one of ['high', 'medium'] (got {fidelity!r})"
+                    )
 
     lane = job.get("lane")
     if lane == "dance_swap":
@@ -122,11 +126,19 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
                 if not isinstance(val, str) or not val.strip():
                     errors.append(f"dance_swap.{key} must be a non-empty string")
             beatflow = ds.get("beatflow_artifact")
-            if beatflow is not None and (not isinstance(beatflow, str) or not beatflow.strip()):
-                errors.append("dance_swap.beatflow_artifact must be a non-empty string when present")
+            if beatflow is not None and (
+                not isinstance(beatflow, str) or not beatflow.strip()
+            ):
+                errors.append(
+                    "dance_swap.beatflow_artifact must be a non-empty string when present"
+                )
             subject_id = ds.get("subject_id")
-            if subject_id is not None and (not isinstance(subject_id, str) or not subject_id.strip()):
-                errors.append("dance_swap.subject_id must be a non-empty string when present")
+            if subject_id is not None and (
+                not isinstance(subject_id, str) or not subject_id.strip()
+            ):
+                errors.append(
+                    "dance_swap.subject_id must be a non-empty string when present"
+                )
 
     segment_stitch = job.get("segment_stitch")
     if segment_stitch is not None:
@@ -137,7 +149,9 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             if not isinstance(plan_relpath, str) or not plan_relpath.strip():
                 errors.append("segment_stitch.plan_relpath must be a non-empty string")
             elif not plan_relpath.startswith("repo/"):
-                errors.append("segment_stitch.plan_relpath must be repo-relative (repo/...)")
+                errors.append(
+                    "segment_stitch.plan_relpath must be repo-relative (repo/...)"
+                )
             enabled = segment_stitch.get("enabled")
             if enabled is not None and not isinstance(enabled, bool):
                 errors.append("segment_stitch.enabled must be boolean when present")
@@ -162,7 +176,9 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             if not isinstance(relpath, str) or not relpath.strip():
                 errors.append("motion_contract.relpath must be a non-empty string")
             elif not relpath.startswith("repo/"):
-                errors.append("motion_contract.relpath must be repo-relative (repo/...)")
+                errors.append(
+                    "motion_contract.relpath must be repo-relative (repo/...)"
+                )
 
     continuity_pack = job.get("continuity_pack")
     if continuity_pack is not None:
@@ -173,7 +189,9 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             if not isinstance(relpath, str) or not relpath.strip():
                 errors.append("continuity_pack.relpath must be a non-empty string")
             elif not relpath.startswith("repo/"):
-                errors.append("continuity_pack.relpath must be repo-relative (repo/...)")
+                errors.append(
+                    "continuity_pack.relpath must be repo-relative (repo/...)"
+                )
 
     quality_policy = job.get("quality_policy")
     if quality_policy is not None:
@@ -195,7 +213,9 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
             if not isinstance(relpath, str) or not relpath.strip():
                 errors.append("captions_artifact.relpath must be a non-empty string")
             elif not (relpath.startswith("repo/") or relpath.startswith("sandbox/")):
-                errors.append("captions_artifact.relpath must be repo-relative or sandbox-relative")
+                errors.append(
+                    "captions_artifact.relpath must be repo-relative or sandbox-relative"
+                )
 
     generation_policy = job.get("generation_policy")
     if generation_policy is not None:
@@ -204,28 +224,44 @@ def minimal_v1_checks(job: Dict[str, Any]) -> List[str]:
         else:
             relpath = generation_policy.get("registry_relpath")
             if not isinstance(relpath, str) or not relpath.strip():
-                errors.append("generation_policy.registry_relpath must be a non-empty string")
+                errors.append(
+                    "generation_policy.registry_relpath must be a non-empty string"
+                )
             elif not relpath.startswith("repo/"):
-                errors.append("generation_policy.registry_relpath must be repo-relative (repo/...)")
+                errors.append(
+                    "generation_policy.registry_relpath must be repo-relative (repo/...)"
+                )
 
             video_order = generation_policy.get("video_provider_order")
             frame_order = generation_policy.get("frame_provider_order")
-            if not isinstance(video_order, list) or not video_order or not all(
-                isinstance(x, str) and x.strip() for x in video_order
+            if (
+                not isinstance(video_order, list)
+                or not video_order
+                or not all(isinstance(x, str) and x.strip() for x in video_order)
             ):
-                errors.append("generation_policy.video_provider_order must be a non-empty array of strings")
-            if not isinstance(frame_order, list) or not frame_order or not all(
-                isinstance(x, str) and x.strip() for x in frame_order
+                errors.append(
+                    "generation_policy.video_provider_order must be a non-empty array of strings"
+                )
+            if (
+                not isinstance(frame_order, list)
+                or not frame_order
+                or not all(isinstance(x, str) and x.strip() for x in frame_order)
             ):
-                errors.append("generation_policy.frame_provider_order must be a non-empty array of strings")
+                errors.append(
+                    "generation_policy.frame_provider_order must be a non-empty array of strings"
+                )
             route_mode = generation_policy.get("route_mode")
             if route_mode is not None and route_mode not in ("production", "lab"):
-                errors.append("generation_policy.route_mode must be 'production' or 'lab' when present")
+                errors.append(
+                    "generation_policy.route_mode must be 'production' or 'lab' when present"
+                )
 
     return errors
 
 
-def validate_with_jsonschema(job: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, str]:
+def validate_with_jsonschema(
+    job: Dict[str, Any], schema: Dict[str, Any]
+) -> Tuple[bool, str]:
     """Full validation using jsonschema if available."""
     try:
         import jsonschema  # type: ignore

@@ -7,14 +7,13 @@ import re
 import uuid
 from typing import Any, Dict, List, Optional
 
-from .base import BaseProvider, today_utc
 from repo.shared.demo_asset_resolver import (
     DANCE_LOOP_CANDIDATES,
     GENERAL_BACKGROUND_CANDIDATES,
     resolve_first_existing,
 )
 
-
+from .base import BaseProvider, today_utc
 
 
 def _slug(text: str) -> str:
@@ -34,7 +33,10 @@ def _is_dance_loop_intent(prd: Dict[str, Any]) -> bool:
     blob = " ".join(
         str(prd.get(k, "")) for k in ("prompt", "concept", "title", "niche")
     ).lower()
-    return any(tok in blob for tok in ("dance", "loop", "choreo", "choreography", "groove", "beat"))
+    return any(
+        tok in blob
+        for tok in ("dance", "loop", "choreo", "choreography", "groove", "beat")
+    )
 
 
 class ComfyUIVideoProvider(BaseProvider):
@@ -49,7 +51,9 @@ class ComfyUIVideoProvider(BaseProvider):
     def __init__(self) -> None:
         self.model = self.default_model
         self.base_url = os.environ.get("COMFYUI_BASE_URL", "").strip()
-        self.workflow_id = os.environ.get("COMFYUI_WORKFLOW_ID", "").strip() or "caf_dance_loop_v1"
+        self.workflow_id = (
+            os.environ.get("COMFYUI_WORKFLOW_ID", "").strip() or "caf_dance_loop_v1"
+        )
         self.workflow_path = self._resolve_workflow_path(self.workflow_id)
 
     @staticmethod
@@ -60,7 +64,9 @@ class ComfyUIVideoProvider(BaseProvider):
     def _resolve_workflow_path(self, workflow_id: str) -> Optional[pathlib.Path]:
         if not workflow_id:
             return None
-        path = self._repo_root() / "repo" / "workflows" / "comfy" / f"{workflow_id}.json"
+        path = (
+            self._repo_root() / "repo" / "workflows" / "comfy" / f"{workflow_id}.json"
+        )
         if not path.exists():
             return None
         try:
@@ -85,13 +91,19 @@ class ComfyUIVideoProvider(BaseProvider):
         except Exception:
             return None
 
-    def _pick_background_asset(self, quality_context: Optional[Dict[str, Any]], *, dance_intent: bool) -> str:
+    def _pick_background_asset(
+        self, quality_context: Optional[Dict[str, Any]], *, dance_intent: bool
+    ) -> str:
         # Prefer sample-ingest source video when available.
         if isinstance(quality_context, dict):
             resolver = quality_context.get("pointer_resolver")
             if isinstance(resolver, dict):
                 manifest_rel = resolver.get("sample_ingest_manifest_relpath")
-                manifest = self._load_json_rel(str(manifest_rel)) if isinstance(manifest_rel, str) else None
+                manifest = (
+                    self._load_json_rel(str(manifest_rel))
+                    if isinstance(manifest_rel, str)
+                    else None
+                )
                 if isinstance(manifest, dict):
                     source = manifest.get("source")
                     if isinstance(source, dict):
@@ -105,9 +117,13 @@ class ComfyUIVideoProvider(BaseProvider):
         # Fail-loud for dance-loop intent: do not silently route to unrelated fight composite.
         sandbox_root = self._repo_root() / "sandbox"
         if dance_intent:
-            selected = resolve_first_existing(sandbox_root=sandbox_root, candidates=DANCE_LOOP_CANDIDATES)
+            selected = resolve_first_existing(
+                sandbox_root=sandbox_root, candidates=DANCE_LOOP_CANDIDATES
+            )
         else:
-            selected = resolve_first_existing(sandbox_root=sandbox_root, candidates=GENERAL_BACKGROUND_CANDIDATES)
+            selected = resolve_first_existing(
+                sandbox_root=sandbox_root, candidates=GENERAL_BACKGROUND_CANDIDATES
+            )
         if selected:
             return selected
         if dance_intent:
@@ -123,7 +139,11 @@ class ComfyUIVideoProvider(BaseProvider):
             resolver = quality_context.get("pointer_resolver")
             if isinstance(resolver, dict):
                 manifest_rel = resolver.get("sample_ingest_manifest_relpath")
-                manifest = self._load_json_rel(str(manifest_rel)) if isinstance(manifest_rel, str) else None
+                manifest = (
+                    self._load_json_rel(str(manifest_rel))
+                    if isinstance(manifest_rel, str)
+                    else None
+                )
                 if isinstance(manifest, dict):
                     assets = manifest.get("assets", {})
                     identity = assets.get("identity_anchor")
@@ -162,10 +182,13 @@ class ComfyUIVideoProvider(BaseProvider):
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
         workflow_tag = self.workflow_id.replace("_", "-")
         is_dance = _is_dance_loop_intent(prd)
-        background_asset = self._pick_background_asset(quality_context, dance_intent=is_dance)
+        background_asset = self._pick_background_asset(
+            quality_context, dance_intent=is_dance
+        )
         identity_asset = self._pick_identity_asset(quality_context)
-        pose_video_asset = background_asset if is_dance else "sandbox/assets/demo/dance_loop.mp4"
-
+        pose_video_asset = (
+            background_asset if is_dance else "sandbox/assets/demo/dance_loop.mp4"
+        )
 
         # Resolve Hero and Costume (Existing Logic)
         hero_id = "mochi-grey-tabby"  # Default fallback
@@ -185,10 +208,10 @@ class ComfyUIVideoProvider(BaseProvider):
         shared_root = self._repo_root() / "repo" / "shared"
         hero_reg_path = shared_root / "hero_registry.v1.json"
         costume_reg_path = shared_root / "costume_profiles.v1.json"
-        
+
         hero_data = self._load_json_rel("repo/shared/hero_registry.v1.json") or {}
         costume_data = self._load_json_rel("repo/shared/costume_profiles.v1.json") or {}
-        
+
         prompt_lower = prompt.lower()
         selected_hero = None
         for h in hero_data.get("heroes", []):
@@ -196,19 +219,28 @@ class ComfyUIVideoProvider(BaseProvider):
                 selected_hero = h
                 break
         if not selected_hero:
-             selected_hero = next((h for h in hero_data.get("heroes", []) if h["hero_id"] == "mochi-grey-tabby"), None)
+            selected_hero = next(
+                (
+                    h
+                    for h in hero_data.get("heroes", [])
+                    if h["hero_id"] == "mochi-grey-tabby"
+                ),
+                None,
+            )
 
         traits_str = "cute cat"
         costume_str = "costume"
-        
+
         if selected_hero:
             t = selected_hero.get("traits", {})
             traits_str = f"{selected_hero['name']['en']} {t.get('primary_color','')} {t.get('coat_type','')}"
-            if t.get('eye_color'):
+            if t.get("eye_color"):
                 traits_str += f", {t['eye_color']} eyes"
             c_def = selected_hero.get("costume", {})
             c_id = c_def.get("id")
-            c_profile = next((c for c in costume_data.get("profiles", []) if c["id"] == c_id), None)
+            c_profile = next(
+                (c for c in costume_data.get("profiles", []) if c["id"] == c_id), None
+            )
             if c_profile:
                 costume_str = ", ".join(c_profile.get("cues", []))
             else:
@@ -218,10 +250,10 @@ class ComfyUIVideoProvider(BaseProvider):
         style_tokens = []
         reverse_prompt_data = None
         if isinstance(quality_context, dict):
-             reverse_prompt_data = quality_context.get("reverse_prompt")
-             if isinstance(reverse_prompt_data, dict):
-                 suggestions = reverse_prompt_data.get("suggestions", {})
-                 style_tokens = suggestions.get("vendor_style_tokens", [])
+            reverse_prompt_data = quality_context.get("reverse_prompt")
+            if isinstance(reverse_prompt_data, dict):
+                suggestions = reverse_prompt_data.get("suggestions", {})
+                style_tokens = suggestions.get("vendor_style_tokens", [])
 
         style_suffix = ", ".join(style_tokens) if style_tokens else "high fidelity, 8k"
 
@@ -231,7 +263,7 @@ class ComfyUIVideoProvider(BaseProvider):
             f"{costume_str}, "
             f"full body, smooth motion, {style_suffix}."
         )
-        
+
         comfy_negative = (
             "human, person, woman, man, human face, human body, multiple characters, crowd, duplicate subject, "
             "extra limbs, giant ears, mouse ears, identity drift, costume drift, flicker, background drift, "
@@ -258,10 +290,25 @@ class ComfyUIVideoProvider(BaseProvider):
                 "ending": "Loop cleanly for retry checks.",
             },
             "shots": [
-                {"t": 0, "visual": "wide stage", "action": "start groove", "caption": "Mochi starts"},
-                {"t": 2, "visual": "mid shot", "action": "side step", "caption": "On beat"},
+                {
+                    "t": 0,
+                    "visual": "wide stage",
+                    "action": "start groove",
+                    "caption": "Mochi starts",
+                },
+                {
+                    "t": 2,
+                    "visual": "mid shot",
+                    "action": "side step",
+                    "caption": "On beat",
+                },
                 {"t": 4, "visual": "mid shot", "action": "spin", "caption": "Spin"},
-                {"t": 6, "visual": "wide stage", "action": "pose hit", "caption": "Pose"},
+                {
+                    "t": 6,
+                    "visual": "wide stage",
+                    "action": "pose hit",
+                    "caption": "Pose",
+                },
                 {"t": 8, "visual": "mid shot", "action": "bounce", "caption": "Bounce"},
                 {"t": 10, "visual": "wide stage", "action": "reset", "caption": "Loop"},
             ],
@@ -300,7 +347,10 @@ class ComfyUIVideoProvider(BaseProvider):
                 "registry_relpath": "repo/shared/engine_adapter_registry.v1.json",
                 "baseline_video_provider": "comfyui_video",
                 "baseline_frame_provider": "grok_image",
-                "route_mode": os.environ.get("CAF_ENGINE_ROUTE_MODE", "production").strip().lower() or "production",
+                "route_mode": os.environ.get("CAF_ENGINE_ROUTE_MODE", "production")
+                .strip()
+                .lower()
+                or "production",
                 "selected_video_provider": "comfyui_video",
                 "selected_frame_provider": "grok_image",
                 "video_provider_order": ["comfyui_video"],

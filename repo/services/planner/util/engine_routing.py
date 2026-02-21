@@ -13,7 +13,9 @@ def _is_enabled_provider(provider: Dict[str, Any]) -> bool:
     return bool(isinstance(provider, dict) and provider.get("enabled") is True)
 
 
-def _provider_matches(provider: Dict[str, Any], *, kind: str, mode: str, lane: str) -> bool:
+def _provider_matches(
+    provider: Dict[str, Any], *, kind: str, mode: str, lane: str
+) -> bool:
     if not _is_enabled_provider(provider):
         return False
     if str(provider.get("kind", "")).strip() != kind:
@@ -29,7 +31,9 @@ def _provider_matches(provider: Dict[str, Any], *, kind: str, mode: str, lane: s
     return lane in lanes
 
 
-def route_engine_policy(policy: Dict[str, Any], lane: str, mode: str = "production") -> Dict[str, Any]:
+def route_engine_policy(
+    policy: Dict[str, Any], lane: str, mode: str = "production"
+) -> Dict[str, Any]:
     lane = lane.strip() or "ai_video"
     mode = "lab" if mode == "lab" else "production"
     providers = policy.get("providers", [])
@@ -56,11 +60,21 @@ def route_engine_policy(policy: Dict[str, Any], lane: str, mode: str = "producti
         if pid:
             provider_by_id[pid] = row
 
-    video_order = _as_str_list(routing.get("video_provider_order")) or _as_str_list(policy.get("video_provider_order"))
-    frame_order = _as_str_list(routing.get("frame_provider_order")) or _as_str_list(policy.get("frame_provider_order"))
-    lab_order = _as_str_list(routing.get("lab_challenger_order")) or _as_str_list(policy.get("lab_challenger_order"))
-    motion_order = _as_str_list(routing.get("motion_constraints")) or _as_str_list(policy.get("motion_constraints"))
-    post_order = _as_str_list(routing.get("post_process_order")) or _as_str_list(policy.get("post_process_order"))
+    video_order = _as_str_list(routing.get("video_provider_order")) or _as_str_list(
+        policy.get("video_provider_order")
+    )
+    frame_order = _as_str_list(routing.get("frame_provider_order")) or _as_str_list(
+        policy.get("frame_provider_order")
+    )
+    lab_order = _as_str_list(routing.get("lab_challenger_order")) or _as_str_list(
+        policy.get("lab_challenger_order")
+    )
+    motion_order = _as_str_list(routing.get("motion_constraints")) or _as_str_list(
+        policy.get("motion_constraints")
+    )
+    post_order = _as_str_list(routing.get("post_process_order")) or _as_str_list(
+        policy.get("post_process_order")
+    )
 
     video_candidates: List[str] = []
     for pid in video_order:

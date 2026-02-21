@@ -14,7 +14,9 @@ def _repo_root() -> pathlib.Path:
 
 
 def _run(cmd: list[str], *, env: dict[str, str]) -> tuple[int, str]:
-    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+    p = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env
+    )
     out = p.stdout or ""
     print(out, end="")
     return p.returncode, out
@@ -58,7 +60,9 @@ def main(argv: list[str]) -> int:
         return 1
     job_path = _extract_job_path(output)
     if job_path is None or not job_path.exists():
-        print("ERROR: could not find written job path in planner output", file=sys.stderr)
+        print(
+            "ERROR: could not find written job path in planner output", file=sys.stderr
+        )
         return 1
 
     val_cmd = [sys.executable, "-m", "repo.tools.validate_job", str(job_path)]
@@ -69,7 +73,9 @@ def main(argv: list[str]) -> int:
 
     job = _load(job_path)
     if job.get("lane") != "ai_video":
-        print(f"ERROR: expected lane=ai_video, got {job.get('lane')!r}", file=sys.stderr)
+        print(
+            f"ERROR: expected lane=ai_video, got {job.get('lane')!r}", file=sys.stderr
+        )
         return 1
     gen = job.get("generation_policy")
     if not isinstance(gen, dict):
@@ -86,4 +92,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

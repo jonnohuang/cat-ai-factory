@@ -131,13 +131,24 @@ class WanDashScopeProvider(BaseProvider):
         return "wan2.2-t2v"
 
     def __init__(self) -> None:
-        self.model = os.environ.get("WAN_DASHSCOPE_MODEL", self.default_model).strip() or self.default_model
+        self.model = (
+            os.environ.get("WAN_DASHSCOPE_MODEL", self.default_model).strip()
+            or self.default_model
+        )
         self.base_url = (
-            os.environ.get("WAN_DASHSCOPE_BASE_URL", "https://dashscope-intl.aliyuncs.com").strip().rstrip("/")
+            os.environ.get(
+                "WAN_DASHSCOPE_BASE_URL", "https://dashscope-intl.aliyuncs.com"
+            )
+            .strip()
+            .rstrip("/")
         )
         self.api_key = os.environ.get("DASHSCOPE_API_KEY", "").strip()
-        self.poll_seconds = max(30, min(900, int(os.environ.get("WAN_DASHSCOPE_POLL_SECONDS", "240"))))
-        self.poll_interval = max(2, min(30, int(os.environ.get("WAN_DASHSCOPE_POLL_INTERVAL", "5"))))
+        self.poll_seconds = max(
+            30, min(900, int(os.environ.get("WAN_DASHSCOPE_POLL_SECONDS", "240")))
+        )
+        self.poll_interval = max(
+            2, min(30, int(os.environ.get("WAN_DASHSCOPE_POLL_INTERVAL", "5")))
+        )
 
     def generate_job(
         self,
@@ -168,10 +179,25 @@ class WanDashScopeProvider(BaseProvider):
                 "ending": "Loop cleanly for retry checks.",
             },
             "shots": [
-                {"t": 0, "visual": "wide stage", "action": "start groove", "caption": "Mochi starts"},
-                {"t": 2, "visual": "mid shot", "action": "side step", "caption": "On beat"},
+                {
+                    "t": 0,
+                    "visual": "wide stage",
+                    "action": "start groove",
+                    "caption": "Mochi starts",
+                },
+                {
+                    "t": 2,
+                    "visual": "mid shot",
+                    "action": "side step",
+                    "caption": "On beat",
+                },
                 {"t": 4, "visual": "mid shot", "action": "spin", "caption": "Spin"},
-                {"t": 6, "visual": "wide stage", "action": "pose hit", "caption": "Pose"},
+                {
+                    "t": 6,
+                    "visual": "wide stage",
+                    "action": "pose hit",
+                    "caption": "Pose",
+                },
                 {"t": 8, "visual": "mid shot", "action": "bounce", "caption": "Bounce"},
                 {"t": 10, "visual": "wide stage", "action": "reset", "caption": "Loop"},
             ],
@@ -185,7 +211,9 @@ class WanDashScopeProvider(BaseProvider):
         }
 
         context = _job_context_text(job, prd)
-        rel_video = self._try_generate_video_asset(context=context, job_id=str(job["job_id"]))
+        rel_video = self._try_generate_video_asset(
+            context=context, job_id=str(job["job_id"])
+        )
         if rel_video:
             render = job.setdefault("render", {})
             render["background_asset"] = rel_video
@@ -204,7 +232,9 @@ class WanDashScopeProvider(BaseProvider):
         if not self.api_key:
             print(f"WARNING planner provider={self.name} missing DASHSCOPE_API_KEY")
             return None
-        submit_url = f"{self.base_url}/api/v1/services/aigc/video-generation/video-synthesis"
+        submit_url = (
+            f"{self.base_url}/api/v1/services/aigc/video-generation/video-synthesis"
+        )
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -213,19 +243,28 @@ class WanDashScopeProvider(BaseProvider):
         payload = {
             "model": self.model,
             "input": {
-                "prompt": context[:1500] or "Cute cat dance loop, stable camera, clean background.",
+                "prompt": context[:1500]
+                or "Cute cat dance loop, stable camera, clean background.",
             },
             "parameters": {
                 "size": "720*1280",
             },
         }
         try:
-            submit_resp = _http_json(url=submit_url, method="POST", headers=headers, payload=payload, timeout_s=90)
+            submit_resp = _http_json(
+                url=submit_url,
+                method="POST",
+                headers=headers,
+                payload=payload,
+                timeout_s=90,
+            )
         except urllib.error.HTTPError as ex:
             print(f"WARNING planner provider={self.name} submit_failed=http_{ex.code}")
             return None
         except Exception as ex:  # pragma: no cover
-            print(f"WARNING planner provider={self.name} submit_failed={type(ex).__name__}")
+            print(
+                f"WARNING planner provider={self.name} submit_failed={type(ex).__name__}"
+            )
             return None
 
         task_id = _extract_task_id(submit_resp)
@@ -237,19 +276,31 @@ class WanDashScopeProvider(BaseProvider):
         deadline = time.time() + self.poll_seconds
         while time.time() < deadline:
             try:
-                status_resp = _http_json(url=task_url, method="GET", headers=headers, payload=None, timeout_s=60)
+                status_resp = _http_json(
+                    url=task_url,
+                    method="GET",
+                    headers=headers,
+                    payload=None,
+                    timeout_s=60,
+                )
             except Exception:
                 time.sleep(self.poll_interval)
                 continue
-            task_status = str(status_resp.get("output", {}).get("task_status", "")).upper()
+            task_status = str(
+                status_resp.get("output", {}).get("task_status", "")
+            ).upper()
             if task_status in {"SUCCEEDED", "SUCCESS"}:
                 video_url = _find_first_url(status_resp)
                 if not video_url:
-                    print(f"WARNING planner provider={self.name} missing_video_url task={task_id}")
+                    print(
+                        f"WARNING planner provider={self.name} missing_video_url task={task_id}"
+                    )
                     return None
                 return self._download_to_asset(video_url=video_url, job_id=job_id)
             if task_status in {"FAILED", "CANCELED"}:
-                print(f"WARNING planner provider={self.name} task_failed task={task_id}")
+                print(
+                    f"WARNING planner provider={self.name} task_failed task={task_id}"
+                )
                 return None
             time.sleep(self.poll_interval)
 
@@ -264,6 +315,8 @@ class WanDashScopeProvider(BaseProvider):
         try:
             _download_file(url=video_url, dst_path=out_path, timeout_s=300)
         except Exception as ex:
-            print(f"WARNING planner provider={self.name} download_failed={type(ex).__name__}")
+            print(
+                f"WARNING planner provider={self.name} download_failed={type(ex).__name__}"
+            )
             return None
         return f"{rel_dir}/wan-dashscope-0001.mp4"

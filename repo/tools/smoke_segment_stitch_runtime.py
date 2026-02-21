@@ -7,6 +7,7 @@ PR-34.7g smoke runner:
 - runs worker render
 - validates segment_stitch_report.v1 artifact
 """
+
 from __future__ import annotations
 
 import argparse
@@ -16,7 +17,10 @@ import shutil
 import subprocess
 import sys
 
-from repo.shared.demo_asset_resolver import FIGHT_COMPOSITE_ALIASES, resolve_first_existing
+from repo.shared.demo_asset_resolver import (
+    FIGHT_COMPOSITE_ALIASES,
+    resolve_first_existing,
+)
 
 
 def _repo_root() -> pathlib.Path:
@@ -39,11 +43,15 @@ def _resolve_demo_background_asset(root: pathlib.Path) -> str:
     )
     if selected:
         return selected
-    raise FileNotFoundError(f"Missing demo background asset; expected one of: {list(FIGHT_COMPOSITE_ALIASES)}")
+    raise FileNotFoundError(
+        f"Missing demo background asset; expected one of: {list(FIGHT_COMPOSITE_ALIASES)}"
+    )
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Smoke test segment stitch runtime execution")
+    parser = argparse.ArgumentParser(
+        description="Smoke test segment stitch runtime execution"
+    )
     parser.add_argument(
         "--source-job",
         default="sandbox/jobs/demo-flight-composite.job.json",
@@ -82,11 +90,24 @@ def main(argv: list[str]) -> int:
     job_path = root / "sandbox" / "jobs" / f"{job_id}.job.json"
     _write(job_path, src)
 
-    run_worker = [sys.executable, "-m", "repo.worker.render_ffmpeg", "--job", str(job_path)]
+    run_worker = [
+        sys.executable,
+        "-m",
+        "repo.worker.render_ffmpeg",
+        "--job",
+        str(job_path),
+    ]
     print("RUN:", " ".join(run_worker))
     subprocess.check_call(run_worker, cwd=str(root))
 
-    report_path = root / "sandbox" / "output" / job_id / "segments" / "segment_stitch_report.v1.json"
+    report_path = (
+        root
+        / "sandbox"
+        / "output"
+        / job_id
+        / "segments"
+        / "segment_stitch_report.v1.json"
+    )
     if not report_path.exists():
         print(f"ERROR: segment stitch report missing: {report_path}", file=sys.stderr)
         return 1

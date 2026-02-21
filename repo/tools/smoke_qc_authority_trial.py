@@ -34,17 +34,33 @@ def main(argv: list[str]) -> int:
     root = _repo_root()
     job_id = "smoke-segment-stitch-runtime"
     job_path = root / "sandbox" / "jobs" / f"{job_id}.job.json"
-    decision_path = root / "sandbox" / "logs" / job_id / "qc" / "quality_decision.v1.json"
+    decision_path = (
+        root / "sandbox" / "logs" / job_id / "qc" / "quality_decision.v1.json"
+    )
     _run([sys.executable, "-m", "repo.tools.smoke_qc_policy_report_contract"], root)
 
     original = _load(job_path)
     mutated = dict(original)
-    mutated["quality_policy"] = {"relpath": "repo/examples/qc_policy.authority_trial.v1.example.json"}
+    mutated["quality_policy"] = {
+        "relpath": "repo/examples/qc_policy.authority_trial.v1.example.json"
+    }
     _save(job_path, mutated)
     try:
         env = dict(os.environ)
         env["CAF_QC_AUTHORITY_TRIAL"] = "1"
-        _run([sys.executable, "-m", "repo.tools.decide_quality_action", "--job-id", job_id, "--max-retries", "2"], root, env)
+        _run(
+            [
+                sys.executable,
+                "-m",
+                "repo.tools.decide_quality_action",
+                "--job-id",
+                job_id,
+                "--max-retries",
+                "2",
+            ],
+            root,
+            env,
+        )
         decision = _load(decision_path)
         policy = decision.get("policy", {})
         if not isinstance(policy, dict):

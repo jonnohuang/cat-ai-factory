@@ -16,7 +16,9 @@ def _repo_root() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parents[2]
 
 
-def _http_json(url: str, *, method: str = "GET", payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def _http_json(
+    url: str, *, method: str = "GET", payload: Dict[str, Any] | None = None
+) -> Dict[str, Any]:
     data = None
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
@@ -55,7 +57,11 @@ def _load_workflow(path: pathlib.Path) -> Dict[str, Any]:
 
 def _inject_seed_image(graph: Dict[str, Any]) -> None:
     comfy_home_s = os.environ.get("COMFYUI_HOME", "").strip()
-    comfy_home = pathlib.Path(comfy_home_s) if comfy_home_s else (_repo_root() / "sandbox" / "third_party" / "ComfyUI")
+    comfy_home = (
+        pathlib.Path(comfy_home_s)
+        if comfy_home_s
+        else (_repo_root() / "sandbox" / "third_party" / "ComfyUI")
+    )
     input_dir = comfy_home / "input"
     input_dir.mkdir(parents=True, exist_ok=True)
     seed_name = "caf_seed_input.png"
@@ -71,14 +77,30 @@ def _inject_seed_image(graph: Dict[str, Any]) -> None:
         cls = str(node.get("class_type", "")).strip()
         if cls == "CheckpointLoaderSimple":
             inputs = node.get("inputs")
-            if isinstance(inputs, dict) and str(inputs.get("ckpt_name", "")).strip() == "__CAF_CHECKPOINT__":
+            if (
+                isinstance(inputs, dict)
+                and str(inputs.get("ckpt_name", "")).strip() == "__CAF_CHECKPOINT__"
+            ):
                 # Derive first available checkpoint from object_info when possible.
                 ckpt = os.environ.get("COMFYUI_CHECKPOINT_NAME", "").strip()
                 if not ckpt:
                     try:
-                        info = _http_json(f"{os.environ.get('COMFYUI_BASE_URL','').rstrip('/')}/object_info")
-                        req = (((info.get("CheckpointLoaderSimple") or {}).get("input") or {}).get("required") or {}).get("ckpt_name")
-                        if isinstance(req, list) and req and isinstance(req[0], list) and req[0]:
+                        info = _http_json(
+                            f"{os.environ.get('COMFYUI_BASE_URL','').rstrip('/')}/object_info"
+                        )
+                        req = (
+                            (
+                                (info.get("CheckpointLoaderSimple") or {}).get("input")
+                                or {}
+                            ).get("required")
+                            or {}
+                        ).get("ckpt_name")
+                        if (
+                            isinstance(req, list)
+                            and req
+                            and isinstance(req[0], list)
+                            and req[0]
+                        ):
                             ckpt = str(req[0][0])
                     except Exception:
                         ckpt = ""
@@ -97,16 +119,28 @@ def _inject_seed_image(graph: Dict[str, Any]) -> None:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Validate ComfyUI API reachability and CAF workflow wiring.")
-    parser.add_argument("--base-url", default=os.environ.get("COMFYUI_BASE_URL", "").strip())
-    parser.add_argument("--workflow-id", default=os.environ.get("COMFYUI_WORKFLOW_ID", "").strip())
-    parser.add_argument("--workflow-path", default="", help="Optional explicit workflow file path")
+    parser = argparse.ArgumentParser(
+        description="Validate ComfyUI API reachability and CAF workflow wiring."
+    )
+    parser.add_argument(
+        "--base-url", default=os.environ.get("COMFYUI_BASE_URL", "").strip()
+    )
+    parser.add_argument(
+        "--workflow-id", default=os.environ.get("COMFYUI_WORKFLOW_ID", "").strip()
+    )
+    parser.add_argument(
+        "--workflow-path", default="", help="Optional explicit workflow file path"
+    )
     parser.add_argument(
         "--require-nodes",
         default="input_prompt,input_negative_prompt,sampler",
         help="Comma-separated node ids required by CAF bindings",
     )
-    parser.add_argument("--check-submit", action="store_true", help="Submit workflow to /prompt for runtime validation")
+    parser.add_argument(
+        "--check-submit",
+        action="store_true",
+        help="Submit workflow to /prompt for runtime validation",
+    )
     args = parser.parse_args(argv)
 
     ok = True
@@ -122,7 +156,9 @@ def main(argv: list[str]) -> int:
         workflow_path = pathlib.Path(args.workflow_path.strip())
     else:
         workflow_id = args.workflow_id.strip() or "caf_dance_loop_v1"
-        workflow_path = _repo_root() / "repo" / "workflows" / "comfy" / f"{workflow_id}.json"
+        workflow_path = (
+            _repo_root() / "repo" / "workflows" / "comfy" / f"{workflow_id}.json"
+        )
 
     print(f"base_url: {base_url}")
     print(f"workflow_path: {workflow_path}")
@@ -171,8 +207,17 @@ def main(argv: list[str]) -> int:
                 _inject_seed_image(submit_graph)
                 # Explicit preflight: fail early with clear message when no checkpoints are installed.
                 info = _http_json(f"{base_url}/object_info")
-                req = (((info.get("CheckpointLoaderSimple") or {}).get("input") or {}).get("required") or {}).get("ckpt_name")
-                ckpts = req[0] if isinstance(req, list) and req and isinstance(req[0], list) else []
+                req = (
+                    ((info.get("CheckpointLoaderSimple") or {}).get("input") or {}).get(
+                        "required"
+                    )
+                    or {}
+                ).get("ckpt_name")
+                ckpts = (
+                    req[0]
+                    if isinstance(req, list) and req and isinstance(req[0], list)
+                    else []
+                )
                 if "__CAF_CHECKPOINT__" in json.dumps(submit_graph) and not ckpts:
                     print(
                         "ERROR: motion workflow requires checkpoint model(s) in "

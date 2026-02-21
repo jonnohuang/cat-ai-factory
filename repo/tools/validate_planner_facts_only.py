@@ -4,6 +4,7 @@ validate_planner_facts_only.py
 
 Deterministically validates that planner job text claims are grounded in reverse analyzer facts.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -55,8 +56,13 @@ def _validate(job: Dict[str, Any], reverse_doc: Dict[str, Any]) -> List[str]:
     camera_mode = str(visual.get("camera_movement_mode") or "unknown").lower()
     brightness_bucket = str(visual.get("brightness_bucket") or "unknown").lower()
 
-    camera_terms = re.compile(r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b", re.IGNORECASE)
-    brightness_terms = re.compile(r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", re.IGNORECASE)
+    camera_terms = re.compile(
+        r"\\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\\b",
+        re.IGNORECASE,
+    )
+    brightness_terms = re.compile(
+        r"\\b(bright|dark|dim|neon|high-key|low-key)\\b", re.IGNORECASE
+    )
     allowed_camera: Dict[str, set[str]] = {
         "unknown": set(),
         "locked": {"locked", "static"},
@@ -64,7 +70,18 @@ def _validate(job: Dict[str, Any], reverse_doc: Dict[str, Any]) -> List[str]:
         "tilt": {"tilt"},
         "push": {"push"},
         "pull": {"pull"},
-        "mixed": {"pan", "tilt", "zoom", "dolly", "push", "pull", "tracking", "handheld", "static", "locked"},
+        "mixed": {
+            "pan",
+            "tilt",
+            "zoom",
+            "dolly",
+            "push",
+            "pull",
+            "tracking",
+            "handheld",
+            "static",
+            "locked",
+        },
     }
 
     for label, text in _collect_texts(job):
@@ -72,14 +89,20 @@ def _validate(job: Dict[str, Any], reverse_doc: Dict[str, Any]) -> List[str]:
         if cam_match:
             token = cam_match.group(1).lower()
             if token not in allowed_camera.get(camera_mode, set()):
-                errs.append(f"{label}: camera claim '{token}' not grounded by camera_movement_mode={camera_mode}")
+                errs.append(
+                    f"{label}: camera claim '{token}' not grounded by camera_movement_mode={camera_mode}"
+                )
         if brightness_bucket == "unknown" and brightness_terms.search(text):
-            errs.append(f"{label}: brightness claim not allowed when brightness_bucket=unknown")
+            errs.append(
+                f"{label}: brightness claim not allowed when brightness_bucket=unknown"
+            )
     return errs
 
 
 def main(argv: List[str]) -> int:
-    parser = argparse.ArgumentParser(description="Validate planner output against facts-only reverse-analysis rules")
+    parser = argparse.ArgumentParser(
+        description="Validate planner output against facts-only reverse-analysis rules"
+    )
     parser.add_argument("--job", required=True)
     parser.add_argument("--reverse", required=True)
     args = parser.parse_args(argv[1:])

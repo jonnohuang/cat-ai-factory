@@ -8,6 +8,7 @@ Validates Media Stack v1 stage manifests:
 - timeline.v1
 - render_manifest.v1
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,11 +41,15 @@ def _must_exist(path_s: str, label: str) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Validate Media Stack v1 stage manifests")
+    parser = argparse.ArgumentParser(
+        description="Validate Media Stack v1 stage manifests"
+    )
     parser.add_argument("--frame", required=True, help="Path to frame_manifest.v1.json")
     parser.add_argument("--audio", required=True, help="Path to audio_manifest.v1.json")
     parser.add_argument("--timeline", required=True, help="Path to timeline.v1.json")
-    parser.add_argument("--render", required=True, help="Path to render_manifest.v1.json")
+    parser.add_argument(
+        "--render", required=True, help="Path to render_manifest.v1.json"
+    )
     args = parser.parse_args(argv[1:])
 
     root = _repo_root()
@@ -89,7 +94,9 @@ def main(argv: list[str]) -> int:
         if end < start:
             errors.append(f"timeline.segments[{idx}] has end_sec < start_sec")
         if start < prev_end:
-            errors.append(f"timeline.segments[{idx}] starts before previous segment end")
+            errors.append(
+                f"timeline.segments[{idx}] starts before previous segment end"
+            )
         prev_end = end
 
     render = manifests["render"]
@@ -109,4 +116,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

@@ -18,7 +18,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _kebab(value: str) -> str:
@@ -46,13 +51,17 @@ def _safe_rel(path: pathlib.Path, root: pathlib.Path) -> str:
 
 
 def _run(cmd: List[str], cwd: pathlib.Path) -> None:
-    proc = subprocess.run(cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.run(
+        cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     print(proc.stdout, end="")
     if proc.returncode != 0:
         raise RuntimeError(f"command failed ({proc.returncode}): {' '.join(cmd)}")
 
 
-def _find_core_contract(out_dir: pathlib.Path, analysis_id: str, suffix: str) -> Optional[pathlib.Path]:
+def _find_core_contract(
+    out_dir: pathlib.Path, analysis_id: str, suffix: str
+) -> Optional[pathlib.Path]:
     p = out_dir / f"{analysis_id}.{suffix}.json"
     return p if p.exists() else None
 
@@ -67,9 +76,19 @@ def _extract_aliases(name: str) -> List[str]:
 
 
 def _collect_sample_refs(analysis: Dict[str, Any]) -> Dict[str, List[str]]:
-    pattern = analysis.get("pattern") if isinstance(analysis.get("pattern"), dict) else {}
-    visual = pattern.get("visual_signature") if isinstance(pattern.get("visual_signature"), dict) else {}
-    choreography = pattern.get("choreography") if isinstance(pattern.get("choreography"), dict) else {}
+    pattern = (
+        analysis.get("pattern") if isinstance(analysis.get("pattern"), dict) else {}
+    )
+    visual = (
+        pattern.get("visual_signature")
+        if isinstance(pattern.get("visual_signature"), dict)
+        else {}
+    )
+    choreography = (
+        pattern.get("choreography")
+        if isinstance(pattern.get("choreography"), dict)
+        else {}
+    )
     hooks: Dict[str, List[str]] = {
         "hero_refs": [],
         "costume_refs": [],
@@ -97,7 +116,9 @@ def _collect_sample_refs(analysis: Dict[str, Any]) -> Dict[str, List[str]]:
             v = bg.get(key)
             if isinstance(v, str) and v:
                 hooks["background_refs"].append(v)
-    motion = choreography.get("motion_style") if isinstance(choreography, dict) else None
+    motion = (
+        choreography.get("motion_style") if isinstance(choreography, dict) else None
+    )
     if isinstance(motion, str) and motion:
         hooks["style_tone_refs"].append(motion)
 
@@ -125,12 +146,21 @@ def _build_artifact_classes(
     ) + [f"hero_ref:{x}" for x in refs.get("hero_refs", []) if _non_empty_str(x)]
     costume_style_evidence = (
         [f"costume_ref:{x}" for x in refs.get("costume_refs", []) if _non_empty_str(x)]
-        + [f"style_ref:{x}" for x in refs.get("style_tone_refs", []) if _non_empty_str(x)]
-        + _ev(contracts.get("continuity_pack_relpath"), contracts.get("storyboard_relpath"))
+        + [
+            f"style_ref:{x}"
+            for x in refs.get("style_tone_refs", [])
+            if _non_empty_str(x)
+        ]
+        + _ev(
+            contracts.get("continuity_pack_relpath"),
+            contracts.get("storyboard_relpath"),
+        )
     )
-    background_evidence = [f"background_ref:{x}" for x in refs.get("background_refs", []) if _non_empty_str(x)] + _ev(
-        contracts.get("video_analysis_relpath")
-    )
+    background_evidence = [
+        f"background_ref:{x}"
+        for x in refs.get("background_refs", [])
+        if _non_empty_str(x)
+    ] + _ev(contracts.get("video_analysis_relpath"))
     framing_evidence = _ev(
         contracts.get("video_analysis_relpath"),
         contracts.get("reverse_prompt_relpath"),
@@ -185,7 +215,9 @@ def _build_artifact_classes(
     return classes
 
 
-def _missing_required_artifact_classes(artifact_classes: Dict[str, Dict[str, Any]]) -> List[str]:
+def _missing_required_artifact_classes(
+    artifact_classes: Dict[str, Dict[str, Any]],
+) -> List[str]:
     missing: List[str] = []
     for name, row in artifact_classes.items():
         if not isinstance(row, dict):
@@ -196,14 +228,26 @@ def _missing_required_artifact_classes(artifact_classes: Dict[str, Dict[str, Any
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Lab-first deterministic sample ingest for incoming demo videos.")
+    parser = argparse.ArgumentParser(
+        description="Lab-first deterministic sample ingest for incoming demo videos."
+    )
     parser.add_argument("--incoming-dir", default="sandbox/assets/demo/incoming")
     parser.add_argument("--processed-dir", default="sandbox/assets/demo/processed")
     parser.add_argument("--canon-dir", default="repo/canon/demo_analyses")
-    parser.add_argument("--index", default="repo/canon/demo_analyses/video_analysis_index.v1.json")
-    parser.add_argument("--quality-target-relpath", default="repo/examples/quality_target.motion_strict.v1.example.json")
-    parser.add_argument("--continuity-pack-relpath", default="repo/examples/episode_continuity_pack.v1.example.json")
-    parser.add_argument("--storyboard-relpath", default="repo/examples/storyboard.v1.example.json")
+    parser.add_argument(
+        "--index", default="repo/canon/demo_analyses/video_analysis_index.v1.json"
+    )
+    parser.add_argument(
+        "--quality-target-relpath",
+        default="repo/examples/quality_target.motion_strict.v1.example.json",
+    )
+    parser.add_argument(
+        "--continuity-pack-relpath",
+        default="repo/examples/episode_continuity_pack.v1.example.json",
+    )
+    parser.add_argument(
+        "--storyboard-relpath", default="repo/examples/storyboard.v1.example.json"
+    )
     parser.add_argument("--no-move-processed", action="store_true")
     args = parser.parse_args(argv[1:])
 
@@ -218,7 +262,8 @@ def main(argv: list[str]) -> int:
     canon_dir.mkdir(parents=True, exist_ok=True)
 
     videos = sorted(
-        p for p in incoming_dir.iterdir()
+        p
+        for p in incoming_dir.iterdir()
         if p.is_file() and p.suffix.lower() in {".mp4", ".mov", ".mkv", ".webm"}
     )
     if not videos:
@@ -273,8 +318,12 @@ def main(argv: list[str]) -> int:
 
         beat = _find_core_contract(canon_dir, analysis_id, "beat_grid.v1")
         pose = _find_core_contract(canon_dir, analysis_id, "pose_checkpoints.v1")
-        keyframe = _find_core_contract(canon_dir, analysis_id, "keyframe_checkpoints.v1")
-        reverse = _find_core_contract(canon_dir, analysis_id, "caf.video_reverse_prompt.v1")
+        keyframe = _find_core_contract(
+            canon_dir, analysis_id, "keyframe_checkpoints.v1"
+        )
+        reverse = _find_core_contract(
+            canon_dir, analysis_id, "caf.video_reverse_prompt.v1"
+        )
         frame_labels = _find_core_contract(canon_dir, analysis_id, "frame_labels.v1")
         seg_plan = _find_core_contract(canon_dir, analysis_id, "segment_stitch_plan.v1")
 
@@ -283,12 +332,18 @@ def main(argv: list[str]) -> int:
             "reverse_prompt_relpath": _safe_rel(reverse, root) if reverse else None,
             "beat_grid_relpath": _safe_rel(beat, root) if beat else None,
             "pose_checkpoints_relpath": _safe_rel(pose, root) if pose else None,
-            "keyframe_checkpoints_relpath": _safe_rel(keyframe, root) if keyframe else None,
-            "segment_stitch_plan_relpath": _safe_rel(seg_plan, root) if seg_plan else None,
+            "keyframe_checkpoints_relpath": (
+                _safe_rel(keyframe, root) if keyframe else None
+            ),
+            "segment_stitch_plan_relpath": (
+                _safe_rel(seg_plan, root) if seg_plan else None
+            ),
             "quality_target_relpath": args.quality_target_relpath,
             "continuity_pack_relpath": args.continuity_pack_relpath,
             "storyboard_relpath": args.storyboard_relpath,
-            "frame_labels_relpath": _safe_rel(frame_labels, root) if frame_labels else None,
+            "frame_labels_relpath": (
+                _safe_rel(frame_labels, root) if frame_labels else None
+            ),
         }
         artifact_classes = _build_artifact_classes(contracts, refs)
         missing_required = _missing_required_artifact_classes(artifact_classes)
@@ -332,7 +387,10 @@ def main(argv: list[str]) -> int:
         if not args.no_move_processed:
             dst = processed_dir / video_path.name
             if dst.exists():
-                dst = processed_dir / f"{analysis_id}-{int(dt.datetime.now().timestamp())}{video_path.suffix.lower()}"
+                dst = (
+                    processed_dir
+                    / f"{analysis_id}-{int(dt.datetime.now().timestamp())}{video_path.suffix.lower()}"
+                )
             shutil.move(str(video_path), str(dst))
             manifest["source"]["video_relpath"] = _safe_rel(dst, root)
             _write_json(manifest_path, manifest)

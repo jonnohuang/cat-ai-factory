@@ -7,6 +7,7 @@ Validate frame_labels.v1 with schema + deterministic grounding checks:
 - facts remain aligned with reverse truth shots
 - enrichment stays facts-only-or-unknown
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,12 +41,20 @@ def _load(path: pathlib.Path) -> Dict[str, Any]:
 
 
 def _camera_token_set(text: str) -> set[str]:
-    m = re.findall(r"\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\b", text, flags=re.IGNORECASE)
+    m = re.findall(
+        r"\b(pan|tilt|zoom|dolly|push|pull|tracking|handheld|static|locked)\b",
+        text,
+        flags=re.IGNORECASE,
+    )
     return {x.lower() for x in m}
 
 
 def _brightness_claims(text: str) -> bool:
-    return bool(re.search(r"\b(bright|dark|dim|neon|high-key|low-key)\b", text, flags=re.IGNORECASE))
+    return bool(
+        re.search(
+            r"\b(bright|dark|dim|neon|high-key|low-key)\b", text, flags=re.IGNORECASE
+        )
+    )
 
 
 def _validate_semantics(
@@ -58,18 +67,28 @@ def _validate_semantics(
     if frame_doc.get("analysis_id") != reverse_doc.get("analysis_id"):
         errs.append("analysis_id mismatch between frame_labels and reverse_prompt")
     if frame_doc.get("analysis_id") != keyframe_doc.get("analysis_id"):
-        errs.append("analysis_id mismatch between frame_labels and keyframe_checkpoints")
+        errs.append(
+            "analysis_id mismatch between frame_labels and keyframe_checkpoints"
+        )
 
     if frame_doc.get("source_video_relpath") != reverse_doc.get("source_video_relpath"):
-        errs.append("source_video_relpath mismatch between frame_labels and reverse_prompt")
-    if frame_doc.get("source_video_relpath") != keyframe_doc.get("source_video_relpath"):
-        errs.append("source_video_relpath mismatch between frame_labels and keyframe_checkpoints")
+        errs.append(
+            "source_video_relpath mismatch between frame_labels and reverse_prompt"
+        )
+    if frame_doc.get("source_video_relpath") != keyframe_doc.get(
+        "source_video_relpath"
+    ):
+        errs.append(
+            "source_video_relpath mismatch between frame_labels and keyframe_checkpoints"
+        )
 
     frame_tools = frame_doc.get("tool_versions")
     reverse_tools = reverse_doc.get("tool_versions")
     if isinstance(frame_tools, dict) and isinstance(reverse_tools, dict):
         if frame_tools != reverse_tools:
-            errs.append("tool_versions mismatch between frame_labels and reverse_prompt")
+            errs.append(
+                "tool_versions mismatch between frame_labels and reverse_prompt"
+            )
     else:
         errs.append("tool_versions missing in frame_labels and/or reverse_prompt")
 
@@ -84,7 +103,9 @@ def _validate_semantics(
 
     authority = frame_doc.get("authority", {})
     if isinstance(authority, dict):
-        if authority.get("reverse_prompt_ref") == authority.get("keyframe_checkpoints_ref"):
+        if authority.get("reverse_prompt_ref") == authority.get(
+            "keyframe_checkpoints_ref"
+        ):
             errs.append("authority refs must point to distinct contracts")
 
     policy = frame_doc.get("policy", {})
@@ -110,7 +131,9 @@ def _validate_semantics(
 
         shot_id = row.get("shot_id")
         if shot_id not in shot_map:
-            errs.append(f"frames[{i}].shot_id '{shot_id}' not found in reverse truth.shots")
+            errs.append(
+                f"frames[{i}].shot_id '{shot_id}' not found in reverse truth.shots"
+            )
             continue
         shot_truth = shot_map[str(shot_id)]
         facts = row.get("facts", {})
@@ -120,16 +143,26 @@ def _validate_semantics(
 
         # Facts must align with reverse truth shot values.
         cam = facts.get("camera_mode")
-        if isinstance(shot_truth.get("camera"), str) and cam != shot_truth.get("camera"):
-            errs.append(f"frames[{i}].facts.camera_mode must match truth.shots[{shot_id}].camera")
+        if isinstance(shot_truth.get("camera"), str) and cam != shot_truth.get(
+            "camera"
+        ):
+            errs.append(
+                f"frames[{i}].facts.camera_mode must match truth.shots[{shot_id}].camera"
+            )
         palette = facts.get("palette_hint")
-        if isinstance(shot_truth.get("palette_hint"), str) and palette != shot_truth.get("palette_hint"):
-            errs.append(f"frames[{i}].facts.palette_hint must match truth.shots[{shot_id}].palette_hint")
+        if isinstance(
+            shot_truth.get("palette_hint"), str
+        ) and palette != shot_truth.get("palette_hint"):
+            errs.append(
+                f"frames[{i}].facts.palette_hint must match truth.shots[{shot_id}].palette_hint"
+            )
         mi = facts.get("motion_intensity")
         if isinstance(mi, (int, float)):
             tv = float(shot_truth.get("motion_intensity", 0.0))
             if abs(float(mi) - tv) > 0.001:
-                errs.append(f"frames[{i}].facts.motion_intensity must match truth.shots[{shot_id}].motion_intensity")
+                errs.append(
+                    f"frames[{i}].facts.motion_intensity must match truth.shots[{shot_id}].motion_intensity"
+                )
 
         labels = row.get("labels", {})
         if not isinstance(labels, dict):
@@ -147,28 +180,53 @@ def _validate_semantics(
             "tilt": {"tilt"},
             "push": {"push"},
             "pull": {"pull"},
-            "mixed": {"pan", "tilt", "zoom", "dolly", "push", "pull", "tracking", "handheld", "static", "locked"},
+            "mixed": {
+                "pan",
+                "tilt",
+                "zoom",
+                "dolly",
+                "push",
+                "pull",
+                "tracking",
+                "handheld",
+                "static",
+                "locked",
+            },
         }.get(cam_truth, set())
         if camera_tokens and not camera_tokens.issubset(allowed_camera):
-            errs.append(f"frames[{i}].labels.action_summary camera claims violate facts-only-or-unknown policy")
+            errs.append(
+                f"frames[{i}].labels.action_summary camera claims violate facts-only-or-unknown policy"
+            )
         if bright_truth == "unknown" and brightness_tokens:
-            errs.append(f"frames[{i}].labels.action_summary brightness claims violate unknown policy")
+            errs.append(
+                f"frames[{i}].labels.action_summary brightness claims violate unknown policy"
+            )
 
     return errs
 
 
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Validate frame_labels.v1 contract")
-    parser.add_argument("--frame-labels", required=True, help="Path to frame_labels.v1 JSON")
-    parser.add_argument("--reverse", required=True, help="Path to caf.video_reverse_prompt.v1 JSON")
-    parser.add_argument("--keyframes", required=True, help="Path to keyframe_checkpoints.v1 JSON")
+    parser.add_argument(
+        "--frame-labels", required=True, help="Path to frame_labels.v1 JSON"
+    )
+    parser.add_argument(
+        "--reverse", required=True, help="Path to caf.video_reverse_prompt.v1 JSON"
+    )
+    parser.add_argument(
+        "--keyframes", required=True, help="Path to keyframe_checkpoints.v1 JSON"
+    )
     args = parser.parse_args(argv[1:])
 
     root = _repo_root()
     schemas = {
         "frame_labels": _load(root / "repo" / "shared" / "frame_labels.v1.schema.json"),
-        "reverse": _load(root / "repo" / "shared" / "caf.video_reverse_prompt.v1.schema.json"),
-        "keyframes": _load(root / "repo" / "shared" / "keyframe_checkpoints.v1.schema.json"),
+        "reverse": _load(
+            root / "repo" / "shared" / "caf.video_reverse_prompt.v1.schema.json"
+        ),
+        "keyframes": _load(
+            root / "repo" / "shared" / "keyframe_checkpoints.v1.schema.json"
+        ),
     }
     docs = {
         "frame_labels": _load(pathlib.Path(args.frame_labels).resolve()),
@@ -184,7 +242,11 @@ def main(argv: List[str]) -> int:
             errors.append(f"SCHEMA {key}: {ex.message}")
 
     if not errors:
-        errors.extend(_validate_semantics(docs["frame_labels"], docs["reverse"], docs["keyframes"]))
+        errors.extend(
+            _validate_semantics(
+                docs["frame_labels"], docs["reverse"], docs["keyframes"]
+            )
+        )
 
     if errors:
         eprint("INVALID: frame_labels contracts")

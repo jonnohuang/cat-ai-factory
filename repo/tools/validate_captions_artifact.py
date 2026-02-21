@@ -27,7 +27,9 @@ def _load(path: pathlib.Path) -> Dict[str, Any]:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Validate captions_artifact.v1 contract")
+    parser = argparse.ArgumentParser(
+        description="Validate captions_artifact.v1 contract"
+    )
     parser.add_argument("path", help="Path to captions_artifact.v1 JSON")
     args = parser.parse_args(argv[1:])
 

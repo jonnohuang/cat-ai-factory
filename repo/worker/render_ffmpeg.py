@@ -14,7 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from repo.shared.demo_asset_resolver import (
     DANCE_LOOP_CANDIDATES,
@@ -79,7 +79,9 @@ def make_srt(captions, out_path: pathlib.Path) -> None:
     atomic_write_text(out_path, "\n".join(lines))
 
 
-def prepare_subtitles_file(job: dict, srt_path: pathlib.Path, sandbox_root: pathlib.Path) -> str:
+def prepare_subtitles_file(
+    job: dict, srt_path: pathlib.Path, sandbox_root: pathlib.Path
+) -> str:
     """
     Resolve subtitles deterministically from:
     1) optional job.captions_artifact.relpath (captions_artifact.v1)
@@ -93,7 +95,9 @@ def prepare_subtitles_file(job: dict, srt_path: pathlib.Path, sandbox_root: path
         relpath = captions_artifact.get("relpath")
         if isinstance(relpath, str) and relpath.strip():
             try:
-                artifact_path = resolve_project_relpath(relpath.strip(), repo_root_from_here(), sandbox_root)
+                artifact_path = resolve_project_relpath(
+                    relpath.strip(), repo_root_from_here(), sandbox_root
+                )
             except Exception:
                 atomic_write_text(srt_path, "")
                 return "skipped_external_invalid_pointer"
@@ -113,7 +117,9 @@ def prepare_subtitles_file(job: dict, srt_path: pathlib.Path, sandbox_root: path
                 atomic_write_text(srt_path, "")
                 return "skipped_external_missing_srt_relpath"
             try:
-                source_srt = resolve_project_relpath(srt_relpath.strip(), repo_root_from_here(), sandbox_root)
+                source_srt = resolve_project_relpath(
+                    srt_relpath.strip(), repo_root_from_here(), sandbox_root
+                )
             except Exception:
                 atomic_write_text(srt_path, "")
                 return "skipped_external_invalid_srt_pointer"
@@ -132,7 +138,9 @@ def prepare_subtitles_file(job: dict, srt_path: pathlib.Path, sandbox_root: path
             return "skipped_empty"
         return "ready_to_burn"
 
-    whisper_status = maybe_generate_whisper_captions(job=job, srt_path=srt_path, sandbox_root=sandbox_root)
+    whisper_status = maybe_generate_whisper_captions(
+        job=job, srt_path=srt_path, sandbox_root=sandbox_root
+    )
     if whisper_status is not None:
         return whisper_status
     atomic_write_text(srt_path, "")
@@ -228,13 +236,17 @@ def load_template_registry(repo_root: pathlib.Path) -> dict:
     registry_path = repo_root / "repo/assets/templates/template_registry.json"
     if not registry_path.exists():
         raise SystemExit(f"Template registry not found at {registry_path}")
-    
+
     try:
         data = json.loads(registry_path.read_text(encoding="utf-8"))
         if "version" not in data or "templates" not in data:
-            raise SystemExit(f"Invalid template registry schema at {registry_path}: missing 'version' or 'templates'")
+            raise SystemExit(
+                f"Invalid template registry schema at {registry_path}: missing 'version' or 'templates'"
+            )
         if not isinstance(data["templates"], dict):
-            raise SystemExit(f"Invalid template registry schema at {registry_path}: 'templates' must be a dictionary")
+            raise SystemExit(
+                f"Invalid template registry schema at {registry_path}: 'templates' must be a dictionary"
+            )
         return data
     except json.JSONDecodeError as e:
         raise SystemExit(f"Failed to parse template registry: {e}")
@@ -249,7 +261,7 @@ def run_ffmpeg(cmd, out_path: pathlib.Path) -> list[str]:
     # The last argument in our constructed commands is typically the output path
     cmd_with_tmp = list(cmd)
     cmd_with_tmp[-1] = str(tmp_out)
-    
+
     print("Running:", " ".join(cmd_with_tmp))
     subprocess.check_call(cmd_with_tmp)
     tmp_out.replace(out_path)
@@ -347,7 +359,9 @@ def _comfy_required_node_classes(
 ) -> set[str]:
     caps = workflow_doc.get("caf_capabilities")
     if isinstance(caps, dict) and isinstance(caps.get("required_node_classes"), list):
-        explicit = {str(x) for x in caps["required_node_classes"] if isinstance(x, str) and x}
+        explicit = {
+            str(x) for x in caps["required_node_classes"] if isinstance(x, str) and x
+        }
         if explicit:
             return explicit
     classes: set[str] = set()
@@ -414,13 +428,19 @@ def _comfy_pick_media_item(history_obj: dict[str, Any]) -> dict[str, str] | None
     return None
 
 
-def _apply_comfy_bindings(prompt_graph: dict[str, Any], bindings: dict[str, Any]) -> None:
+def _apply_comfy_bindings(
+    prompt_graph: dict[str, Any], bindings: dict[str, Any]
+) -> None:
     # Applies basic deterministic bindings to named nodes in exported workflow JSON.
     positive = str(bindings.get("positive_prompt", "")).strip()
     negative = str(bindings.get("negative_prompt", "")).strip()
     seed = bindings.get("seed")
-    positive_nodes = [str(x) for x in bindings.get("positive_nodes", []) if isinstance(x, str)]
-    negative_nodes = [str(x) for x in bindings.get("negative_nodes", []) if isinstance(x, str)]
+    positive_nodes = [
+        str(x) for x in bindings.get("positive_nodes", []) if isinstance(x, str)
+    ]
+    negative_nodes = [
+        str(x) for x in bindings.get("negative_nodes", []) if isinstance(x, str)
+    ]
     seed_nodes = [str(x) for x in bindings.get("seed_nodes", []) if isinstance(x, str)]
 
     for node_id in positive_nodes:
@@ -447,7 +467,11 @@ def _prepare_comfy_seed_image(
     sandbox_root: pathlib.Path,
 ) -> str:
     comfy_home_s = os.environ.get("COMFYUI_HOME", "").strip()
-    comfy_home = pathlib.Path(comfy_home_s) if comfy_home_s else (repo_root / "sandbox" / "third_party" / "ComfyUI")
+    comfy_home = (
+        pathlib.Path(comfy_home_s)
+        if comfy_home_s
+        else (repo_root / "sandbox" / "third_party" / "ComfyUI")
+    )
     input_dir = comfy_home / "input"
     input_dir.mkdir(parents=True, exist_ok=True)
     seed_png = input_dir / "caf_seed_input.png"
@@ -469,7 +493,9 @@ def _prepare_comfy_seed_image(
         if fallback_rel:
             bg_path = sandbox_root / fallback_rel
         else:
-            raise SystemExit("Comfy seed image source is missing; set render.background_asset or provide demo source.")
+            raise SystemExit(
+                "Comfy seed image source is missing; set render.background_asset or provide demo source."
+            )
 
     ext = bg_path.suffix.lower()
     if ext in {".png", ".jpg", ".jpeg", ".webp"}:
@@ -523,7 +549,10 @@ def _inject_motion_frame_inputs(
         if not isinstance(inputs, dict):
             continue
         cls = str(node.get("class_type", "")).strip()
-        if cls == "LoadImage" and str(inputs.get("image", "")).strip() == "__CAF_FRAME_IMAGE__":
+        if (
+            cls == "LoadImage"
+            and str(inputs.get("image", "")).strip() == "__CAF_FRAME_IMAGE__"
+        ):
             inputs["image"] = frame_filename
             inputs["upload"] = "image"
         if (
@@ -586,7 +615,9 @@ def _prepare_motion_frames(
 ) -> list[str]:
     bg_rel = str((job.get("render") or {}).get("background_asset") or "").strip()
     if not bg_rel:
-        raise SystemExit("motion workflow requires render.background_asset source video")
+        raise SystemExit(
+            "motion workflow requires render.background_asset source video"
+        )
     bg_path = normalize_sandbox_path(bg_rel, sandbox_root)
     validate_safe_path(bg_path, sandbox_root)
     if not bg_path.exists():
@@ -598,7 +629,9 @@ def _prepare_motion_frames(
             p.unlink()
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    motion_preprocess = os.environ.get("CAF_COMFY_MOTION_PREPROCESS", "pose").strip().lower()
+    motion_preprocess = (
+        os.environ.get("CAF_COMFY_MOTION_PREPROCESS", "pose").strip().lower()
+    )
     ffmpeg_preprocess = motion_preprocess
     if motion_preprocess in {"pose", "mediapipe_pose"}:
         # Extract clean RGB frames first; pose hints are derived in Python below.
@@ -655,19 +688,26 @@ def _prepare_motion_frames(
         pose_dir.mkdir(parents=True, exist_ok=True)
         try:
             import cv2  # type: ignore
-            import numpy as np  # type: ignore
             import mediapipe as mp  # type: ignore
+            import numpy as np  # type: ignore
+
             built: list[pathlib.Path] = []
             detected_count = 0
-            coverage_threshold = float(os.environ.get("CAF_COMFY_POSE_MIN_DETECTION_RATIO", "0.35") or 0.35)
+            coverage_threshold = float(
+                os.environ.get("CAF_COMFY_POSE_MIN_DETECTION_RATIO", "0.35") or 0.35
+            )
 
             if hasattr(mp, "solutions"):
                 # Legacy MediaPipe Solutions API.
                 mp_solutions = mp.solutions  # type: ignore[attr-defined]
                 pose = mp_solutions.pose.Pose(
                     static_image_mode=True,
-                    model_complexity=int(os.environ.get("CAF_MEDIAPIPE_MODEL_COMPLEXITY", "1") or 1),
-                    min_detection_confidence=float(os.environ.get("CAF_MEDIAPIPE_MIN_DETECTION", "0.5") or 0.5),
+                    model_complexity=int(
+                        os.environ.get("CAF_MEDIAPIPE_MODEL_COMPLEXITY", "1") or 1
+                    ),
+                    min_detection_confidence=float(
+                        os.environ.get("CAF_MEDIAPIPE_MIN_DETECTION", "0.5") or 0.5
+                    ),
                 )
                 drawing = mp_solutions.drawing_utils
                 drawing_styles = mp_solutions.drawing_styles
@@ -699,13 +739,19 @@ def _prepare_motion_frames(
                 # MediaPipe Tasks API path (newer wheels, no mp.solutions).
                 from mediapipe.tasks.python import vision  # type: ignore
                 from mediapipe.tasks.python.core.base_options import BaseOptions  # type: ignore
-                from mediapipe.tasks.python.vision import drawing_utils, drawing_styles  # type: ignore
+                from mediapipe.tasks.python.vision import drawing_styles, drawing_utils  # type: ignore
 
                 model_path_s = os.environ.get("CAF_MEDIAPIPE_POSE_MODEL", "").strip()
                 model_path = (
                     pathlib.Path(model_path_s)
                     if model_path_s
-                    else (sandbox_root / "assets" / "models" / "mediapipe" / "pose_landmarker_lite.task")
+                    else (
+                        sandbox_root
+                        / "assets"
+                        / "models"
+                        / "mediapipe"
+                        / "pose_landmarker_lite.task"
+                    )
                 )
                 if not model_path.exists():
                     raise FileNotFoundError(
@@ -769,7 +815,9 @@ def _prepare_motion_frames(
                     )
             else:
                 preprocess_report["status"] = "pose_empty_fallback_raw"
-                print("WARNING worker comfy motion_preprocess=pose produced no frames; using raw frames")
+                print(
+                    "WARNING worker comfy motion_preprocess=pose produced no frames; using raw frames"
+                )
         except Exception as ex:
             preprocess_report["status"] = "mediapipe_unavailable_fallback_raw"
             preprocess_report["error"] = f"{type(ex).__name__}: {ex}"
@@ -780,7 +828,9 @@ def _prepare_motion_frames(
 
     try:
         report_path = out_dir / "generated" / "motion_preprocess_report.v1.json"
-        report_path.write_text(json.dumps(preprocess_report, indent=2), encoding="utf-8")
+        report_path.write_text(
+            json.dumps(preprocess_report, indent=2), encoding="utf-8"
+        )
     except Exception:
         pass
 
@@ -806,7 +856,9 @@ def _render_motion_sequence_via_comfy(
     interval_seconds: int,
     capability_preflight: dict[str, Any],
 ) -> dict[str, Any]:
-    requires_checkpoint = "__CAF_CHECKPOINT__" in json.dumps(prompt_graph_template, sort_keys=True)
+    requires_checkpoint = "__CAF_CHECKPOINT__" in json.dumps(
+        prompt_graph_template, sort_keys=True
+    )
     checkpoint_name: str | None = None
     if requires_checkpoint:
         checkpoint_name = str(capability_preflight.get("checkpoint_name") or "")
@@ -838,7 +890,9 @@ def _render_motion_sequence_via_comfy(
         old.unlink()
 
     for i, frame_name in enumerate(frame_names, start=1):
-        print(f"INFO worker comfy motion_frame_start index={i}/{len(frame_names)} src={frame_name}")
+        print(
+            f"INFO worker comfy motion_frame_start index={i}/{len(frame_names)} src={frame_name}"
+        )
         prompt_graph = copy.deepcopy(prompt_graph_template)
         if isinstance(bindings, dict):
             _apply_comfy_bindings(prompt_graph, bindings)
@@ -852,20 +906,28 @@ def _render_motion_sequence_via_comfy(
         submit_url = f"{base_url}/prompt"
         submit_payload = {"client_id": client_id, "prompt": prompt_graph}
         try:
-            submit_resp = _http_json(url=submit_url, method="POST", payload=submit_payload, timeout_s=120)
+            submit_resp = _http_json(
+                url=submit_url, method="POST", payload=submit_payload, timeout_s=120
+            )
         except Exception as ex:
-            raise SystemExit(f"comfy motion submit failed at frame {i}: {type(ex).__name__}: {ex}")
+            raise SystemExit(
+                f"comfy motion submit failed at frame {i}: {type(ex).__name__}: {ex}"
+            )
         prompt_id = submit_resp.get("prompt_id")
         if not isinstance(prompt_id, str) or not prompt_id.strip():
             raise SystemExit(f"comfy motion submit missing prompt_id at frame {i}")
         prompt_id = prompt_id.strip()
-        print(f"INFO worker comfy motion_prompt_submitted index={i}/{len(frame_names)} prompt_id={prompt_id}")
+        print(
+            f"INFO worker comfy motion_prompt_submitted index={i}/{len(frame_names)} prompt_id={prompt_id}"
+        )
         deadline = time.time() + timeout_seconds
         history_obj: dict[str, Any] | None = None
         while time.time() < deadline:
             history_url = f"{base_url}/history/{prompt_id}"
             try:
-                history_resp = _http_json(url=history_url, method="GET", payload=None, timeout_s=60)
+                history_resp = _http_json(
+                    url=history_url, method="GET", payload=None, timeout_s=60
+                )
             except Exception:
                 time.sleep(interval_seconds)
                 continue
@@ -898,7 +960,9 @@ def _render_motion_sequence_via_comfy(
         view_url = f"{base_url}/view?{query}"
         out_img = gen_frames_dir / f"frame_{i:04d}.png"
         _http_download(view_url, out_img, timeout_s=120)
-        print(f"INFO worker comfy motion_frame_done index={i}/{len(frame_names)} output={out_img.name}")
+        print(
+            f"INFO worker comfy motion_frame_done index={i}/{len(frame_names)} output={out_img.name}"
+        )
 
     video_cfg = job.get("video") if isinstance(job.get("video"), dict) else {}
     resolution = str(video_cfg.get("resolution", "1080x1920"))
@@ -917,7 +981,9 @@ def _render_motion_sequence_via_comfy(
     target_fps = max(12, min(60, target_fps))
     target_duration = int(video_cfg.get("length_seconds", 12) or 12)
     target_duration = max(1, min(60, target_duration))
-    use_minterp = os.environ.get("CAF_COMFY_ENABLE_MINTERPOLATE", "1").strip().lower() in (
+    use_minterp = os.environ.get(
+        "CAF_COMFY_ENABLE_MINTERPOLATE", "1"
+    ).strip().lower() in (
         "1",
         "true",
         "yes",
@@ -925,7 +991,9 @@ def _render_motion_sequence_via_comfy(
     )
     vf_core = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h}"
     if use_minterp:
-        vf = f"{vf_core},minterpolate=fps={target_fps}:mi_mode=mci:mc_mode=aobmc:vsbmc=1"
+        vf = (
+            f"{vf_core},minterpolate=fps={target_fps}:mi_mode=mci:mc_mode=aobmc:vsbmc=1"
+        )
     else:
         vf = f"{vf_core},fps={target_fps}"
     cmd = [
@@ -976,7 +1044,9 @@ def _render_motion_sequence_via_comfy(
     run_ffmpeg(loop_cmd, out_video)
     if tmp_video.exists():
         tmp_video.unlink()
-    rel_video = str(out_video.resolve().relative_to(sandbox_root.resolve())).replace("\\", "/")
+    rel_video = str(out_video.resolve().relative_to(sandbox_root.resolve())).replace(
+        "\\", "/"
+    )
     return {
         "provider": "comfyui_video",
         "mode": "motion_frame_sequence",
@@ -1058,16 +1128,26 @@ def generate_comfyui_video_asset(
 ) -> dict[str, Any]:
     comfy = job.get("comfyui")
     if not isinstance(comfy, dict):
-        raise SystemExit("selected_video_provider=comfyui_video requires job.comfyui block")
+        raise SystemExit(
+            "selected_video_provider=comfyui_video requires job.comfyui block"
+        )
 
-    base_url = str(comfy.get("base_url") or os.environ.get("COMFYUI_BASE_URL", "")).strip().rstrip("/")
+    base_url = (
+        str(comfy.get("base_url") or os.environ.get("COMFYUI_BASE_URL", ""))
+        .strip()
+        .rstrip("/")
+    )
     if not base_url:
-        raise SystemExit("comfyui generation requires COMFYUI_BASE_URL or job.comfyui.base_url")
+        raise SystemExit(
+            "comfyui generation requires COMFYUI_BASE_URL or job.comfyui.base_url"
+        )
 
     workflow_rel = comfy.get("workflow_relpath")
     if not isinstance(workflow_rel, str) or not workflow_rel.strip():
         raise SystemExit("job.comfyui.workflow_relpath is required")
-    workflow_path = resolve_project_relpath(workflow_rel.strip(), repo_root, sandbox_root)
+    workflow_path = resolve_project_relpath(
+        workflow_rel.strip(), repo_root, sandbox_root
+    )
     if not workflow_path.exists():
         raise SystemExit(f"comfy workflow not found: {workflow_path}")
 
@@ -1078,7 +1158,9 @@ def generate_comfyui_video_asset(
     elif isinstance(workflow_doc.get("nodes"), dict):
         prompt_graph = workflow_doc["nodes"]
     if not isinstance(prompt_graph, dict) or not prompt_graph:
-        raise SystemExit("comfy workflow must provide non-empty 'prompt_api' or 'nodes' map")
+        raise SystemExit(
+            "comfy workflow must provide non-empty 'prompt_api' or 'nodes' map"
+        )
     capability_preflight = _comfy_preflight_capabilities(
         base_url=base_url,
         workflow_doc=workflow_doc,
@@ -1089,7 +1171,11 @@ def generate_comfyui_video_asset(
     workflow_mode = str(workflow_doc.get("caf_mode", "")).strip().lower()
     if workflow_mode == "motion_frame_sequence":
         comfy_home_s = os.environ.get("COMFYUI_HOME", "").strip()
-        comfy_home = pathlib.Path(comfy_home_s) if comfy_home_s else (repo_root / "sandbox" / "third_party" / "ComfyUI")
+        comfy_home = (
+            pathlib.Path(comfy_home_s)
+            if comfy_home_s
+            else (repo_root / "sandbox" / "third_party" / "ComfyUI")
+        )
         return _render_motion_sequence_via_comfy(
             job=job,
             prompt_graph_template=prompt_graph,
@@ -1098,13 +1184,19 @@ def generate_comfyui_video_asset(
             comfy_home=comfy_home,
             out_dir=out_dir,
             bindings=bindings if isinstance(bindings, dict) else None,
-            timeout_seconds=int((comfy.get("poll") or {}).get("timeout_seconds", 900) or 900),
-            interval_seconds=int((comfy.get("poll") or {}).get("interval_seconds", 2) or 2),
+            timeout_seconds=int(
+                (comfy.get("poll") or {}).get("timeout_seconds", 900) or 900
+            ),
+            interval_seconds=int(
+                (comfy.get("poll") or {}).get("interval_seconds", 2) or 2
+            ),
             capability_preflight=capability_preflight,
         )
     if isinstance(bindings, dict):
         _apply_comfy_bindings(prompt_graph, bindings)
-    seed_filename = _prepare_comfy_seed_image(job=job, repo_root=repo_root, sandbox_root=sandbox_root)
+    seed_filename = _prepare_comfy_seed_image(
+        job=job, repo_root=repo_root, sandbox_root=sandbox_root
+    )
     _inject_comfy_seed_image(prompt_graph, seed_filename)
 
     poll = comfy.get("poll") if isinstance(comfy.get("poll"), dict) else {}
@@ -1120,7 +1212,9 @@ def generate_comfyui_video_asset(
         "prompt": prompt_graph,
     }
     try:
-        submit_resp = _http_json(url=submit_url, method="POST", payload=submit_payload, timeout_s=120)
+        submit_resp = _http_json(
+            url=submit_url, method="POST", payload=submit_payload, timeout_s=120
+        )
     except Exception as ex:
         msg = f"{type(ex).__name__}: {ex}"
         # Allow placeholder workflow fallback so end-to-end pipeline remains testable.
@@ -1149,7 +1243,9 @@ def generate_comfyui_video_asset(
     while time.time() < deadline:
         history_url = f"{base_url}/history/{prompt_id}"
         try:
-            history_resp = _http_json(url=history_url, method="GET", payload=None, timeout_s=60)
+            history_resp = _http_json(
+                url=history_url, method="GET", payload=None, timeout_s=60
+            )
         except Exception:
             time.sleep(interval_seconds)
             continue
@@ -1159,7 +1255,9 @@ def generate_comfyui_video_asset(
             if isinstance(status, dict):
                 status_str = str(status.get("status_str", "")).lower()
                 if status_str in {"error", "failed"}:
-                    raise SystemExit(f"comfy generation failed for prompt_id={prompt_id}")
+                    raise SystemExit(
+                        f"comfy generation failed for prompt_id={prompt_id}"
+                    )
             media = _comfy_pick_media_item(raw)
             if media is not None:
                 history_obj = raw
@@ -1167,7 +1265,9 @@ def generate_comfyui_video_asset(
         time.sleep(interval_seconds)
 
     if history_obj is None:
-        raise SystemExit(f"comfy generation timeout after {timeout_seconds}s for prompt_id={prompt_id}")
+        raise SystemExit(
+            f"comfy generation timeout after {timeout_seconds}s for prompt_id={prompt_id}"
+        )
 
     media = _comfy_pick_media_item(history_obj)
     if media is None:
@@ -1193,8 +1293,12 @@ def generate_comfyui_video_asset(
     if (not local_path.exists()) or local_path.stat().st_size == 0:
         raise SystemExit("comfy download produced empty file")
 
-    final_media_path = _ensure_video_from_comfy_media(media_path=local_path, out_dir=out_dir, job=job)
-    relpath = str(final_media_path.resolve().relative_to(sandbox_root.resolve())).replace("\\", "/")
+    final_media_path = _ensure_video_from_comfy_media(
+        media_path=local_path, out_dir=out_dir, job=job
+    )
+    relpath = str(
+        final_media_path.resolve().relative_to(sandbox_root.resolve())
+    ).replace("\\", "/")
     print(f"INFO worker comfy media_downloaded={relpath}")
     return {
         "provider": "comfyui_video",
@@ -1203,7 +1307,9 @@ def generate_comfyui_video_asset(
         "media_filename": filename,
         "media_subfolder": subfolder,
         "media_type": media_type,
-        "downloaded_relpath": str(local_path.resolve().relative_to(sandbox_root.resolve())).replace("\\", "/"),
+        "downloaded_relpath": str(
+            local_path.resolve().relative_to(sandbox_root.resolve())
+        ).replace("\\", "/"),
         "output_relpath": relpath,
         "workflow_relpath": str(workflow_rel),
         "base_url": base_url,
@@ -1266,11 +1372,7 @@ def build_audio_filter(duration: str) -> str:
             "loudnorm=I=-16:TP=-1.5:LRA=11,"
             "alimiter=limit=0.95"
         )
-    return (
-        f"apad=pad_dur={duration},"
-        f"atrim=0:{duration},"
-        "alimiter=limit=0.95"
-    )
+    return f"apad=pad_dur={duration}," f"atrim=0:{duration}," "alimiter=limit=0.95"
 
 
 def build_loop_ready_bg(
@@ -1327,17 +1429,19 @@ def build_loop_ready_bg(
     return out_path
 
 
-def normalize_sandbox_path(rel_path_str: str, sandbox_root: pathlib.Path) -> pathlib.Path:
+def normalize_sandbox_path(
+    rel_path_str: str, sandbox_root: pathlib.Path
+) -> pathlib.Path:
     # Deterministic normalization:
     # If path starts with "sandbox/", strip it.
     # Then join with sandbox_root.
     # This supports both "assets/..." and "sandbox/assets/..." conventions
     # while ensuring they map to the same physical location under sandbox_root.
-    
+
     p = pathlib.Path(rel_path_str)
     if p.is_absolute():
         raise ValueError(f"Asset path must be relative: {rel_path_str}")
-    
+
     parts = p.parts
     if parts and parts[0] == "sandbox":
         p = pathlib.Path(*parts[1:])
@@ -1360,14 +1464,18 @@ def validate_safe_path(path: pathlib.Path, root: pathlib.Path) -> None:
         raise ValueError(f"Path is strictly forbidden outside sandbox root: {path}")
 
 
-def validate_safe_path_under(path: pathlib.Path, root: pathlib.Path, label: str) -> None:
+def validate_safe_path_under(
+    path: pathlib.Path, root: pathlib.Path, label: str
+) -> None:
     try:
         path.resolve().relative_to(root.resolve())
     except ValueError:
         raise ValueError(f"{label} path forbidden outside {root}: {path}")
 
 
-def resolve_project_relpath(rel_path_str: str, repo_root: pathlib.Path, sandbox_root: pathlib.Path) -> pathlib.Path:
+def resolve_project_relpath(
+    rel_path_str: str, repo_root: pathlib.Path, sandbox_root: pathlib.Path
+) -> pathlib.Path:
     p = pathlib.Path(rel_path_str)
     if p.is_absolute():
         raise ValueError(f"Path must be relative: {rel_path_str}")
@@ -1379,7 +1487,9 @@ def resolve_project_relpath(rel_path_str: str, repo_root: pathlib.Path, sandbox_
         out = (repo_root / rel_path_str).resolve()
         validate_safe_path_under(out, repo_root / "repo", "repo")
         return out
-    raise ValueError(f"Unsupported relpath prefix (expected repo/ or sandbox/): {rel_path_str}")
+    raise ValueError(
+        f"Unsupported relpath prefix (expected repo/ or sandbox/): {rel_path_str}"
+    )
 
 
 def load_json_file(path: pathlib.Path) -> dict:
@@ -1449,23 +1559,49 @@ def load_retry_hook(
         "trigger_metrics": [str(x) for x in triggers if isinstance(x, str)],
         "provider_switch": {
             "mode": switch_mode,
-            "current_provider": str(switch_current) if isinstance(switch_current, str) and switch_current else None,
-            "next_provider": str(switch_next) if isinstance(switch_next, str) and switch_next else None,
-            "provider_order_index": int(switch_index) if isinstance(switch_index, int) and switch_index >= 0 else None,
+            "current_provider": (
+                str(switch_current)
+                if isinstance(switch_current, str) and switch_current
+                else None
+            ),
+            "next_provider": (
+                str(switch_next)
+                if isinstance(switch_next, str) and switch_next
+                else None
+            ),
+            "provider_order_index": (
+                int(switch_index)
+                if isinstance(switch_index, int) and switch_index >= 0
+                else None
+            ),
         },
         "workflow_preset": {
             "mode": preset_mode,
-            "preset_id": str(preset_id) if isinstance(preset_id, str) and preset_id else None,
-            "workflow_id": str(workflow_id) if isinstance(workflow_id, str) and workflow_id else None,
-            "failure_class": str(failure_class) if isinstance(failure_class, str) and failure_class else None,
-            "parameter_overrides": parameter_overrides if isinstance(parameter_overrides, dict) else {},
+            "preset_id": (
+                str(preset_id) if isinstance(preset_id, str) and preset_id else None
+            ),
+            "workflow_id": (
+                str(workflow_id)
+                if isinstance(workflow_id, str) and workflow_id
+                else None
+            ),
+            "failure_class": (
+                str(failure_class)
+                if isinstance(failure_class, str) and failure_class
+                else None
+            ),
+            "parameter_overrides": (
+                parameter_overrides if isinstance(parameter_overrides, dict) else {}
+            ),
         },
         "provider_switch_env": {
             "mode": os.environ.get("CAF_RETRY_PROVIDER_SWITCH_MODE"),
             "current_provider": os.environ.get("CAF_RETRY_CURRENT_PROVIDER"),
             "next_provider": os.environ.get("CAF_RETRY_NEXT_PROVIDER"),
         },
-        "retry_plan_relpath": str(retry_plan_path.resolve().relative_to(repo_root_from_here().resolve())).replace("\\", "/"),
+        "retry_plan_relpath": str(
+            retry_plan_path.resolve().relative_to(repo_root_from_here().resolve())
+        ).replace("\\", "/"),
         "attempt_id": os.environ.get("CAF_RETRY_ATTEMPT_ID"),
     }
 
@@ -1482,8 +1618,14 @@ def build_engine_policy_runtime(
         return None
     motion = gen.get("motion_constraints")
     post = gen.get("post_process_order")
-    motion_list = [str(x) for x in motion if isinstance(x, str)] if isinstance(motion, list) else []
-    post_list = [str(x) for x in post if isinstance(x, str)] if isinstance(post, list) else []
+    motion_list = (
+        [str(x) for x in motion if isinstance(x, str)]
+        if isinstance(motion, list)
+        else []
+    )
+    post_list = (
+        [str(x) for x in post if isinstance(x, str)] if isinstance(post, list) else []
+    )
     if not motion_list and not post_list:
         return None
 
@@ -1491,12 +1633,22 @@ def build_engine_policy_runtime(
         "route_mode": gen.get("route_mode"),
         "selected_video_provider": gen.get("selected_video_provider"),
         "selected_frame_provider": gen.get("selected_frame_provider"),
-        "motion_constraints": motion_constraints_runtime
-        if isinstance(motion_constraints_runtime, list)
-        else [{"constraint_id": cid, "status": "not_applied_worker_policy_only"} for cid in motion_list],
-        "post_process_order": post_process_runtime
-        if isinstance(post_process_runtime, list)
-        else [{"step_id": sid, "status": "not_applied_worker_policy_only"} for sid in post_list],
+        "motion_constraints": (
+            motion_constraints_runtime
+            if isinstance(motion_constraints_runtime, list)
+            else [
+                {"constraint_id": cid, "status": "not_applied_worker_policy_only"}
+                for cid in motion_list
+            ]
+        ),
+        "post_process_order": (
+            post_process_runtime
+            if isinstance(post_process_runtime, list)
+            else [
+                {"step_id": sid, "status": "not_applied_worker_policy_only"}
+                for sid in post_list
+            ]
+        ),
     }
     if isinstance(retry_hook, dict):
         policy_runtime["retry_provider_switch"] = retry_hook.get("provider_switch")
@@ -1524,9 +1676,15 @@ def resolve_dance_swap_contracts(job: dict, sandbox_root: pathlib.Path) -> dict:
         raise SystemExit("Lane 'dance_swap' requires 'dance_swap' object in job.json")
 
     required_fields = ["loop_artifact", "tracks_artifact", "foreground_asset"]
-    missing = [k for k in required_fields if not isinstance(dance_swap.get(k), str) or not dance_swap.get(k, "").strip()]
+    missing = [
+        k
+        for k in required_fields
+        if not isinstance(dance_swap.get(k), str) or not dance_swap.get(k, "").strip()
+    ]
     if missing:
-        raise SystemExit(f"dance_swap missing required string field(s): {', '.join(missing)}")
+        raise SystemExit(
+            f"dance_swap missing required string field(s): {', '.join(missing)}"
+        )
 
     loop_path = normalize_sandbox_path(dance_swap["loop_artifact"], sandbox_root)
     tracks_path = normalize_sandbox_path(dance_swap["tracks_artifact"], sandbox_root)
@@ -1537,7 +1695,9 @@ def resolve_dance_swap_contracts(job: dict, sandbox_root: pathlib.Path) -> dict:
 
     beatflow_path = None
     if dance_swap.get("beatflow_artifact"):
-        beatflow_path = normalize_sandbox_path(dance_swap["beatflow_artifact"], sandbox_root)
+        beatflow_path = normalize_sandbox_path(
+            dance_swap["beatflow_artifact"], sandbox_root
+        )
         validate_safe_path(beatflow_path, sandbox_root)
 
     for p in [loop_path, tracks_path, fg_path, beatflow_path]:
@@ -1549,19 +1709,31 @@ def resolve_dance_swap_contracts(job: dict, sandbox_root: pathlib.Path) -> dict:
     beatflow = load_json_file(beatflow_path) if beatflow_path else None
 
     if loop.get("version") != "dance_swap_loop.v1":
-        raise SystemExit("dance_swap.loop_artifact must be a dance_swap_loop.v1 artifact")
+        raise SystemExit(
+            "dance_swap.loop_artifact must be a dance_swap_loop.v1 artifact"
+        )
     if tracks.get("version") != "dance_swap_tracks.v1":
-        raise SystemExit("dance_swap.tracks_artifact must be a dance_swap_tracks.v1 artifact")
+        raise SystemExit(
+            "dance_swap.tracks_artifact must be a dance_swap_tracks.v1 artifact"
+        )
     if beatflow is not None and beatflow.get("version") != "dance_swap_beatflow.v1":
-        raise SystemExit("dance_swap.beatflow_artifact must be a dance_swap_beatflow.v1 artifact")
+        raise SystemExit(
+            "dance_swap.beatflow_artifact must be a dance_swap_beatflow.v1 artifact"
+        )
 
     source_rel = loop.get("source_video_relpath")
     if not isinstance(source_rel, str) or not source_rel.startswith("sandbox/"):
-        raise SystemExit("dance_swap.loop.source_video_relpath must be a sandbox-relative path")
+        raise SystemExit(
+            "dance_swap.loop.source_video_relpath must be a sandbox-relative path"
+        )
     if tracks.get("source_video_relpath") != source_rel:
-        raise SystemExit("Dance Swap source mismatch: loop and tracks source_video_relpath differ")
+        raise SystemExit(
+            "Dance Swap source mismatch: loop and tracks source_video_relpath differ"
+        )
     if beatflow is not None and beatflow.get("source_video_relpath") != source_rel:
-        raise SystemExit("Dance Swap source mismatch: beatflow source_video_relpath differs")
+        raise SystemExit(
+            "Dance Swap source mismatch: beatflow source_video_relpath differs"
+        )
 
     source_video = normalize_sandbox_path(source_rel, sandbox_root)
     validate_safe_path(source_video, sandbox_root)
@@ -1598,7 +1770,9 @@ def resolve_dance_swap_contracts(job: dict, sandbox_root: pathlib.Path) -> dict:
         if loop_start <= frame <= loop_end:
             mask_rel = row.get("mask_relpath")
             if not isinstance(mask_rel, str) or not mask_rel.startswith("sandbox/"):
-                raise SystemExit(f"Dance Swap frame has invalid mask_relpath: frame={frame}")
+                raise SystemExit(
+                    f"Dance Swap frame has invalid mask_relpath: frame={frame}"
+                )
             mask_path = normalize_sandbox_path(mask_rel, sandbox_root)
             validate_safe_path(mask_path, sandbox_root)
             if not mask_path.exists():
@@ -1719,7 +1893,9 @@ def emit_media_stack_artifacts(
         "sample_times_sec": [round(x, 3) for x in frame_times],
         "frames": frame_files,
         "frame_count": len(frame_files),
-        "hashes": {pathlib.Path(p).name: sha256_file(pathlib.Path(p)) for p in frame_files},
+        "hashes": {
+            pathlib.Path(p).name: sha256_file(pathlib.Path(p)) for p in frame_files
+        },
     }
     frame_manifest_path = frames_dir / "frame_manifest.v1.json"
     atomic_write_json(frame_manifest_path, frame_manifest)
@@ -1837,7 +2013,9 @@ def execute_segment_stitch_runtime(
 
     plan = load_json_file(plan_path)
     if plan.get("version") != "segment_stitch_plan.v1":
-        raise SystemExit("segment_stitch.plan_relpath must point to segment_stitch_plan.v1")
+        raise SystemExit(
+            "segment_stitch.plan_relpath must point to segment_stitch_plan.v1"
+        )
     segments = plan.get("segments", [])
     if not isinstance(segments, list) or not segments:
         raise SystemExit("segment_stitch plan requires non-empty segments array")
@@ -1851,7 +2029,10 @@ def execute_segment_stitch_runtime(
             stale.unlink()
         except OSError:
             pass
-    for stale in (seg_dir / "stitched_preview.mp4", seg_dir / "stitched_preview.mp4.tmp.mp4"):
+    for stale in (
+        seg_dir / "stitched_preview.mp4",
+        seg_dir / "stitched_preview.mp4.tmp.mp4",
+    ):
         if stale.exists():
             try:
                 stale.unlink()
@@ -1866,7 +2047,10 @@ def execute_segment_stitch_runtime(
         raise SystemExit("segment_stitch plan has no valid segment entries")
 
     retry_hook_applied: dict[str, Any] | None = None
-    if isinstance(retry_hook, dict) and retry_hook.get("retry_type") in {"motion", "recast"}:
+    if isinstance(retry_hook, dict) and retry_hook.get("retry_type") in {
+        "motion",
+        "recast",
+    }:
         mode = str(retry_hook.get("mode", "none"))
         targets = set(retry_hook.get("target_segments", []) or [])
         if mode == "retry_selected" and targets:
@@ -1877,7 +2061,9 @@ def execute_segment_stitch_runtime(
             "retry_type": str(retry_hook.get("retry_type")),
             "mode": mode,
             "target_segments": sorted(list(targets)),
-            "trigger_metrics": sorted([str(x) for x in (retry_hook.get("trigger_metrics", []) or [])]),
+            "trigger_metrics": sorted(
+                [str(x) for x in (retry_hook.get("trigger_metrics", []) or [])]
+            ),
             "retry_plan_relpath": retry_hook.get("retry_plan_relpath"),
             "attempt_id": retry_hook.get("attempt_id"),
         }
@@ -1962,7 +2148,9 @@ def execute_segment_stitch_runtime(
                 "segment_id": seg_id,
                 "start_sec": round(start, 3),
                 "end_sec": round(end, 3),
-                "output_relpath": str(out_mp4.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+                "output_relpath": str(
+                    out_mp4.resolve().relative_to(repo_root.resolve())
+                ).replace("\\", "/"),
                 "duration_sec": round(end - start, 3),
             }
         )
@@ -1986,13 +2174,20 @@ def execute_segment_stitch_runtime(
             {
                 "from_segment": str(prev.get("segment_id")),
                 "to_segment": str(cur.get("segment_id")),
-                "method": method if method in ("hard_cut", "crossfade", "motion_blend") else "hard_cut",
+                "method": (
+                    method
+                    if method in ("hard_cut", "crossfade", "motion_blend")
+                    else "hard_cut"
+                ),
                 "blend_frames": max(0, min(60, blend_frames)),
                 "transition": transition,
             }
         )
 
-    if retry_hook_applied is not None and retry_hook_applied.get("retry_type") == "motion":
+    if (
+        retry_hook_applied is not None
+        and retry_hook_applied.get("retry_type") == "motion"
+    ):
         for seam in seams:
             if seam["method"] == "hard_cut":
                 seam["method"] = "crossfade"
@@ -2039,7 +2234,11 @@ def execute_segment_stitch_runtime(
         for idx in range(1, len(seg_paths)):
             seam = seams[idx - 1]
             method = seam["method"]
-            transition = "fade" if method == "crossfade" else ("smoothleft" if method == "motion_blend" else "fade")
+            transition = (
+                "fade"
+                if method == "crossfade"
+                else ("smoothleft" if method == "motion_blend" else "fade")
+            )
             blend_frames = int(seam["blend_frames"])
             dur = max(0.03, min(0.7, blend_frames / max(1, fps)))
             offset = max(0.0, acc - dur)
@@ -2077,8 +2276,12 @@ def execute_segment_stitch_runtime(
         "version": "segment_stitch_report.v1",
         "job_id": str(job.get("job_id")),
         "plan_relpath": plan_relpath,
-        "segments_dir": str(seg_dir.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
-        "stitched_preview": str(stitched_preview.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+        "segments_dir": str(seg_dir.resolve().relative_to(repo_root.resolve())).replace(
+            "\\", "/"
+        ),
+        "stitched_preview": str(
+            stitched_preview.resolve().relative_to(repo_root.resolve())
+        ).replace("\\", "/"),
         "segments": seg_outputs,
         "skipped_segments": skipped_segments,
         "seams": seams,
@@ -2171,7 +2374,9 @@ def emit_segment_debug_exports(
                     "seam_index": idx,
                     "from_segment": from_id,
                     "to_segment": to_id,
-                    "preview_relpath": str(preview.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+                    "preview_relpath": str(
+                        preview.resolve().relative_to(repo_root.resolve())
+                    ).replace("\\", "/"),
                     "start_sec": round(clip_start, 3),
                     "end_sec": round(clip_end, 3),
                 }
@@ -2203,7 +2408,9 @@ def emit_segment_debug_exports(
                     if i % step != 0:
                         continue
                     g = cv2.cvtColor(cv2.resize(frame, (160, 90)), cv2.COLOR_BGR2GRAY)
-                    score = float(np.mean(np.abs(g.astype("float32") - prev_g.astype("float32"))))
+                    score = float(
+                        np.mean(np.abs(g.astype("float32") - prev_g.astype("float32")))
+                    )
                     t = float((i + 1) / max(1.0, fps))
                     points.append({"t_sec": round(t, 3), "score": round(score, 6)})
                     prev_g = g
@@ -2226,7 +2433,12 @@ def emit_segment_debug_exports(
         fm = media_stack_paths.get("frame_manifest")
         if isinstance(fm, str):
             frame_manifest_path = pathlib.Path(fm)
-    if frame_manifest_path is not None and frame_manifest_path.exists() and cv2 is not None and np is not None:
+    if (
+        frame_manifest_path is not None
+        and frame_manifest_path.exists()
+        and cv2 is not None
+        and np is not None
+    ):
         frame_manifest = load_json_file(frame_manifest_path)
         frames = frame_manifest.get("frames", [])
         imgs = []
@@ -2246,22 +2458,36 @@ def emit_segment_debug_exports(
                 strip = np.hstack([strip, sep, im])
             strip_path = debug_dir / "checkpoint_strip.png"
             cv2.imwrite(str(strip_path), strip)
-            checkpoint_strip_relpath = str(strip_path.resolve().relative_to(repo_root.resolve())).replace("\\", "/")
+            checkpoint_strip_relpath = str(
+                strip_path.resolve().relative_to(repo_root.resolve())
+            ).replace("\\", "/")
 
     manifest_path = debug_dir / "segment_debug_manifest.v1.json"
     manifest = {
         "version": "segment_debug_manifest.v1",
         "job_id": str(job.get("job_id")),
-        "source_final_mp4": str(final_mp4.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
-        "debug_dir": str(debug_dir.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+        "source_final_mp4": str(
+            final_mp4.resolve().relative_to(repo_root.resolve())
+        ).replace("\\", "/"),
+        "debug_dir": str(debug_dir.resolve().relative_to(repo_root.resolve())).replace(
+            "\\", "/"
+        ),
         "inputs": {
-            "segment_stitch_report_relpath": str(report_path.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
-            "frame_manifest_relpath": str(frame_manifest_path.resolve().relative_to(repo_root.resolve())).replace("\\", "/")
-            if frame_manifest_path is not None and frame_manifest_path.exists()
-            else None,
+            "segment_stitch_report_relpath": str(
+                report_path.resolve().relative_to(repo_root.resolve())
+            ).replace("\\", "/"),
+            "frame_manifest_relpath": (
+                str(
+                    frame_manifest_path.resolve().relative_to(repo_root.resolve())
+                ).replace("\\", "/")
+                if frame_manifest_path is not None and frame_manifest_path.exists()
+                else None
+            ),
         },
         "seam_previews": seam_previews,
-        "motion_curve_snapshot_relpath": str(motion_curve_path.resolve().relative_to(repo_root.resolve())).replace("\\", "/"),
+        "motion_curve_snapshot_relpath": str(
+            motion_curve_path.resolve().relative_to(repo_root.resolve())
+        ).replace("\\", "/"),
         "checkpoint_strip_relpath": checkpoint_strip_relpath,
     }
     atomic_write_json(manifest_path, manifest)
@@ -2271,17 +2497,19 @@ def emit_segment_debug_exports(
     }
 
 
-
-
 def has_audio_stream(path: pathlib.Path) -> bool:
     try:
         cmd = [
             "ffprobe",
-            "-v", "error",
-            "-select_streams", "a:0",
-            "-show_entries", "stream=codec_type",
-            "-of", "csv=p=0",
-            str(path)
+            "-v",
+            "error",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=codec_type",
+            "-of",
+            "csv=p=0",
+            str(path),
         ]
         out = subprocess.check_output(cmd, text=True).strip()
         return bool(out)
@@ -2293,29 +2521,29 @@ def has_audio_stream(path: pathlib.Path) -> bool:
 def resolve_audio_asset(job: dict, sandbox_root: pathlib.Path) -> pathlib.Path | None:
     if "audio" not in job or "audio_asset" not in job["audio"]:
         return None
-    
+
     clean_path = job["audio"]["audio_asset"]
     if not clean_path:
         return None
-        
+
     try:
         p = normalize_sandbox_path(clean_path, sandbox_root)
-        
+
         # Security check: fail loud if unsafe path
         validate_safe_path(p, sandbox_root)
-        
+
         # Existence check: fail soft (warn and fallback)
         if not p.exists():
             print(f"WARNING: Audio asset missing, falling back to silence/bg: {p}")
             return None
-            
+
         # Extension check: fail soft
         # PR20: Allow video containers (mp4, mov, etc) to be used as audio sources
         valid_exts = [".mp3", ".wav", ".m4a", ".aac", ".mp4", ".mov", ".mkv", ".webm"]
         if p.suffix.lower() not in valid_exts:
-             print(f"WARNING: Unsupported audio format, falling back: {p.suffix}")
-             return None
-            
+            print(f"WARNING: Unsupported audio format, falling back: {p.suffix}")
+            return None
+
         print(f"Found audio asset: {p}")
         return p
     except ValueError as e:
@@ -2351,41 +2579,49 @@ def ffmpeg_has_subtitles_filter() -> bool:
     return _HAS_SUBTITLES_FILTER
 
 
-def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path) -> dict:
+def render_image_motion(
+    job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path
+) -> dict:
     job_id = job["job_id"]
-    
+
     # 1. Validate Lane B inputs
     if "image_motion" not in job:
-        raise SystemExit("Lane 'image_motion' requires 'image_motion' field in job.json")
-    
+        raise SystemExit(
+            "Lane 'image_motion' requires 'image_motion' field in job.json"
+        )
+
     im_config = job["image_motion"]
     seed_frames = im_config.get("seed_frames", [])
     preset = im_config.get("motion_preset")
-    
+
     if not seed_frames or not isinstance(seed_frames, list):
         raise SystemExit("image_motion.seed_frames must be a non-empty list")
-    
+
     if len(seed_frames) > 3:
         raise SystemExit("image_motion.seed_frames max 3 frames supported")
-        
+
     if not preset:
         raise SystemExit("image_motion.motion_preset is required")
 
     # 2. Resolve safe paths
     safe_seeds = []
-    
+
     # 2b. Identity Pack Resolution (PR-37.5)
     hero = job.get("hero", {})
     identity_pack_ref = hero.get("identity_pack_ref")
     if identity_pack_ref:
         print(f"INFO: Resolving identity pack from {identity_pack_ref}")
         try:
-            pack_path = resolve_project_relpath(identity_pack_ref, repo_root_from_here(), sandbox_root)
+            pack_path = resolve_project_relpath(
+                identity_pack_ref, repo_root_from_here(), sandbox_root
+            )
             if pack_path.exists():
                 pack = load_json_file(pack_path)
                 front_ref = (pack.get("references") or {}).get("front")
                 if front_ref:
-                    print(f"INFO: Using identity-pack front-reference as primary seed: {front_ref}")
+                    print(
+                        f"INFO: Using identity-pack front-reference as primary seed: {front_ref}"
+                    )
                     # Prepend to seed_frames if not already there or if we want to prioritize it
                     if front_ref not in seed_frames:
                         seed_frames = [front_ref] + seed_frames
@@ -2413,16 +2649,16 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     # 4. Filter Graph Construction
     inputs: list[str] = []
     filter_chain: list[str] = []
-    
+
     next_input_idx = 0  # Unified input counter
-    
+
     # Constants
     VIDEO_W = 1080
     VIDEO_H = 1920
-    
+
     # Base scale/crop filter
     scale_crop = f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,crop={VIDEO_W}:{VIDEO_H}"
-    
+
     # Preset Expressions
     PRESETS = {
         "kb_zoom_in": f"zoompan=z='min(zoom+0.0015,1.5)':d={{d}}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_W}x{VIDEO_H}",
@@ -2430,54 +2666,56 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
         "pan_lr": f"zoompan=z=1.2:d={{d}}:x='on*(iw-iw/zoom)/{{d}}':y='ih/2-(ih/zoom/2)':s={VIDEO_W}x{VIDEO_H}",
         "pan_ud": f"zoompan=z=1.2:d={{d}}:x='iw/2-(iw/zoom/2)':y='on*(ih-ih/zoom)/{{d}}':s={VIDEO_W}x{VIDEO_H}",
         "shake_soft": f"zoompan=z=1.1:d={{d}}:x='iw/2-(iw/zoom/2)+20*sin(on/20)':y='ih/2-(ih/zoom/2)+20*cos(on/20)':s={VIDEO_W}x{VIDEO_H}",
-        "static": f"zoompan=z=1.0:d={{d}}:x=0:y=0:s={VIDEO_W}x{VIDEO_H}" 
+        "static": f"zoompan=z=1.0:d={{d}}:x=0:y=0:s={VIDEO_W}x{VIDEO_H}",
     }
 
     # -- Video Inputs (Images) First --
     # Add image inputs before audio to ensure stable video indexing
-    
+
     if preset == "cut_3frame" and len(safe_seeds) > 1:
         # Multi-frame (2 or 3)
         count = len(safe_seeds)
         seg_frames_base = total_frames // count
         remainder = total_frames % count
-        
+
         concat_inputs = []
-        
+
         for i, p in enumerate(safe_seeds):
             current_seg_frames = seg_frames_base + (1 if i < remainder else 0)
             current_seg_duration = current_seg_frames / fps
-            
+
             # Use next_input_idx for image input
             input_idx = next_input_idx
-            inputs.extend(["-loop", "1", "-t", f"{current_seg_duration:.3f}", "-i", str(p)])
+            inputs.extend(
+                ["-loop", "1", "-t", f"{current_seg_duration:.3f}", "-i", str(p)]
+            )
             next_input_idx += 1
-            
+
             zp_expr = PRESETS["kb_zoom_in"].format(d=current_seg_frames)
-            
+
             filter_chain.append(f"[{input_idx}:v]{scale_crop},setsar=1[v{i}_base]")
             filter_chain.append(f"[v{i}_base]{zp_expr}[v{i}_zoom]")
             concat_inputs.append(f"[v{i}_zoom]")
-            
+
         concat_str = "".join(concat_inputs)
         filter_chain.append(f"{concat_str}concat=n={count}:v=1:a=0[bg]")
-        
+
     else:
         # Single frame or fallback
         if preset == "cut_3frame":
-             preset = "kb_zoom_in"
-             
+            preset = "kb_zoom_in"
+
         if preset not in PRESETS:
             raise SystemExit(f"Unknown or unsupported preset: {preset}")
-            
+
         if not safe_seeds:
-             raise SystemExit("No seed frames available")
-             
+            raise SystemExit("No seed frames available")
+
         p_path = safe_seeds[0]
         input_idx = next_input_idx
         inputs.extend(["-loop", "1", "-i", str(p_path)])
         next_input_idx += 1
-        
+
         zp_expr = PRESETS[preset].format(d=total_frames)
         filter_chain.append(f"[{input_idx}:v]{scale_crop},setsar=1[base]")
         filter_chain.append(f"[base]{zp_expr}[bg]")
@@ -2485,10 +2723,10 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     # -- Audio Inputs --
     # Prio: Job Asset > Silence (Images have no BG audio)
     audio_asset = resolve_audio_asset(job, sandbox_root)
-    has_bg_audio = False # Images don't have audio stream
+    has_bg_audio = False  # Images don't have audio stream
     audio_source = "silence"
     audio_input_idx = -1
-    
+
     if audio_asset:
         audio_source = "job_asset"
         # -stream_loop -1 allows audio to loop if shorter than video duration
@@ -2498,11 +2736,16 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     else:
         audio_source = "silence"
         # Inject deterministic silence
-        inputs.extend([
-            "-f", "lavfi", 
-            "-t", str(duration), 
-            "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"
-        ])
+        inputs.extend(
+            [
+                "-f",
+                "lavfi",
+                "-t",
+                str(duration),
+                "-i",
+                "anullsrc=channel_layout=stereo:sample_rate=48000",
+            ]
+        )
         audio_input_idx = next_input_idx
         next_input_idx += 1
 
@@ -2510,66 +2753,90 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
     wm_input_idx = next_input_idx
     inputs.extend(["-i", str(wm_path)])
     next_input_idx += 1
-    filter_chain.append(f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]")
+    filter_chain.append(
+        f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
+    )
 
     # Now we have [bg] at 1080x1920
     out_mp4 = out_dir / "final.mp4"
     srt_path = out_dir / "final.srt"
-    
+
     subtitles_status = prepare_subtitles_file(job, srt_path, sandbox_root)
-    
+
     current_bg_ref = "[bg]"
-    
+
     if subtitles_status == "ready_to_burn":
         try:
             validate_safe_path(srt_path, sandbox_root)
         except ValueError:
             subtitles_status = "skipped_unsafe_path"
 
-    attempt_burn = (subtitles_status == "ready_to_burn")
+    attempt_burn = subtitles_status == "ready_to_burn"
     if attempt_burn and not ffmpeg_has_subtitles_filter():
         subtitles_status = "skipped_missing_subtitles_filter"
         attempt_burn = False
-    
+
     def build_final_chain(burning: bool):
         c = list(filter_chain)
         ref = current_bg_ref
         if burning:
-             safe_srt = escape_ffmpeg_path(srt_path)
-             c.append(f"{ref}subtitles=filename='{safe_srt}'[v_sub]")
-             ref = "[v_sub]"
-        
+            safe_srt = escape_ffmpeg_path(srt_path)
+            c.append(f"{ref}subtitles=filename='{safe_srt}'[v_sub]")
+            ref = "[v_sub]"
+
         c.append(f"{ref}[wm]overlay=W-w-{PADDING_PX}:H-h-{PADDING_PX}[out]")
         return ";".join(c)
 
     executed_cmd = []
     failed_cmd = None
-    
+
     audio_filter = build_audio_filter(duration)
 
     output_args = [
-        "-map", "[out]",
-        "-map", f"{audio_input_idx}:a:0",
-        "-t", str(duration),
-        "-r", str(fps),
-        "-c:v", "libx264",
-        "-preset", "slow", "-crf", "18",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-ar", "48000",
-        "-ac", "2",
-        "-af", audio_filter,
-        "-movflags", "+faststart",
-        "-map_metadata", "-1",
-        "-map_chapters", "-1",
-        str(out_mp4)
+        "-map",
+        "[out]",
+        "-map",
+        f"{audio_input_idx}:a:0",
+        "-t",
+        str(duration),
+        "-r",
+        str(fps),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "slow",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-af",
+        audio_filter,
+        "-movflags",
+        "+faststart",
+        "-map_metadata",
+        "-1",
+        "-map_chapters",
+        "-1",
+        str(out_mp4),
     ]
-    
+
     if attempt_burn:
         try:
             full_filter = build_final_chain(True)
-            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", full_filter] + output_args
+            cmd = (
+                ["ffmpeg", "-y"]
+                + inputs
+                + ["-filter_complex", full_filter]
+                + output_args
+            )
             print(f"Rendering Image Motion ({preset}) with subtitles...")
             executed_cmd = run_ffmpeg(cmd, out_mp4)
             subtitles_status = "burned"
@@ -2578,13 +2845,13 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
             subtitles_status = "failed_ffmpeg_subtitles"
             failed_cmd = cmd
             attempt_burn = False
-            
+
     if not attempt_burn:
         full_filter = build_final_chain(False)
         cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", full_filter] + output_args
         print(f"Rendering Image Motion ({preset}) clean...")
         executed_cmd = run_ffmpeg(cmd, out_mp4)
-        
+
     return {
         "job_id": job_id,
         "outputs": {
@@ -2611,29 +2878,31 @@ def render_image_motion(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.
         "subtitles_status": subtitles_status,
         "ffmpeg_cmd": cmd,
         "ffmpeg_cmd_executed": executed_cmd,
-        "failed_ffmpeg_cmd": failed_cmd
+        "failed_ffmpeg_cmd": failed_cmd,
     }
 
 
-def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path) -> dict:
+def render_standard(
+    job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path
+) -> dict:
     # Standard render logic refactored from main
     job_id = job["job_id"]
-    
+
     # background_asset is stored as a sandbox-relative path in the contract
     bg_rel = job["render"]["background_asset"]
-    
+
     try:
         bg = normalize_sandbox_path(bg_rel, sandbox_root)
         validate_safe_path(bg, sandbox_root)
     except ValueError as e:
         raise SystemExit(str(e))
-    
+
     if not bg.exists():
         raise SystemExit(f"Missing background asset: {bg}")
 
     out_mp4 = out_dir / "final.mp4"
     srt_path = out_dir / "final.srt"
-    
+
     subtitles_status = prepare_subtitles_file(job, srt_path, sandbox_root)
 
     # Get video dimensions (height unused but returned for completeness/logging if needed)
@@ -2651,7 +2920,9 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     # by default, align output duration to generated source video duration to avoid
     # long padded outputs that feel unsynced.
     if lane == "ai_video":
-        match_source = os.environ.get("CAF_AI_VIDEO_MATCH_SOURCE_DURATION", "0").strip().lower()
+        match_source = (
+            os.environ.get("CAF_AI_VIDEO_MATCH_SOURCE_DURATION", "0").strip().lower()
+        )
         if match_source in ("1", "true", "yes"):
             src_dur = get_video_duration(bg)
             if src_dur > 0.0:
@@ -2672,20 +2943,20 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     # Inputs Construction
     inputs = []
     next_input_idx = 0
-    
+
     # Input 0: Background
     # Add input first, then increment counter and use it
     current_bg_idx = next_input_idx
     inputs.extend(["-i", str(bg)])
     next_input_idx += 1
-    
+
     # -- Audio Logic (Standard) --
     # Prio: Job Asset > BG Audio > Silence
     audio_asset = resolve_audio_asset(job, sandbox_root)
     has_bg_audio = has_audio_stream(bg)
     audio_source = "silence"
     audio_input_idx = -1
-    
+
     if audio_asset:
         audio_source = "job_asset"
         inputs.extend(["-stream_loop", "-1", "-i", str(audio_asset)])
@@ -2693,14 +2964,19 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
         next_input_idx += 1
     elif has_bg_audio:
         audio_source = "bg_audio"
-        audio_input_idx = current_bg_idx # Use BG input
+        audio_input_idx = current_bg_idx  # Use BG input
     else:
         audio_source = "silence"
-        inputs.extend([
-            "-f", "lavfi", 
-            "-t", duration, 
-            "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"
-        ])
+        inputs.extend(
+            [
+                "-f",
+                "lavfi",
+                "-t",
+                duration,
+                "-i",
+                "anullsrc=channel_layout=stereo:sample_rate=48000",
+            ]
+        )
         audio_input_idx = next_input_idx
         next_input_idx += 1
 
@@ -2711,7 +2987,9 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
     # Helper to build filter string
     def build_filter(include_subtitles: bool):
         f = []
-        f.append(f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]")
+        f.append(
+            f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
+        )
         current_bg_ref = f"[{current_bg_idx}:v]"
 
         # Apply subtitles (optional).
@@ -2719,9 +2997,9 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
         if include_subtitles and srt_path.exists() and srt_path.stat().st_size > 0:
             # Strict validation
             validate_safe_path(srt_path, sandbox_root)
-            
+
             safe_srt_path = escape_ffmpeg_path(srt_path)
-            
+
             f.append(f"{current_bg_ref}subtitles=filename='{safe_srt_path}'[v_sub]")
             current_bg_ref = "[v_sub]"
 
@@ -2730,37 +3008,63 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
 
     # Strategy: Try with subtitles first (if they exist). If that fails (e.g. no libass),
     # fallback to clean render without subtitles.
-    
+
     final_cmd_logical = []
     final_cmd_executed = []
     failed_cmd = None
-    
+
     audio_filter = build_audio_filter(duration)
-    
+
     output_args = [
-        "-map", "[out]",
-        "-map", f"{audio_input_idx}:a:0",
-        "-t", duration,
-        "-r", fps,
-        "-c:v", "libx264",
-        "-preset", "slow", "-crf", "18",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-ar", "48000",
-        "-ac", "2",
-        "-af", audio_filter,
-        "-movflags", "+faststart",
-        "-map_metadata", "-1",
-        "-map_chapters", "-1",
+        "-map",
+        "[out]",
+        "-map",
+        f"{audio_input_idx}:a:0",
+        "-t",
+        duration,
+        "-r",
+        fps,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "slow",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-af",
+        audio_filter,
+        "-movflags",
+        "+faststart",
+        "-map_metadata",
+        "-1",
+        "-map_chapters",
+        "-1",
         str(out_mp4),
     ]
 
     # Attempt 1: With Subtitles (if available and non-empty and ffmpeg supports subtitles filter)
-    if srt_path.exists() and srt_path.stat().st_size > 0 and ffmpeg_has_subtitles_filter():
+    if (
+        srt_path.exists()
+        and srt_path.stat().st_size > 0
+        and ffmpeg_has_subtitles_filter()
+    ):
         try:
             full_filter = build_filter(include_subtitles=True)
-            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", full_filter] + output_args
+            cmd = (
+                ["ffmpeg", "-y"]
+                + inputs
+                + ["-filter_complex", full_filter]
+                + output_args
+            )
             print("Attempting render with subtitles...")
             executed = run_ffmpeg(cmd, out_mp4)
             subtitles_status = "burned"
@@ -2773,11 +3077,11 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
             else:
                 subtitles_status = "failed_ffmpeg_subtitles"
                 failed_cmd = cmd
-            
+
             # Clean up potential partial output
             if out_mp4.exists():
                 out_mp4.unlink()
-    
+
     # Attempt 2: clean render (if Attempt 1 failed or no subtitles)
     if not out_mp4.exists():
         full_filter = build_filter(include_subtitles=False)
@@ -2811,11 +3115,13 @@ def render_standard(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path
         "subtitles_status": subtitles_status,
         "ffmpeg_cmd": final_cmd_logical,
         "ffmpeg_cmd_executed": final_cmd_executed,
-        "failed_ffmpeg_cmd": failed_cmd
+        "failed_ffmpeg_cmd": failed_cmd,
     }
 
 
-def render_dance_swap(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path) -> dict:
+def render_dance_swap(
+    job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path
+) -> dict:
     """Deterministic dance-swap render path using validated slot contracts."""
     job_id = job["job_id"]
     ds = resolve_dance_swap_contracts(job, sandbox_root)
@@ -2851,7 +3157,16 @@ def render_dance_swap(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Pa
     audio_source = "bg_audio" if has_audio_stream(source_video) else "silence"
     audio_input_idx = source_idx
     if audio_source == "silence":
-        inputs.extend(["-f", "lavfi", "-t", duration, "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"])
+        inputs.extend(
+            [
+                "-f",
+                "lavfi",
+                "-t",
+                duration,
+                "-i",
+                "anullsrc=channel_layout=stereo:sample_rate=48000",
+            ]
+        )
         audio_input_idx = 3
 
     video_w, _ = get_video_dims(source_video)
@@ -2864,7 +3179,7 @@ def render_dance_swap(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Pa
     overlay_y = f"{slot_y}+{slot_dy:.3f}*cos(2*PI*{slot_hz:.6f}*t)"
     wm_core = f"[{wm_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
 
-    attempt_burn = (subtitles_status == "ready_to_burn" and ffmpeg_has_subtitles_filter())
+    attempt_burn = subtitles_status == "ready_to_burn" and ffmpeg_has_subtitles_filter()
     if subtitles_status == "ready_to_burn" and not ffmpeg_has_subtitles_filter():
         subtitles_status = "skipped_missing_subtitles_filter"
 
@@ -2875,28 +3190,47 @@ def render_dance_swap(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Pa
             safe_srt = escape_ffmpeg_path(srt_path)
             parts.append(f"{base_ref}subtitles=filename='{safe_srt}'[v_sub]")
             base_ref = "[v_sub]"
-        parts.append(f"{base_ref}[fgfit]overlay=x='{overlay_x}':y='{overlay_y}':format=auto[v_swap]")
+        parts.append(
+            f"{base_ref}[fgfit]overlay=x='{overlay_x}':y='{overlay_y}':format=auto[v_swap]"
+        )
         parts.append(wm_core)
         parts.append(f"[v_swap][wm]overlay=W-w-{PADDING_PX}:H-h-{PADDING_PX}[out]")
         return ";".join(parts)
 
     audio_filter = build_audio_filter(duration)
     output_args = [
-        "-map", "[out]",
-        "-map", f"{audio_input_idx}:a:0",
-        "-t", duration,
-        "-r", fps,
-        "-c:v", "libx264",
-        "-preset", "slow", "-crf", "18",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-ar", "48000",
-        "-ac", "2",
-        "-af", audio_filter,
-        "-movflags", "+faststart",
-        "-map_metadata", "-1",
-        "-map_chapters", "-1",
+        "-map",
+        "[out]",
+        "-map",
+        f"{audio_input_idx}:a:0",
+        "-t",
+        duration,
+        "-r",
+        fps,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "slow",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-af",
+        audio_filter,
+        "-movflags",
+        "+faststart",
+        "-map_metadata",
+        "-1",
+        "-map_chapters",
+        "-1",
         str(out_mp4),
     ]
 
@@ -2905,7 +3239,12 @@ def render_dance_swap(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Pa
     failed_cmd: list[str] | None = None
     if attempt_burn:
         try:
-            cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", _build_filter(True)] + output_args
+            cmd = (
+                ["ffmpeg", "-y"]
+                + inputs
+                + ["-filter_complex", _build_filter(True)]
+                + output_args
+            )
             final_cmd_executed = run_ffmpeg(cmd, out_mp4)
             final_cmd_logical = cmd
             subtitles_status = "burned"
@@ -2916,7 +3255,12 @@ def render_dance_swap(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Pa
                 out_mp4.unlink()
 
     if not out_mp4.exists():
-        cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", _build_filter(False)] + output_args
+        cmd = (
+            ["ffmpeg", "-y"]
+            + inputs
+            + ["-filter_complex", _build_filter(False)]
+            + output_args
+        )
         final_cmd_executed = run_ffmpeg(cmd, out_mp4)
         final_cmd_logical = cmd
 
@@ -2949,12 +3293,18 @@ def render_dance_swap(job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Pa
     }
 
 
-def enforce_motion_constraints(job: dict, repo_root: pathlib.Path) -> list[dict[str, Any]]:
+def enforce_motion_constraints(
+    job: dict, repo_root: pathlib.Path
+) -> list[dict[str, Any]]:
     gen = job.get("generation_policy")
     if not isinstance(gen, dict):
         return []
     motion = gen.get("motion_constraints")
-    motion_list = [str(x) for x in motion if isinstance(x, str)] if isinstance(motion, list) else []
+    motion_list = (
+        [str(x) for x in motion if isinstance(x, str)]
+        if isinstance(motion, list)
+        else []
+    )
     out: list[dict[str, Any]] = []
     for cid in motion_list:
         if cid != "openpose_constraint":
@@ -2962,18 +3312,28 @@ def enforce_motion_constraints(job: dict, repo_root: pathlib.Path) -> list[dict[
             continue
         mc = job.get("motion_contract")
         if not isinstance(mc, dict):
-            raise SystemExit("motion_constraints=openpose_constraint requires motion_contract block")
+            raise SystemExit(
+                "motion_constraints=openpose_constraint requires motion_contract block"
+            )
         relpath = mc.get("relpath")
         if not isinstance(relpath, str) or not relpath.startswith("repo/"):
-            raise SystemExit("motion_contract.relpath must be repo-relative for openpose_constraint")
+            raise SystemExit(
+                "motion_contract.relpath must be repo-relative for openpose_constraint"
+            )
         contract_path = repo_root / relpath
         if not contract_path.exists():
-            raise SystemExit(f"motion_contract missing for openpose_constraint: {contract_path}")
+            raise SystemExit(
+                f"motion_contract missing for openpose_constraint: {contract_path}"
+            )
         data = load_json_file(contract_path)
         version = str(data.get("version", ""))
         if version != "pose_checkpoints.v1":
-            raise SystemExit("openpose_constraint requires pose_checkpoints.v1 motion contract")
-        out.append({"constraint_id": cid, "status": "applied", "contract_relpath": relpath})
+            raise SystemExit(
+                "openpose_constraint requires pose_checkpoints.v1 motion contract"
+            )
+        out.append(
+            {"constraint_id": cid, "status": "applied", "contract_relpath": relpath}
+        )
     return out
 
 
@@ -2987,7 +3347,9 @@ def apply_post_process_order(
     if not isinstance(gen, dict):
         return []
     post = gen.get("post_process_order")
-    post_list = [str(x) for x in post if isinstance(x, str)] if isinstance(post, list) else []
+    post_list = (
+        [str(x) for x in post if isinstance(x, str)] if isinstance(post, list) else []
+    )
     out: list[dict[str, Any]] = []
     for step_id in post_list:
         if step_id == "rife_film_post":
@@ -3020,7 +3382,9 @@ def apply_post_process_order(
             ]
             run_ffmpeg(cmd, tmp)
             tmp.replace(final_mp4)
-            out.append({"step_id": step_id, "status": "applied", "impl": "ffmpeg_minterpolate"})
+            out.append(
+                {"step_id": step_id, "status": "applied", "impl": "ffmpeg_minterpolate"}
+            )
             continue
         if step_id == "esrgan_selective_post":
             # Deterministic lightweight sharpening/denoise approximation in absence of ESRGAN runtime.
@@ -3052,7 +3416,13 @@ def apply_post_process_order(
             ]
             run_ffmpeg(cmd, tmp)
             tmp.replace(final_mp4)
-            out.append({"step_id": step_id, "status": "applied", "impl": "ffmpeg_sharpen_denoise"})
+            out.append(
+                {
+                    "step_id": step_id,
+                    "status": "applied",
+                    "impl": "ffmpeg_sharpen_denoise",
+                }
+            )
             continue
         out.append({"step_id": step_id, "status": "skipped_unknown_step"})
     return out
@@ -3069,7 +3439,9 @@ def main():
     args = parser.parse_args()
 
     root = repo_root_from_here()
-    sandbox_root = pathlib.Path(args.sandbox_root) if args.sandbox_root else (root / "sandbox")
+    sandbox_root = (
+        pathlib.Path(args.sandbox_root) if args.sandbox_root else (root / "sandbox")
+    )
 
     jobs_dir = sandbox_root / "jobs"
     output_root = sandbox_root / "output"
@@ -3089,25 +3461,38 @@ def main():
     out_dir = output_root / job_id
     out_dir.mkdir(parents=True, exist_ok=True)
     result_path = out_dir / "result.json"
-    
+
     target_shot_id = os.environ.get("CAF_TARGET_SHOT_ID", "").strip()
     if target_shot_id:
-        print(f"INFO: Worker running in Shot-Targeting mode (shot_id='{target_shot_id}')")
+        print(
+            f"INFO: Worker running in Shot-Targeting mode (shot_id='{target_shot_id}')"
+        )
         shots = job.get("shots", [])
-        target_shot = next((s for s in shots if s.get("shot_id") == target_shot_id), None)
+        target_shot = next(
+            (s for s in shots if s.get("shot_id") == target_shot_id), None
+        )
         if not target_shot:
-            print(f"ERROR: shot_id '{target_shot_id}' not found in job JSON.", file=sys.stderr)
+            print(
+                f"ERROR: shot_id '{target_shot_id}' not found in job JSON.",
+                file=sys.stderr,
+            )
             sys.exit(1)
         # For granular mode, we redirect output to a shot-specific path if not explicitly provided
-        # But render_ffmpeg typically writes to out_dir/final.mp4. 
+        # But render_ffmpeg typically writes to out_dir/final.mp4.
         # The Orchestrator should have set out_dir to the shot-specific subfolder.
     comfy_generation: dict[str, Any] | None = None
     motion_constraints_runtime: list[dict[str, Any]] = []
     post_process_runtime: list[dict[str, Any]] = []
 
-    gen_policy = job.get("generation_policy") if isinstance(job.get("generation_policy"), dict) else {}
+    gen_policy = (
+        job.get("generation_policy")
+        if isinstance(job.get("generation_policy"), dict)
+        else {}
+    )
     selected_video_provider = str(gen_policy.get("selected_video_provider", "")).strip()
-    comfy_required = selected_video_provider == "comfyui_video" or isinstance(job.get("comfyui"), dict)
+    comfy_required = selected_video_provider == "comfyui_video" or isinstance(
+        job.get("comfyui"), dict
+    )
     if comfy_required:
         comfy_generation = generate_comfyui_video_asset(
             job=job,
@@ -3115,7 +3500,11 @@ def main():
             sandbox_root=sandbox_root,
             out_dir=out_dir,
         )
-        comfy_rel = comfy_generation.get("output_relpath") if isinstance(comfy_generation, dict) else None
+        comfy_rel = (
+            comfy_generation.get("output_relpath")
+            if isinstance(comfy_generation, dict)
+            else None
+        )
         if isinstance(comfy_rel, str) and comfy_rel.strip():
             job.setdefault("render", {})
             job["render"]["background_asset"] = comfy_rel.strip()
@@ -3127,27 +3516,31 @@ def main():
     lane = job.get("lane", "")
     template_id = None
     recipe_id = None
-    
+
     if lane == "template_remix":
         # PR18: Lane C Logic
         # 1. Require registry
         registry = load_template_registry(root)
-        
+
         # 2. Require job.template and valid template_id
         if "template" not in job:
-            raise SystemExit("Lane 'template_remix' requires 'template' field in job.json")
-        
+            raise SystemExit(
+                "Lane 'template_remix' requires 'template' field in job.json"
+            )
+
         template_id = job["template"]["template_id"]
         if template_id not in registry.get("templates", {}):
             raise SystemExit(f"Unknown template_id: {template_id}")
-             
+
         template_config = registry["templates"][template_id]
-        
+
         # 3. Validate required inputs
         for req_input in template_config.get("required_inputs", []):
             if req_input == "render.background_asset":
                 if "background_asset" not in job.get("render", {}):
-                    raise SystemExit(f"Template '{template_id}' requires 'render.background_asset' in job")
+                    raise SystemExit(
+                        f"Template '{template_id}' requires 'render.background_asset' in job"
+                    )
             elif req_input == "template.params.foreground_asset":
                 params = job.get("template", {}).get("params", {})
                 if not isinstance(params, dict) or "foreground_asset" not in params:
@@ -3161,17 +3554,18 @@ def main():
                     "Only 'render.background_asset' and 'template.params.foreground_asset' are supported."
                 )
 
-
         # 4. Validate Params (Worker-side enforcement)
         params = job["template"].get("params", {})
         clip_start = params.get("clip_start_seconds")
         clip_end = params.get("clip_end_seconds")
-        
+
         # Note: These params are validated here but not yet used in the standard_render recipe.
         # They are reserved for future recipe implementations.
         if clip_start is not None and clip_end is not None:
             if clip_end < clip_start:
-                raise SystemExit(f"Invalid params: clip_end_seconds ({clip_end}) must be >= clip_start_seconds ({clip_start})")
+                raise SystemExit(
+                    f"Invalid params: clip_end_seconds ({clip_end}) must be >= clip_start_seconds ({clip_start})"
+                )
 
         # 5. Dispatch recipe
         recipe_id = template_config.get("recipe_id")
@@ -3199,7 +3593,9 @@ def main():
         fps=int(job["video"].get("fps", 30) or 30),
     )
     # Refresh final hash after post-processing mutations.
-    render_result["hashes"]["final_mp4_sha256"] = sha256_file(pathlib.Path(render_result["outputs"]["final_mp4"]))
+    render_result["hashes"]["final_mp4_sha256"] = sha256_file(
+        pathlib.Path(render_result["outputs"]["final_mp4"])
+    )
 
     retry_hook = load_retry_hook(job=job, sandbox_root=sandbox_root)
     segment_runtime = execute_segment_stitch_runtime(
@@ -3221,7 +3617,7 @@ def main():
         "outputs": render_result["outputs"],
         "hashes": {
             "job_json_sha256": sha256_file(pathlib.Path(job_path)),
-            **render_result["hashes"]
+            **render_result["hashes"],
         },
         "watermark": render_result["watermark"],
         "subtitles_status": render_result["subtitles_status"],
@@ -3234,7 +3630,7 @@ def main():
     }
     if comfy_generation is not None:
         final_result["comfy_generation"] = comfy_generation
-    
+
     if lane == "template_remix":
         final_result["template_id"] = template_id
         final_result["recipe_id"] = recipe_id
@@ -3243,7 +3639,7 @@ def main():
         final_result["seed_frames_count"] = render_result["seed_frames_count"]
     elif lane == "dance_swap":
         final_result["dance_swap_runtime"] = render_result.get("dance_swap_runtime")
-    
+
     if render_result.get("failed_ffmpeg_cmd"):
         final_result["failed_ffmpeg_cmd"] = render_result["failed_ffmpeg_cmd"]
 

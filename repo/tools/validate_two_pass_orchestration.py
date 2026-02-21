@@ -45,11 +45,17 @@ def main(argv: list[str]) -> int:
         return 1
 
     action = str(data.get("orchestration", {}).get("next_preferred_action", ""))
-    motion_status = str(data.get("passes", {}).get("motion", {}).get("status", "unknown"))
-    identity_status = str(data.get("passes", {}).get("identity", {}).get("status", "unknown"))
+    motion_status = str(
+        data.get("passes", {}).get("motion", {}).get("status", "unknown")
+    )
+    identity_status = str(
+        data.get("passes", {}).get("identity", {}).get("status", "unknown")
+    )
 
     if action == "retry_motion" and motion_status != "fail":
-        print("SEMANTIC_ERROR: retry_motion requires motion.status=fail", file=sys.stderr)
+        print(
+            "SEMANTIC_ERROR: retry_motion requires motion.status=fail", file=sys.stderr
+        )
         return 1
     if action in {"retry_recast", "block_for_costume"} and identity_status != "fail":
         print(

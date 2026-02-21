@@ -17,7 +17,9 @@ def _write(path: pathlib.Path, payload: dict) -> None:
 
 
 def _run(cmd: list[str], cwd: pathlib.Path) -> int:
-    proc = subprocess.run(cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.run(
+        cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     print(proc.stdout, end="")
     return proc.returncode
 
@@ -57,12 +59,42 @@ def main() -> int:
             "style_tone_refs": ["playful"],
         },
         "artifact_classes": {
-            "identity_anchor": {"required": True, "present": True, "consumers": ["planner"], "evidence": ["hero_ref:mochi"]},
-            "costume_style": {"required": True, "present": True, "consumers": ["planner"], "evidence": ["costume_ref:dino"]},
-            "background_setting": {"required": True, "present": True, "consumers": ["planner"], "evidence": ["background_ref:stage"]},
-            "framing_edit": {"required": True, "present": True, "consumers": ["planner"], "evidence": ["repo/canon/demo_analyses/smoke.video_analysis.v1.json"]},
-            "motion_trace": {"required": True, "present": True, "consumers": ["planner"], "evidence": ["repo/canon/demo_analyses/smoke.pose_checkpoints.v1.json"]},
-            "audio_beat": {"required": True, "present": True, "consumers": ["planner"], "evidence": ["repo/canon/demo_analyses/smoke.beat_grid.v1.json"]},
+            "identity_anchor": {
+                "required": True,
+                "present": True,
+                "consumers": ["planner"],
+                "evidence": ["hero_ref:mochi"],
+            },
+            "costume_style": {
+                "required": True,
+                "present": True,
+                "consumers": ["planner"],
+                "evidence": ["costume_ref:dino"],
+            },
+            "background_setting": {
+                "required": True,
+                "present": True,
+                "consumers": ["planner"],
+                "evidence": ["background_ref:stage"],
+            },
+            "framing_edit": {
+                "required": True,
+                "present": True,
+                "consumers": ["planner"],
+                "evidence": ["repo/canon/demo_analyses/smoke.video_analysis.v1.json"],
+            },
+            "motion_trace": {
+                "required": True,
+                "present": True,
+                "consumers": ["planner"],
+                "evidence": ["repo/canon/demo_analyses/smoke.pose_checkpoints.v1.json"],
+            },
+            "audio_beat": {
+                "required": True,
+                "present": True,
+                "consumers": ["planner"],
+                "evidence": ["repo/canon/demo_analyses/smoke.beat_grid.v1.json"],
+            },
         },
         "provenance": {
             "ingest_tool": "smoke",
@@ -82,12 +114,22 @@ def main() -> int:
     }
     _write(bad, bad_payload)
 
-    cmd_good = [sys.executable, "-m", "repo.tools.validate_sample_ingest_manifest", str(good)]
+    cmd_good = [
+        sys.executable,
+        "-m",
+        "repo.tools.validate_sample_ingest_manifest",
+        str(good),
+    ]
     if _run(cmd_good, root) != 0:
         print("ERROR: expected good sample_ingest manifest to pass", file=sys.stderr)
         return 1
 
-    cmd_bad = [sys.executable, "-m", "repo.tools.validate_sample_ingest_manifest", str(bad)]
+    cmd_bad = [
+        sys.executable,
+        "-m",
+        "repo.tools.validate_sample_ingest_manifest",
+        str(bad),
+    ]
     if _run(cmd_bad, root) == 0:
         print("ERROR: expected bad sample_ingest manifest to fail", file=sys.stderr)
         return 1

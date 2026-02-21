@@ -6,6 +6,7 @@ Used by:
 - repo/tools/validate_hero_registry.py (CLI)
 - repo/services/planner/planner_cli.py (Planner Service)
 """
+
 from __future__ import annotations
 
 import json
@@ -18,7 +19,9 @@ def load_json(path: str) -> Dict[str, Any]:
         return json.load(f)
 
 
-def validate_with_jsonschema(data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, List[str]]:
+def validate_with_jsonschema(
+    data: Dict[str, Any], schema: Dict[str, Any]
+) -> Tuple[bool, List[str]]:
     """
     Full validation using jsonschema if available.
     Returns (True, []) or (False, [error_messages]).
@@ -29,7 +32,7 @@ def validate_with_jsonschema(data: Dict[str, Any], schema: Dict[str, Any]) -> Tu
     except ImportError:
         # Proceed with semantic checks only if jsonschema is missing
         return True, []
-    
+
     try:
         jsonschema.validate(instance=data, schema=schema)
         return True, []
@@ -45,7 +48,7 @@ def validate_with_jsonschema(data: Dict[str, Any], schema: Dict[str, Any]) -> Tu
 def semantic_checks(registry: Dict[str, Any]) -> List[str]:
     """Perform extra semantic checks (uniqueness, etc)."""
     errors: List[str] = []
-    
+
     heroes = registry.get("heroes")
     if not isinstance(heroes, list):
         return errors
@@ -54,32 +57,36 @@ def semantic_checks(registry: Dict[str, Any]) -> List[str]:
     for i, hero in enumerate(heroes):
         if not isinstance(hero, dict):
             continue
-        
+
         hid = hero.get("hero_id")
         if not isinstance(hid, str):
             continue
-        
+
         if hid in seen_ids:
             first_idx = seen_ids[hid]
-            errors.append(f"Duplicate hero_id '{hid}' at heroes[{i}] (already seen at heroes[{first_idx}])")
+            errors.append(
+                f"Duplicate hero_id '{hid}' at heroes[{i}] (already seen at heroes[{first_idx}])"
+            )
         else:
             seen_ids[hid] = i
 
     return errors
 
 
-def validate_registry_data(registry: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, List[str]]:
+def validate_registry_data(
+    registry: Dict[str, Any], schema: Dict[str, Any]
+) -> Tuple[bool, List[str]]:
     """
     Validates registry data against schema data.
     Returns (True, []) on success, or (False, [errors]) on failure.
     """
     errors = []
-    
+
     # Schema Validation
     ok, schema_errors = validate_with_jsonschema(registry, schema)
     if not ok:
         errors.extend(schema_errors)
-    
+
     # Semantic Checks
     sem_errors = semantic_checks(registry)
     errors.extend(sem_errors)
@@ -87,7 +94,9 @@ def validate_registry_data(registry: Dict[str, Any], schema: Dict[str, Any]) -> 
     return (len(errors) == 0), errors
 
 
-def validate_registry_file(registry_path: str, schema_path: str) -> Tuple[bool, List[str]]:
+def validate_registry_file(
+    registry_path: str, schema_path: str
+) -> Tuple[bool, List[str]]:
     """
     Validates a registry file against a schema file.
     Returns (True, []) on success, or (False, [errors]) on failure.

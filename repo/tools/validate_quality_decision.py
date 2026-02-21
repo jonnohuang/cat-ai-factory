@@ -28,7 +28,9 @@ def _load(path: pathlib.Path) -> Any:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_quality_decision path/to/quality_decision.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_quality_decision path/to/quality_decision.v1.json"
+        )
         return 1
     target = pathlib.Path(argv[1]).resolve()
     if not target.exists():
@@ -53,15 +55,21 @@ def main(argv: list[str]) -> int:
     retry_attempt = int(data.get("policy", {}).get("retry_attempt", 0))
     action = str(data.get("decision", {}).get("action", ""))
     seg_retry = data.get("segment_retry", {}) if isinstance(data, dict) else {}
-    seg_mode = str(seg_retry.get("mode", "none")) if isinstance(seg_retry, dict) else "none"
-    seg_targets = seg_retry.get("target_segments", []) if isinstance(seg_retry, dict) else []
+    seg_mode = (
+        str(seg_retry.get("mode", "none")) if isinstance(seg_retry, dict) else "none"
+    )
+    seg_targets = (
+        seg_retry.get("target_segments", []) if isinstance(seg_retry, dict) else []
+    )
     if action in {"retry_recast", "retry_motion"} and retry_attempt > max_retries:
         eprint("SEMANTIC_ERROR: retry action requires retry_attempt <= max_retries")
         return 1
     if action == "retry_motion" and seg_mode == "none":
         eprint("SEMANTIC_ERROR: retry_motion requires segment_retry mode != none")
         return 1
-    if seg_mode == "retry_selected" and (not isinstance(seg_targets, list) or len(seg_targets) == 0):
+    if seg_mode == "retry_selected" and (
+        not isinstance(seg_targets, list) or len(seg_targets) == 0
+    ):
         eprint("SEMANTIC_ERROR: retry_selected requires target_segments")
         return 1
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Ralph Loop orchestrator: single-job CLI (PR-4)."""
+
 from __future__ import annotations
 
 import argparse
@@ -26,7 +27,13 @@ def repo_root_from_here() -> pathlib.Path:
 
 
 def now_ts() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
 
 def atomic_write_json(path: pathlib.Path, payload: Dict[str, Any]) -> None:
     tmp_path = path.with_suffix(path.suffix + ".tmp")
@@ -92,7 +99,11 @@ def run_cmd(
                 stdout=f,
                 stderr=subprocess.STDOUT,
                 env=env,
-                timeout=timeout_sec if isinstance(timeout_sec, int) and timeout_sec > 0 else None,
+                timeout=(
+                    timeout_sec
+                    if isinstance(timeout_sec, int) and timeout_sec > 0
+                    else None
+                ),
             )
             return proc.returncode, False
         except subprocess.TimeoutExpired:
@@ -122,7 +133,9 @@ def safe_rel(path: pathlib.Path, root: pathlib.Path) -> Optional[str]:
         return None
 
 
-def provider_switch_env_from_retry_plan(retry_plan_path: pathlib.Path) -> Dict[str, str]:
+def provider_switch_env_from_retry_plan(
+    retry_plan_path: pathlib.Path,
+) -> Dict[str, str]:
     payload = load_json_if_exists(retry_plan_path)
     if not isinstance(payload, dict):
         return {}
@@ -165,7 +178,10 @@ def append_retry_attempt_lineage(
     payload = load_json_if_exists(lineage_path)
     attempts: List[Dict[str, Any]] = []
     generated_at = now_ts()
-    if isinstance(payload, dict) and payload.get("version") == "retry_attempt_lineage.v1":
+    if (
+        isinstance(payload, dict)
+        and payload.get("version") == "retry_attempt_lineage.v1"
+    ):
         existing_attempts = payload.get("attempts", [])
         if isinstance(existing_attempts, list):
             attempts = [x for x in existing_attempts if isinstance(x, dict)]
@@ -249,7 +265,9 @@ def next_attempt_id(attempts_root: pathlib.Path) -> str:
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Ralph Loop single-job orchestrator.")
     parser.add_argument("--job", required=True, help="Path to a job.json file")
-    parser.add_argument("--max-retries", type=int, default=2, help="Max retries (default: 2)")
+    parser.add_argument(
+        "--max-retries", type=int, default=2, help="Max retries (default: 2)"
+    )
     parser.add_argument(
         "--worker-timeout-sec",
         type=int,
@@ -292,7 +310,7 @@ def main(argv: List[str]) -> int:
 
     # PR-26: Pre-flight Budget Check
     budget = BudgetTracker(str(sandbox_root))
-    if not budget.check_budget(0.0): # Zero cost just to check caps
+    if not budget.check_budget(0.0):  # Zero cost just to check caps
         summary = budget.get_usage_summary()
         append_event(
             events_path,
@@ -300,12 +318,11 @@ def main(argv: List[str]) -> int:
             None,
             "FAILED",
             None,
-            {
-                "reason": "Budget limits exceeded at start",
-                "summary": summary
-            }
+            {"reason": "Budget limits exceeded at start", "summary": summary},
         )
-        print(f"FATAL: Budget exceeded. Daily: {summary['daily_spent']}/{summary['daily_limit']}, Total: {summary['total_spent']}/{summary['total_limit']}")
+        print(
+            f"FATAL: Budget exceeded. Daily: {summary['daily_spent']}/{summary['daily_limit']}, Total: {summary['total_spent']}/{summary['total_limit']}"
+        )
         return 1
 
     try:
@@ -334,17 +351,26 @@ def main(argv: List[str]) -> int:
         nonlocal current_state
         append_event(events_path, event, current_state, to_state, attempt_id, details)
         current_state = to_state
-        write_state(state_path, canonical_job_id, to_state, attempt_id, reason, error, pointers)
+        write_state(
+            state_path, canonical_job_id, to_state, attempt_id, reason, error, pointers
+        )
 
     def warn(event: str, details: Dict[str, Any]) -> None:
         append_event(events_path, event, current_state, current_state, None, details)
 
-    def quality_decision(attempt_id: Optional[str] = None) -> Tuple[str, str, Dict[str, Any]]:
+    def quality_decision(
+        attempt_id: Optional[str] = None,
+    ) -> Tuple[str, str, Dict[str, Any]]:
         qc_dir = logs_dir / "qc"
         qc_dir.mkdir(parents=True, exist_ok=True)
         decision_log = qc_dir / "quality_decision.log"
         pass_log = qc_dir / "two_pass_orchestration.log"
-        pass_cmd = [py_exec, "repo/tools/derive_two_pass_orchestration.py", "--job-id", canonical_job_id]
+        pass_cmd = [
+            py_exec,
+            "repo/tools/derive_two_pass_orchestration.py",
+            "--job-id",
+            canonical_job_id,
+        ]
         pass_rc, _ = run_cmd(pass_cmd, pass_log)
         if pass_rc != 0:
             warn("TWO_PASS_ORCHESTRATION_FAILED", {"exit_code": pass_rc})
@@ -359,7 +385,11 @@ def main(argv: List[str]) -> int:
         rc, _ = run_cmd(decision_cmd, decision_log)
         if rc != 0:
             warn("QUALITY_DECISION_FAILED", {"exit_code": rc})
-            return "escalate_hitl", "quality decision tool failed; finalize gate is fail-closed", {}
+            return (
+                "escalate_hitl",
+                "quality decision tool failed; finalize gate is fail-closed",
+                {},
+            )
 
         decision_path = qc_dir / "quality_decision.v1.json"
         retry_plan_path = qc_dir / "retry_plan.v1.json"
@@ -369,8 +399,14 @@ def main(argv: List[str]) -> int:
         decision = payload.get("decision", {}) if isinstance(payload, dict) else {}
         action = decision.get("action") if isinstance(decision, dict) else None
         reason = decision.get("reason") if isinstance(decision, dict) else None
-        action_s = str(action) if isinstance(action, str) and action else "proceed_finalize"
-        reason_s = str(reason) if isinstance(reason, str) and reason else "quality decision unavailable"
+        action_s = (
+            str(action) if isinstance(action, str) and action else "proceed_finalize"
+        )
+        reason_s = (
+            str(reason)
+            if isinstance(reason, str) and reason
+            else "quality decision unavailable"
+        )
         append_event(
             events_path,
             "QUALITY_DECISION",
@@ -380,7 +416,10 @@ def main(argv: List[str]) -> int:
             {"action": action_s, "reason": reason_s, "artifact": str(decision_path)},
         )
         advice_payload = load_json_if_exists(advice_path)
-        if isinstance(advice_payload, dict) and advice_payload.get("version") == "qc_route_advice.v1":
+        if (
+            isinstance(advice_payload, dict)
+            and advice_payload.get("version") == "qc_route_advice.v1"
+        ):
             advice_action = advice_payload.get("advice", {}).get("recommended_action")
             advice_reason = advice_payload.get("advice", {}).get("reason")
             append_event(
@@ -408,10 +447,22 @@ def main(argv: List[str]) -> int:
                 source_reason = str(source.get("reason", reason_s))
                 max_retries = retry.get("max_retries")
                 next_attempt = retry.get("next_attempt")
-                provider_switch = retry.get("provider_switch") if isinstance(retry, dict) else None
-                provider_mode = provider_switch.get("mode") if isinstance(provider_switch, dict) else "none"
-                provider_next = provider_switch.get("next_provider") if isinstance(provider_switch, dict) else None
-                if provider_mode in {"video_provider", "frame_provider"} and isinstance(provider_next, str):
+                provider_switch = (
+                    retry.get("provider_switch") if isinstance(retry, dict) else None
+                )
+                provider_mode = (
+                    provider_switch.get("mode")
+                    if isinstance(provider_switch, dict)
+                    else "none"
+                )
+                provider_next = (
+                    provider_switch.get("next_provider")
+                    if isinstance(provider_switch, dict)
+                    else None
+                )
+                if provider_mode in {"video_provider", "frame_provider"} and isinstance(
+                    provider_next, str
+                ):
                     append_event(
                         events_path,
                         "QUALITY_PROVIDER_SWITCH",
@@ -432,7 +483,9 @@ def main(argv: List[str]) -> int:
                     and isinstance(next_attempt, int)
                     and next_attempt <= max_retries
                 ):
-                    mapped_action = "retry_motion" if retry_type == "motion" else "retry_recast"
+                    mapped_action = (
+                        "retry_motion" if retry_type == "motion" else "retry_recast"
+                    )
                     append_event(
                         events_path,
                         "QUALITY_RETRY_PLAN",
@@ -447,41 +500,115 @@ def main(argv: List[str]) -> int:
                             "artifact": str(retry_plan_path),
                         },
                     )
-                    return mapped_action, source_reason, {
-                        "quality_decision_relpath": safe_rel(decision_path, repo_root),
-                        "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
-                        "finalize_gate_relpath": safe_rel(finalize_gate_path, repo_root) if finalize_gate_path.exists() else None,
-                        "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
-                        "retry_type": retry_type,
-                        "segment_retry": retry.get("segment_retry"),
-                        "provider_switch": provider_switch if isinstance(provider_switch, dict) else None,
-                    }
-                terminal_state = str(retry_plan_payload.get("state", {}).get("terminal_state", "none"))
+                    return (
+                        mapped_action,
+                        source_reason,
+                        {
+                            "quality_decision_relpath": safe_rel(
+                                decision_path, repo_root
+                            ),
+                            "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
+                            "finalize_gate_relpath": (
+                                safe_rel(finalize_gate_path, repo_root)
+                                if finalize_gate_path.exists()
+                                else None
+                            ),
+                            "qc_route_advice_relpath": (
+                                safe_rel(advice_path, repo_root)
+                                if advice_path.exists()
+                                else None
+                            ),
+                            "retry_type": retry_type,
+                            "segment_retry": retry.get("segment_retry"),
+                            "provider_switch": (
+                                provider_switch
+                                if isinstance(provider_switch, dict)
+                                else None
+                            ),
+                        },
+                    )
+                terminal_state = str(
+                    retry_plan_payload.get("state", {}).get("terminal_state", "none")
+                )
                 if terminal_state == "block_for_costume":
-                    return "block_for_costume", source_reason, {
-                        "quality_decision_relpath": safe_rel(decision_path, repo_root),
-                        "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
-                        "finalize_gate_relpath": safe_rel(finalize_gate_path, repo_root) if finalize_gate_path.exists() else None,
-                        "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
-                        "retry_type": "none",
-                        "segment_retry": retry.get("segment_retry") if isinstance(retry, dict) else None,
-                        "provider_switch": provider_switch if isinstance(provider_switch, dict) else None,
-                    }
+                    return (
+                        "block_for_costume",
+                        source_reason,
+                        {
+                            "quality_decision_relpath": safe_rel(
+                                decision_path, repo_root
+                            ),
+                            "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
+                            "finalize_gate_relpath": (
+                                safe_rel(finalize_gate_path, repo_root)
+                                if finalize_gate_path.exists()
+                                else None
+                            ),
+                            "qc_route_advice_relpath": (
+                                safe_rel(advice_path, repo_root)
+                                if advice_path.exists()
+                                else None
+                            ),
+                            "retry_type": "none",
+                            "segment_retry": (
+                                retry.get("segment_retry")
+                                if isinstance(retry, dict)
+                                else None
+                            ),
+                            "provider_switch": (
+                                provider_switch
+                                if isinstance(provider_switch, dict)
+                                else None
+                            ),
+                        },
+                    )
                 if terminal_state == "escalate_hitl":
-                    return "escalate_hitl", source_reason, {
-                        "quality_decision_relpath": safe_rel(decision_path, repo_root),
-                        "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
-                        "finalize_gate_relpath": safe_rel(finalize_gate_path, repo_root) if finalize_gate_path.exists() else None,
-                        "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
-                        "retry_type": "none",
-                        "segment_retry": retry.get("segment_retry") if isinstance(retry, dict) else None,
-                        "provider_switch": provider_switch if isinstance(provider_switch, dict) else None,
-                    }
+                    return (
+                        "escalate_hitl",
+                        source_reason,
+                        {
+                            "quality_decision_relpath": safe_rel(
+                                decision_path, repo_root
+                            ),
+                            "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
+                            "finalize_gate_relpath": (
+                                safe_rel(finalize_gate_path, repo_root)
+                                if finalize_gate_path.exists()
+                                else None
+                            ),
+                            "qc_route_advice_relpath": (
+                                safe_rel(advice_path, repo_root)
+                                if advice_path.exists()
+                                else None
+                            ),
+                            "retry_type": "none",
+                            "segment_retry": (
+                                retry.get("segment_retry")
+                                if isinstance(retry, dict)
+                                else None
+                            ),
+                            "provider_switch": (
+                                provider_switch
+                                if isinstance(provider_switch, dict)
+                                else None
+                            ),
+                        },
+                    )
         decision_ctx = {
             "quality_decision_relpath": safe_rel(decision_path, repo_root),
-            "retry_plan_relpath": safe_rel(retry_plan_path, repo_root) if retry_plan_path.exists() else None,
-            "finalize_gate_relpath": safe_rel(finalize_gate_path, repo_root) if finalize_gate_path.exists() else None,
-            "qc_route_advice_relpath": safe_rel(advice_path, repo_root) if advice_path.exists() else None,
+            "retry_plan_relpath": (
+                safe_rel(retry_plan_path, repo_root)
+                if retry_plan_path.exists()
+                else None
+            ),
+            "finalize_gate_relpath": (
+                safe_rel(finalize_gate_path, repo_root)
+                if finalize_gate_path.exists()
+                else None
+            ),
+            "qc_route_advice_relpath": (
+                safe_rel(advice_path, repo_root) if advice_path.exists() else None
+            ),
             "retry_type": None,
             "segment_retry": None,
             "provider_switch": None,
@@ -489,11 +616,21 @@ def main(argv: List[str]) -> int:
         gate_payload = load_json_if_exists(finalize_gate_path)
         if isinstance(gate_payload, dict):
             gate = gate_payload.get("gate", {})
-            allow_finalize = bool(isinstance(gate, dict) and gate.get("allow_finalize") is True)
+            allow_finalize = bool(
+                isinstance(gate, dict) and gate.get("allow_finalize") is True
+            )
             if action_s == "proceed_finalize" and not allow_finalize:
-                return "escalate_hitl", "Finalize gate blocked completion.", decision_ctx
+                return (
+                    "escalate_hitl",
+                    "Finalize gate blocked completion.",
+                    decision_ctx,
+                )
         elif action_s == "proceed_finalize":
-            return "escalate_hitl", "Finalize gate artifact missing; blocking completion.", decision_ctx
+            return (
+                "escalate_hitl",
+                "Finalize gate artifact missing; blocking completion.",
+                decision_ctx,
+            )
         return action_s, reason_s, decision_ctx
 
     try:
@@ -555,12 +692,22 @@ def main(argv: List[str]) -> int:
                         "retry_type": decision_ctx.get("retry_type"),
                         "segment_retry": decision_ctx.get("segment_retry"),
                         "artifacts": {
-                            "quality_decision_relpath": decision_ctx.get("quality_decision_relpath"),
-                            "retry_plan_relpath": decision_ctx.get("retry_plan_relpath"),
-                            "result_relpath": safe_rel(result_json, repo_root) if result_json.exists() else None,
-                            "output_final_relpath": safe_rel(output_dir / "final.mp4", repo_root)
-                            if (output_dir / "final.mp4").exists()
-                            else None,
+                            "quality_decision_relpath": decision_ctx.get(
+                                "quality_decision_relpath"
+                            ),
+                            "retry_plan_relpath": decision_ctx.get(
+                                "retry_plan_relpath"
+                            ),
+                            "result_relpath": (
+                                safe_rel(result_json, repo_root)
+                                if result_json.exists()
+                                else None
+                            ),
+                            "output_final_relpath": (
+                                safe_rel(output_dir / "final.mp4", repo_root)
+                                if (output_dir / "final.mp4").exists()
+                                else None
+                            ),
                         },
                     },
                 )
@@ -579,7 +726,9 @@ def main(argv: List[str]) -> int:
                         current_state,
                         current_state,
                         None,
-                        {"reason": "retry requested on existing outputs; entering bounded retry loop"},
+                        {
+                            "reason": "retry requested on existing outputs; entering bounded retry loop"
+                        },
                     )
                 if action_class == "escalate":
                     transition(
@@ -620,7 +769,12 @@ def main(argv: List[str]) -> int:
 
             worker_log = attempt_dir / "worker.log"
             pointers["worker_log"] = str(worker_log)
-            worker_cmd = [py_exec, "repo/worker/render_ffmpeg.py", "--job", str(job_path)]
+            worker_cmd = [
+                py_exec,
+                "repo/worker/render_ffmpeg.py",
+                "--job",
+                str(job_path),
+            ]
             retry_plan_path = logs_dir / "qc" / "retry_plan.v1.json"
             worker_env: Dict[str, str] = {}
             # Ensure workers can import from repo.*
@@ -628,7 +782,7 @@ def main(argv: List[str]) -> int:
             if retry_plan_path.exists():
                 worker_env["CAF_RETRY_PLAN_PATH"] = str(retry_plan_path.resolve())
                 worker_env.update(provider_switch_env_from_retry_plan(retry_plan_path))
-                
+
                 retry_plan_payload = load_json_if_exists(retry_plan_path)
                 if isinstance(retry_plan_payload, dict):
                     retry_block = retry_plan_payload.get("retry", {})
@@ -697,19 +851,31 @@ def main(argv: List[str]) -> int:
                     entry={
                         "ts": now_ts(),
                         "attempt_id": attempt_id,
-                        "source_attempt_id": "preexisting-output" if force_retry_from_existing else None,
+                        "source_attempt_id": (
+                            "preexisting-output" if force_retry_from_existing else None
+                        ),
                         "decision_action": action,
                         "decision_reason": reason,
                         "resolution": action_class,
                         "retry_type": decision_ctx.get("retry_type"),
                         "segment_retry": decision_ctx.get("segment_retry"),
                         "artifacts": {
-                            "quality_decision_relpath": decision_ctx.get("quality_decision_relpath"),
-                            "retry_plan_relpath": decision_ctx.get("retry_plan_relpath"),
-                            "result_relpath": safe_rel(result_json, repo_root) if result_json.exists() else None,
-                            "output_final_relpath": safe_rel(output_dir / "final.mp4", repo_root)
-                            if (output_dir / "final.mp4").exists()
-                            else None,
+                            "quality_decision_relpath": decision_ctx.get(
+                                "quality_decision_relpath"
+                            ),
+                            "retry_plan_relpath": decision_ctx.get(
+                                "retry_plan_relpath"
+                            ),
+                            "result_relpath": (
+                                safe_rel(result_json, repo_root)
+                                if result_json.exists()
+                                else None
+                            ),
+                            "output_final_relpath": (
+                                safe_rel(output_dir / "final.mp4", repo_root)
+                                if (output_dir / "final.mp4").exists()
+                                else None
+                            ),
                         },
                     },
                 )

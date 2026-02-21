@@ -7,6 +7,7 @@ PR-33.1 smoke runner for deterministic Dance Swap wiring.
 It creates minimal Dance Swap artifacts under sandbox/output/<job_id>/contracts,
 validates contracts/job, and executes worker render.
 """
+
 from __future__ import annotations
 
 import json
@@ -22,7 +23,9 @@ def _repo_root() -> pathlib.Path:
 
 def _write(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def main(argv: list[str]) -> int:
@@ -53,9 +56,21 @@ def main(argv: list[str]) -> int:
                 "subject_id": "cat-1",
                 "hero_id": "mochi-grey-tabby",
                 "frames": [
-                    {"frame": 12, "bbox": {"x": 140, "y": 780, "w": 280, "h": 520}, "mask_relpath": mask_png},
-                    {"frame": 36, "bbox": {"x": 150, "y": 776, "w": 286, "h": 522}, "mask_relpath": mask_png},
-                    {"frame": 60, "bbox": {"x": 144, "y": 782, "w": 282, "h": 518}, "mask_relpath": mask_png},
+                    {
+                        "frame": 12,
+                        "bbox": {"x": 140, "y": 780, "w": 280, "h": 520},
+                        "mask_relpath": mask_png,
+                    },
+                    {
+                        "frame": 36,
+                        "bbox": {"x": 150, "y": 776, "w": 286, "h": 522},
+                        "mask_relpath": mask_png,
+                    },
+                    {
+                        "frame": 60,
+                        "bbox": {"x": 144, "y": 782, "w": 282, "h": 518},
+                        "mask_relpath": mask_png,
+                    },
                 ],
             }
         ],
@@ -118,7 +133,17 @@ def main(argv: list[str]) -> int:
     _write(job_path, job)
 
     cmds = [
-        [sys.executable, "-m", "repo.tools.validate_dance_swap_contracts", "--loop", str(loop_path), "--tracks", str(tracks_path), "--beatflow", str(beatflow_path)],
+        [
+            sys.executable,
+            "-m",
+            "repo.tools.validate_dance_swap_contracts",
+            "--loop",
+            str(loop_path),
+            "--tracks",
+            str(tracks_path),
+            "--beatflow",
+            str(beatflow_path),
+        ],
         [sys.executable, "repo/tools/validate_job.py", str(job_path)],
         [sys.executable, "-m", "repo.worker.render_ffmpeg", "--job", str(job_path)],
     ]
@@ -135,4 +160,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

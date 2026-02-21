@@ -326,7 +326,9 @@ async def style_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             return
 
         if not isinstance(manifest, dict) or style_key not in manifest:
-            await update.message.reply_text("Invalid key. Use '/style list' to see available keys.")
+            await update.message.reply_text(
+                "Invalid key. Use '/style list' to see available keys."
+            )
             return
 
         update_id = update.update_id
@@ -545,7 +547,9 @@ def main() -> None:
     app.add_handler(CommandHandler("style", style_command), group=1)
 
     # Non-command text handler (kept minimal)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1)
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1
+    )
 
     logger.info("Telegram bridge started. Polling for updates...")
     app.run_polling()

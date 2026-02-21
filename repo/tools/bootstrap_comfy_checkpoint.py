@@ -33,13 +33,17 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
         description="Download a checkpoint model into ComfyUI/models/checkpoints."
     )
-    parser.add_argument("--url", default=os.environ.get("COMFYUI_CHECKPOINT_URL", "").strip())
+    parser.add_argument(
+        "--url", default=os.environ.get("COMFYUI_CHECKPOINT_URL", "").strip()
+    )
     parser.add_argument(
         "--filename",
         default=os.environ.get("COMFYUI_CHECKPOINT_NAME", "").strip(),
         help="Target checkpoint filename (e.g. model.safetensors).",
     )
-    parser.add_argument("--comfy-home", default=os.environ.get("COMFYUI_HOME", "").strip())
+    parser.add_argument(
+        "--comfy-home", default=os.environ.get("COMFYUI_HOME", "").strip()
+    )
     args = parser.parse_args(argv)
 
     if not args.url:
@@ -47,13 +51,18 @@ def main(argv: list[str]) -> int:
         return 2
 
     root = _repo_root()
-    comfy_home = pathlib.Path(args.comfy_home) if args.comfy_home else _default_comfy_home(root)
+    comfy_home = (
+        pathlib.Path(args.comfy_home) if args.comfy_home else _default_comfy_home(root)
+    )
     if args.filename:
         filename = args.filename
     else:
         filename = pathlib.Path(args.url.split("?", 1)[0]).name
         if not filename:
-            print("ERROR: cannot infer filename from URL; provide --filename", file=sys.stderr)
+            print(
+                "ERROR: cannot infer filename from URL; provide --filename",
+                file=sys.stderr,
+            )
             return 2
 
     dst = comfy_home / "models" / "checkpoints" / filename
@@ -70,4 +79,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

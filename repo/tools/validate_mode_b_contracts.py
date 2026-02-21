@@ -7,6 +7,7 @@ Validates Mode B optional planner-side contracts:
 - identity_anchor.v1
 - storyboard.v1
 """
+
 from __future__ import annotations
 
 import argparse
@@ -46,9 +47,15 @@ def _load_registry_ids(path: pathlib.Path, key: str, id_field: str) -> set[str]:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Validate Mode B optional contracts")
-    parser.add_argument("--script-plan", required=True, help="Path to script_plan.v1 JSON")
-    parser.add_argument("--identity-anchor", required=True, help="Path to identity_anchor.v1 JSON")
-    parser.add_argument("--storyboard", required=True, help="Path to storyboard.v1 JSON")
+    parser.add_argument(
+        "--script-plan", required=True, help="Path to script_plan.v1 JSON"
+    )
+    parser.add_argument(
+        "--identity-anchor", required=True, help="Path to identity_anchor.v1 JSON"
+    )
+    parser.add_argument(
+        "--storyboard", required=True, help="Path to storyboard.v1 JSON"
+    )
     args = parser.parse_args(argv[1:])
 
     root = _repo_root()
@@ -71,7 +78,11 @@ def main(argv: list[str]) -> int:
         except ValidationError as ex:
             errors.append(f"SCHEMA {name}: {ex.message}")
 
-    job_ids = {str(script_plan.get("job_id")), str(identity_anchor.get("job_id")), str(storyboard.get("job_id"))}
+    job_ids = {
+        str(script_plan.get("job_id")),
+        str(identity_anchor.get("job_id")),
+        str(storyboard.get("job_id")),
+    }
     if len(job_ids) != 1:
         errors.append(f"job_id mismatch across Mode B contracts: {sorted(job_ids)}")
 
@@ -87,17 +98,29 @@ def main(argv: list[str]) -> int:
 
     for idx, frame in enumerate(storyboard.get("frames", [])):
         if frame["shot_id"] not in shot_set:
-            errors.append(f"storyboard.frames[{idx}] references unknown shot_id '{frame['shot_id']}'")
+            errors.append(
+                f"storyboard.frames[{idx}] references unknown shot_id '{frame['shot_id']}'"
+            )
         if frame["anchor_id"] not in anchor_set:
-            errors.append(f"storyboard.frames[{idx}] references unknown anchor_id '{frame['anchor_id']}'")
+            errors.append(
+                f"storyboard.frames[{idx}] references unknown anchor_id '{frame['anchor_id']}'"
+            )
 
-    hero_ids = _load_registry_ids(root / "repo" / "shared" / "hero_registry.v1.json", "heroes", "hero_id")
-    style_ids = _load_registry_ids(root / "repo" / "shared" / "style_registry.v1.json", "styles", "style_id")
+    hero_ids = _load_registry_ids(
+        root / "repo" / "shared" / "hero_registry.v1.json", "heroes", "hero_id"
+    )
+    style_ids = _load_registry_ids(
+        root / "repo" / "shared" / "style_registry.v1.json", "styles", "style_id"
+    )
     for idx, anchor in enumerate(identity_anchor.get("anchors", [])):
         if anchor["hero_id"] not in hero_ids:
-            errors.append(f"identity_anchor.anchors[{idx}] hero_id not found in hero registry: {anchor['hero_id']}")
+            errors.append(
+                f"identity_anchor.anchors[{idx}] hero_id not found in hero registry: {anchor['hero_id']}"
+            )
         if anchor["style_id"] not in style_ids:
-            errors.append(f"identity_anchor.anchors[{idx}] style_id not found in style registry: {anchor['style_id']}")
+            errors.append(
+                f"identity_anchor.anchors[{idx}] style_id not found in style registry: {anchor['style_id']}"
+            )
 
     if errors:
         print("INVALID: Mode B contracts", file=sys.stderr)

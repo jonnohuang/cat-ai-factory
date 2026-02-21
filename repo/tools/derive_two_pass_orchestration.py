@@ -3,6 +3,7 @@
 Deterministic two-pass orchestration artifact builder.
 Writes sandbox/logs/<job_id>/qc/two_pass_orchestration.v1.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,7 +19,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _load_json(path: pathlib.Path) -> Optional[Dict[str, Any]]:
@@ -46,8 +52,17 @@ def _safe_rel(path: pathlib.Path, root: pathlib.Path) -> Optional[str]:
         return None
 
 
-def _find_external_lifecycle(project_root: pathlib.Path, job_id: str) -> Optional[pathlib.Path]:
-    path = project_root / "sandbox" / "dist_artifacts" / job_id / "viggle_pack" / "external_recast_lifecycle.v1.json"
+def _find_external_lifecycle(
+    project_root: pathlib.Path, job_id: str
+) -> Optional[pathlib.Path]:
+    path = (
+        project_root
+        / "sandbox"
+        / "dist_artifacts"
+        / job_id
+        / "viggle_pack"
+        / "external_recast_lifecycle.v1.json"
+    )
     if path.exists():
         return path
     return None
@@ -81,7 +96,9 @@ def _identity_pass(
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Derive deterministic two-pass orchestration artifact")
+    parser = argparse.ArgumentParser(
+        description="Derive deterministic two-pass orchestration artifact"
+    )
     parser.add_argument("--job-id", required=True)
     args = parser.parse_args(argv[1:])
 
@@ -90,7 +107,14 @@ def main(argv: list[str]) -> int:
     qc_dir = root / "sandbox" / "logs" / job_id / "qc"
     out_path = qc_dir / "two_pass_orchestration.v1.json"
 
-    segment_report_path = root / "sandbox" / "output" / job_id / "segments" / "segment_stitch_report.v1.json"
+    segment_report_path = (
+        root
+        / "sandbox"
+        / "output"
+        / job_id
+        / "segments"
+        / "segment_stitch_report.v1.json"
+    )
     quality_path = qc_dir / "recast_quality_report.v1.json"
     costume_path = qc_dir / "costume_fidelity.v1.json"
     external_lifecycle_path = _find_external_lifecycle(root, job_id)
@@ -98,7 +122,9 @@ def main(argv: list[str]) -> int:
     segment_report = _load_json(segment_report_path)
     quality = _load_json(quality_path)
     costume = _load_json(costume_path)
-    external_lifecycle = _load_json(external_lifecycle_path) if external_lifecycle_path else None
+    external_lifecycle = (
+        _load_json(external_lifecycle_path) if external_lifecycle_path else None
+    )
 
     motion_status, motion_reason = _motion_pass(segment_report)
     identity_status, identity_reason = _identity_pass(quality, costume)
@@ -123,12 +149,22 @@ def main(argv: list[str]) -> int:
         "job_id": job_id,
         "generated_at": _utc_now(),
         "inputs": {
-            "segment_stitch_report_relpath": _safe_rel(segment_report_path, root) if segment_report_path.exists() else None,
-            "quality_report_relpath": _safe_rel(quality_path, root) if quality_path.exists() else None,
-            "costume_report_relpath": _safe_rel(costume_path, root) if costume_path.exists() else None,
-            "external_recast_lifecycle_relpath": _safe_rel(external_lifecycle_path, root)
-            if external_lifecycle_path and external_lifecycle_path.exists()
-            else None,
+            "segment_stitch_report_relpath": (
+                _safe_rel(segment_report_path, root)
+                if segment_report_path.exists()
+                else None
+            ),
+            "quality_report_relpath": (
+                _safe_rel(quality_path, root) if quality_path.exists() else None
+            ),
+            "costume_report_relpath": (
+                _safe_rel(costume_path, root) if costume_path.exists() else None
+            ),
+            "external_recast_lifecycle_relpath": (
+                _safe_rel(external_lifecycle_path, root)
+                if external_lifecycle_path and external_lifecycle_path.exists()
+                else None
+            ),
         },
         "passes": {
             "motion": {"status": motion_status, "reason": motion_reason},

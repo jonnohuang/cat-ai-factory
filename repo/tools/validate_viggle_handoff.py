@@ -7,6 +7,7 @@ Validates external HITL recast handoff contracts:
 - external_recast_lifecycle.v1
 - viggle_reingest_pointer.v1
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,17 +39,27 @@ def _must_exist(path: pathlib.Path, label: str) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Validate Viggle HITL handoff contracts")
+    parser = argparse.ArgumentParser(
+        description="Validate Viggle HITL handoff contracts"
+    )
     parser.add_argument("--pack", required=True, help="Path to viggle_pack.v1 JSON")
-    parser.add_argument("--lifecycle", required=True, help="Path to external_recast_lifecycle.v1 JSON")
-    parser.add_argument("--pointer", required=True, help="Path to viggle_reingest_pointer.v1 JSON")
+    parser.add_argument(
+        "--lifecycle", required=True, help="Path to external_recast_lifecycle.v1 JSON"
+    )
+    parser.add_argument(
+        "--pointer", required=True, help="Path to viggle_reingest_pointer.v1 JSON"
+    )
     args = parser.parse_args(argv[1:])
 
     root = _repo_root()
     schemas = {
         "pack": _load(root / "repo" / "shared" / "viggle_pack.v1.schema.json"),
-        "lifecycle": _load(root / "repo" / "shared" / "external_recast_lifecycle.v1.schema.json"),
-        "pointer": _load(root / "repo" / "shared" / "viggle_reingest_pointer.v1.schema.json"),
+        "lifecycle": _load(
+            root / "repo" / "shared" / "external_recast_lifecycle.v1.schema.json"
+        ),
+        "pointer": _load(
+            root / "repo" / "shared" / "viggle_reingest_pointer.v1.schema.json"
+        ),
     }
     docs = {
         "pack": _load(pathlib.Path(args.pack).resolve()),
@@ -63,22 +74,34 @@ def main(argv: list[str]) -> int:
         except ValidationError as ex:
             errors.append(f"SCHEMA {name}: {ex.message}")
 
-    job_ids = {str(docs["pack"].get("job_id")), str(docs["lifecycle"].get("job_id")), str(docs["pointer"].get("job_id"))}
+    job_ids = {
+        str(docs["pack"].get("job_id")),
+        str(docs["lifecycle"].get("job_id")),
+        str(docs["pointer"].get("job_id")),
+    }
     if len(job_ids) != 1:
         errors.append(f"job_id mismatch across contracts: {sorted(job_ids)}")
 
-    if docs["lifecycle"].get("reingest_pointer") and docs["lifecycle"]["reingest_pointer"] != docs["pointer"].get("inbox_relpath", docs["lifecycle"]["reingest_pointer"]):
+    if docs["lifecycle"].get("reingest_pointer") and docs["lifecycle"][
+        "reingest_pointer"
+    ] != docs["pointer"].get("inbox_relpath", docs["lifecycle"]["reingest_pointer"]):
         # lifecycle stores canonical path; pointer file may store no self-path.
         pass
 
-    if docs["lifecycle"].get("reingest_result_video") and docs["lifecycle"]["reingest_result_video"] != docs["pointer"].get("result_video_relpath"):
-        errors.append("lifecycle.reingest_result_video must match pointer.result_video_relpath when both are set")
+    if docs["lifecycle"].get("reingest_result_video") and docs["lifecycle"][
+        "reingest_result_video"
+    ] != docs["pointer"].get("result_video_relpath"):
+        errors.append(
+            "lifecycle.reingest_result_video must match pointer.result_video_relpath when both are set"
+        )
 
     pack_dir = pathlib.Path(docs["pack"]["pack_root"])
     errors.extend(_must_exist(root / docs["pack"]["hero_image"], "pack.hero_image"))
     errors.extend(_must_exist(root / docs["pack"]["motion_video"], "pack.motion_video"))
     errors.extend(_must_exist(root / docs["pack"]["prompt_file"], "pack.prompt_file"))
-    errors.extend(_must_exist(root / docs["pack"]["instructions_file"], "pack.instructions_file"))
+    errors.extend(
+        _must_exist(root / docs["pack"]["instructions_file"], "pack.instructions_file")
+    )
     if not str(pack_dir).endswith("/viggle_pack"):
         errors.append("pack_root must end with /viggle_pack")
 
@@ -97,4 +120,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-

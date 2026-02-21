@@ -9,7 +9,9 @@ import tempfile
 
 
 def _run(cmd: list[str], expect_ok: bool = True) -> None:
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    )
     print(proc.stdout, end="")
     if expect_ok and proc.returncode != 0:
         raise SystemExit(proc.returncode)
@@ -50,7 +52,13 @@ def main() -> int:
         if isinstance(facts, dict):
             facts["camera_mode"] = "pan"
 
-    with tempfile.NamedTemporaryFile(prefix="caf-frame-labels-bad-", suffix=".json", mode="w", encoding="utf-8", delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(
+        prefix="caf-frame-labels-bad-",
+        suffix=".json",
+        mode="w",
+        encoding="utf-8",
+        delete=False,
+    ) as tmp:
         json.dump(doc, tmp, indent=2, ensure_ascii=False)
         tmp.write("\n")
         bad_path = pathlib.Path(tmp.name)

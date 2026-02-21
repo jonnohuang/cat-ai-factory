@@ -31,7 +31,12 @@ def main(argv: list[str]) -> int:
         print(f"ERROR: missing retry plan: {retry_plan_path}", file=sys.stderr)
         return 1
 
-    val_cmd = [sys.executable, "-m", "repo.tools.validate_retry_plan", str(retry_plan_path)]
+    val_cmd = [
+        sys.executable,
+        "-m",
+        "repo.tools.validate_retry_plan",
+        str(retry_plan_path),
+    ]
     print("RUN:", " ".join(val_cmd))
     subprocess.check_call(val_cmd, cwd=str(root))
 

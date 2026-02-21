@@ -14,7 +14,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _load(path: pathlib.Path) -> Optional[Dict[str, Any]]:
@@ -38,7 +43,9 @@ def _rel(path: pathlib.Path, root: pathlib.Path) -> str:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Create promotion_candidate.v1 from lab summary + sample ingest manifest")
+    parser = argparse.ArgumentParser(
+        description="Create promotion_candidate.v1 from lab summary + sample ingest manifest"
+    )
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--sample-manifest-relpath", required=True)
     parser.add_argument("--pass-rate-delta", type=float, default=0.0)
@@ -46,28 +53,43 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv[1:])
 
     root = _repo_root()
-    summary_path = root / "sandbox" / "logs" / args.job_id / "qc" / "lab_qc_loop_summary.v1.json"
+    summary_path = (
+        root / "sandbox" / "logs" / args.job_id / "qc" / "lab_qc_loop_summary.v1.json"
+    )
     sample_manifest_path = root / args.sample_manifest_relpath
     summary = _load(summary_path)
     manifest = _load(sample_manifest_path)
     if not isinstance(summary, dict):
         print(f"ERROR: missing lab summary: {summary_path}", file=sys.stderr)
         return 1
-    if not isinstance(manifest, dict) or manifest.get("version") != "sample_ingest_manifest.v1":
-        print(f"ERROR: invalid sample manifest: {sample_manifest_path}", file=sys.stderr)
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("version") != "sample_ingest_manifest.v1"
+    ):
+        print(
+            f"ERROR: invalid sample manifest: {sample_manifest_path}", file=sys.stderr
+        )
         return 1
 
     candidate_id = f"{args.job_id}-{manifest.get('sample_id', 'sample')}-candidate"
     proposal = {
         "contract_pointers": {
             "motion_contract": {
-                "relpath": manifest.get("contracts", {}).get("pose_checkpoints_relpath"),
+                "relpath": manifest.get("contracts", {}).get(
+                    "pose_checkpoints_relpath"
+                ),
                 "contract_version": "pose_checkpoints.v1",
             },
-            "quality_target": {"relpath": manifest.get("contracts", {}).get("quality_target_relpath")},
-            "continuity_pack": {"relpath": manifest.get("contracts", {}).get("continuity_pack_relpath")},
+            "quality_target": {
+                "relpath": manifest.get("contracts", {}).get("quality_target_relpath")
+            },
+            "continuity_pack": {
+                "relpath": manifest.get("contracts", {}).get("continuity_pack_relpath")
+            },
             "segment_stitch": {
-                "plan_relpath": manifest.get("contracts", {}).get("segment_stitch_plan_relpath"),
+                "plan_relpath": manifest.get("contracts", {}).get(
+                    "segment_stitch_plan_relpath"
+                ),
                 "enabled": True,
             },
         },
@@ -95,7 +117,14 @@ def main(argv: list[str]) -> int:
         },
     }
 
-    out_path = root / "sandbox" / "logs" / "lab" / "promotions" / f"{candidate_id}.promotion_candidate.v1.json"
+    out_path = (
+        root
+        / "sandbox"
+        / "logs"
+        / "lab"
+        / "promotions"
+        / f"{candidate_id}.promotion_candidate.v1.json"
+    )
     _write(out_path, payload)
     print(f"Wrote {out_path}")
     return 0

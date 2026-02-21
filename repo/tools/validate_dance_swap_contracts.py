@@ -13,6 +13,7 @@ Usage:
     --tracks repo/examples/dance_swap_tracks.v1.example.json \
     --beatflow repo/examples/dance_swap_beatflow.v1.example.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -52,7 +53,9 @@ def _validate_loop_semantics(data: dict[str, Any]) -> list[str]:
     if data["fps"] <= 0:
         errs.append("fps must be > 0")
     if not _is_safe_sandbox_path(data["source_video_relpath"]):
-        errs.append("source_video_relpath must be sandbox-relative and must not contain '..'")
+        errs.append(
+            "source_video_relpath must be sandbox-relative and must not contain '..'"
+        )
     return errs
 
 
@@ -77,14 +80,20 @@ def _validate_tracks_semantics(data: dict[str, Any], hero_ids: set[str]) -> list
                 errs.append(f"subjects[{si}].frames[{fi}]: duplicate frame '{frame}'")
             seen_frames.add(frame)
             if frame <= last:
-                errs.append(f"subjects[{si}].frames[{fi}]: frames must be strictly increasing")
+                errs.append(
+                    f"subjects[{si}].frames[{fi}]: frames must be strictly increasing"
+                )
             last = frame
             if not _is_safe_sandbox_path(row["mask_relpath"]):
-                errs.append(f"subjects[{si}].frames[{fi}]: mask_relpath must be safe sandbox-relative")
+                errs.append(
+                    f"subjects[{si}].frames[{fi}]: mask_relpath must be safe sandbox-relative"
+                )
     return errs
 
 
-def _validate_beatflow_semantics(data: dict[str, Any], loop: dict[str, Any] | None) -> list[str]:
+def _validate_beatflow_semantics(
+    data: dict[str, Any], loop: dict[str, Any] | None
+) -> list[str]:
     errs: list[str] = []
     if not _is_safe_sandbox_path(data["source_video_relpath"]):
         errs.append("beatflow.source_video_relpath must be safe sandbox-relative")
@@ -110,16 +119,24 @@ def _validate_beatflow_semantics(data: dict[str, Any], loop: dict[str, Any] | No
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Validate Dance Swap v1 contract artifacts")
+    parser = argparse.ArgumentParser(
+        description="Validate Dance Swap v1 contract artifacts"
+    )
     parser.add_argument("--loop", required=True, help="Path to dance_swap_loop.v1 JSON")
-    parser.add_argument("--tracks", required=True, help="Path to dance_swap_tracks.v1 JSON")
-    parser.add_argument("--beatflow", help="Optional path to dance_swap_beatflow.v1 JSON")
+    parser.add_argument(
+        "--tracks", required=True, help="Path to dance_swap_tracks.v1 JSON"
+    )
+    parser.add_argument(
+        "--beatflow", help="Optional path to dance_swap_beatflow.v1 JSON"
+    )
     args = parser.parse_args(argv[1:])
 
     root = _repo_root()
     loop_schema = _load(root / "repo" / "shared" / "dance_swap_loop.v1.schema.json")
     tracks_schema = _load(root / "repo" / "shared" / "dance_swap_tracks.v1.schema.json")
-    beatflow_schema = _load(root / "repo" / "shared" / "dance_swap_beatflow.v1.schema.json")
+    beatflow_schema = _load(
+        root / "repo" / "shared" / "dance_swap_beatflow.v1.schema.json"
+    )
     hero_registry = _load(root / "repo" / "shared" / "hero_registry.v1.json")
     hero_ids = {
         h.get("hero_id")
@@ -148,7 +165,9 @@ def main(argv: list[str]) -> int:
             errors.append(f"SCHEMA beatflow: {ex.message}")
 
     errors.extend(_validate_loop_semantics(loop))
-    errors.extend(_validate_tracks_semantics(tracks, {x for x in hero_ids if isinstance(x, str)}))
+    errors.extend(
+        _validate_tracks_semantics(tracks, {x for x in hero_ids if isinstance(x, str)})
+    )
     if beatflow is not None:
         errors.extend(_validate_beatflow_semantics(beatflow, loop))
 

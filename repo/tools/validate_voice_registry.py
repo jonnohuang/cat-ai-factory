@@ -7,6 +7,7 @@ Validates a voice_registry.v1.json against schema and semantic checks.
 Usage:
   python -m repo.tools.validate_voice_registry path/to/voice_registry.v1.json
 """
+
 from __future__ import annotations
 
 import json
@@ -40,7 +41,9 @@ def _semantic_check(data: dict[str, Any], hero_ids: set[str]) -> list[str]:
     seen_heroes: set[str] = set()
     seen_voice_keys: set[tuple[str, str]] = set()
 
-    secret_like = re.compile(r"(?:^|[_-])(sk|api|token|secret)(?:[_-]|$)", re.IGNORECASE)
+    secret_like = re.compile(
+        r"(?:^|[_-])(sk|api|token|secret)(?:[_-]|$)", re.IGNORECASE
+    )
 
     for i, row in enumerate(data.get("voices", [])):
         hero_id = row.get("hero_id", "")
@@ -52,22 +55,30 @@ def _semantic_check(data: dict[str, Any], hero_ids: set[str]) -> list[str]:
         seen_heroes.add(hero_id)
 
         if hero_id not in hero_ids:
-            errors.append(f"voices[{i}]: hero_id '{hero_id}' not found in hero_registry.v1.json")
+            errors.append(
+                f"voices[{i}]: hero_id '{hero_id}' not found in hero_registry.v1.json"
+            )
 
         key = (provider, voice_id)
         if key in seen_voice_keys:
-            errors.append(f"voices[{i}]: duplicate provider+voice_id combination '{provider}:{voice_id}'")
+            errors.append(
+                f"voices[{i}]: duplicate provider+voice_id combination '{provider}:{voice_id}'"
+            )
         seen_voice_keys.add(key)
 
         if secret_like.search(str(voice_id)):
-            errors.append(f"voices[{i}]: voice_id appears secret-like; use placeholder-safe identifiers only")
+            errors.append(
+                f"voices[{i}]: voice_id appears secret-like; use placeholder-safe identifiers only"
+            )
 
     return errors
 
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_voice_registry path/to/voice_registry.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_voice_registry path/to/voice_registry.v1.json"
+        )
         return 1
 
     target = pathlib.Path(argv[1]).resolve()
@@ -96,7 +107,9 @@ def main(argv: list[str]) -> int:
             eprint("Path:", " -> ".join(str(p) for p in ex.path))
         return 1
 
-    hero_ids = {h.get("hero_id") for h in heroes.get("heroes", []) if isinstance(h, dict)}
+    hero_ids = {
+        h.get("hero_id") for h in heroes.get("heroes", []) if isinstance(h, dict)
+    }
     errors = _semantic_check(data, {x for x in hero_ids if isinstance(x, str)})
     if errors:
         eprint(f"SEMANTIC_ERROR: {target}")

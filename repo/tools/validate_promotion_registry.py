@@ -28,7 +28,9 @@ def eprint(*args: Any) -> None:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_promotion_registry path/to/promotion_registry.v1.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_promotion_registry path/to/promotion_registry.v1.json"
+        )
         return 1
     target = pathlib.Path(argv[1]).resolve()
     if not target.exists():

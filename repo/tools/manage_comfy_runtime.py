@@ -112,14 +112,21 @@ def _install_comfy(comfy_home: pathlib.Path) -> int:
     if comfy_home.exists():
         print(f"ComfyUI already exists: {comfy_home}")
         return 0
-    cmd = ["git", "clone", "https://github.com/comfyanonymous/ComfyUI.git", str(comfy_home)]
+    cmd = [
+        "git",
+        "clone",
+        "https://github.com/comfyanonymous/ComfyUI.git",
+        str(comfy_home),
+    ]
     print("Running:", " ".join(cmd))
     rc = subprocess.call(cmd)
     if rc != 0:
         print("ERROR: failed to clone ComfyUI", file=sys.stderr)
         return rc
     print(f"Installed ComfyUI at: {comfy_home}")
-    print("Next: run `python3 -m repo.tools.manage_comfy_runtime setup` to install dependencies.")
+    print(
+        "Next: run `python3 -m repo.tools.manage_comfy_runtime setup` to install dependencies."
+    )
     return 0
 
 
@@ -140,7 +147,10 @@ def _setup_comfy(comfy_home: pathlib.Path, python_bin: str) -> int:
             print("ERROR: failed creating ComfyUI venv", file=sys.stderr)
             return rc
     # Upgrade pip inside venv first.
-    rc = subprocess.call([str(venv_python), "-m", "pip", "install", "--upgrade", "pip"], cwd=str(comfy_home))
+    rc = subprocess.call(
+        [str(venv_python), "-m", "pip", "install", "--upgrade", "pip"],
+        cwd=str(comfy_home),
+    )
     if rc != 0:
         print("ERROR: failed upgrading pip in ComfyUI venv", file=sys.stderr)
         return rc
@@ -150,7 +160,9 @@ def _setup_comfy(comfy_home: pathlib.Path, python_bin: str) -> int:
     req_files = []
     if caf_req.exists():
         req_files.append(caf_req)
-    req_files.extend([comfy_home / "requirements.txt", comfy_home / "manager_requirements.txt"])
+    req_files.extend(
+        [comfy_home / "requirements.txt", comfy_home / "manager_requirements.txt"]
+    )
     seen = set()
     for req in req_files:
         key = str(req.resolve()) if req.exists() else str(req)
@@ -163,7 +175,10 @@ def _setup_comfy(comfy_home: pathlib.Path, python_bin: str) -> int:
         print("Running:", " ".join(cmd))
         rc = subprocess.call(cmd, cwd=str(comfy_home))
         if rc != 0:
-            print(f"ERROR: failed installing requirements from {req.name}", file=sys.stderr)
+            print(
+                f"ERROR: failed installing requirements from {req.name}",
+                file=sys.stderr,
+            )
             return rc
     print("ComfyUI dependencies installed.")
     print(f"ComfyUI venv python: {venv_python}")
@@ -178,7 +193,12 @@ def _status(root: pathlib.Path, host: str, port: int) -> int:
     listen_pid = _listener_pid(host, port) if port_open else None
     pid_alive = _pid_alive(pid) if pid is not None else False
     listener_cmd = _pid_cmdline(listen_pid) if listen_pid is not None else ""
-    managed = pid is not None and pid_alive and listen_pid is not None and int(pid) == int(listen_pid)
+    managed = (
+        pid is not None
+        and pid_alive
+        and listen_pid is not None
+        and int(pid) == int(listen_pid)
+    )
     unmanaged_listener = listen_pid is not None and not managed
     print(f"comfy_host: {host}")
     print(f"comfy_port: {port}")
@@ -215,7 +235,10 @@ def _start(
     main_py = comfy_home / "main.py"
     if not main_py.exists():
         print(f"ERROR: missing ComfyUI main.py at {main_py}", file=sys.stderr)
-        print("Run with --install first or set COMFYUI_HOME to an existing ComfyUI checkout.", file=sys.stderr)
+        print(
+            "Run with --install first or set COMFYUI_HOME to an existing ComfyUI checkout.",
+            file=sys.stderr,
+        )
         return 2
 
     rdir = _runtime_dir(root)
@@ -246,10 +269,12 @@ def _start(
             text=True,
             check=False,
         )
-        has_accel = (probe.returncode == 0 and probe.stdout.strip() == "1")
+        has_accel = probe.returncode == 0 and probe.stdout.strip() == "1"
         if not has_accel:
             resolved_extra_args = ["--cpu"]
-            print("INFO: No GPU/MPS backend detected; auto-applying CPU fallback (--cpu).")
+            print(
+                "INFO: No GPU/MPS backend detected; auto-applying CPU fallback (--cpu)."
+            )
     if resolved_extra_args:
         cmd.extend(resolved_extra_args)
     print("Starting ComfyUI:", " ".join(cmd))
@@ -272,7 +297,10 @@ def _start(
             print(f"OK: ComfyUI listening at http://{host}:{port}")
             return 0
         if proc.poll() is not None:
-            print("ERROR: ComfyUI process exited early; recent runtime log tail:", file=sys.stderr)
+            print(
+                "ERROR: ComfyUI process exited early; recent runtime log tail:",
+                file=sys.stderr,
+            )
             try:
                 tail = log_file.read_text(encoding="utf-8").splitlines()[-40:]
                 for line in tail:
@@ -281,10 +309,14 @@ def _start(
                 pass
             return 3
         import time
+
         time.sleep(0.5)
 
     if proc.poll() is not None:
-        print("ERROR: ComfyUI process exited after readiness window; recent runtime log tail:", file=sys.stderr)
+        print(
+            "ERROR: ComfyUI process exited after readiness window; recent runtime log tail:",
+            file=sys.stderr,
+        )
         try:
             tail = log_file.read_text(encoding="utf-8").splitlines()[-40:]
             for line in tail:
@@ -314,11 +346,23 @@ def _stop(root: pathlib.Path) -> int:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="CAF-managed ComfyUI runtime helper.")
-    parser.add_argument("action", choices=["install", "setup", "start", "stop", "status"])
-    parser.add_argument("--comfy-home", default=os.environ.get("COMFYUI_HOME", "").strip())
-    parser.add_argument("--host", default=os.environ.get("COMFYUI_HOST", "127.0.0.1").strip() or "127.0.0.1")
-    parser.add_argument("--port", type=int, default=int(os.environ.get("COMFYUI_PORT", "8188") or 8188))
-    parser.add_argument("--python-bin", default=os.environ.get("COMFYUI_PYTHON_BIN", "python3").strip() or "python3")
+    parser.add_argument(
+        "action", choices=["install", "setup", "start", "stop", "status"]
+    )
+    parser.add_argument(
+        "--comfy-home", default=os.environ.get("COMFYUI_HOME", "").strip()
+    )
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("COMFYUI_HOST", "127.0.0.1").strip() or "127.0.0.1",
+    )
+    parser.add_argument(
+        "--port", type=int, default=int(os.environ.get("COMFYUI_PORT", "8188") or 8188)
+    )
+    parser.add_argument(
+        "--python-bin",
+        default=os.environ.get("COMFYUI_PYTHON_BIN", "python3").strip() or "python3",
+    )
     parser.add_argument(
         "--extra-args",
         default=os.environ.get("COMFYUI_EXTRA_ARGS", "").strip(),
@@ -327,21 +371,32 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     root = _repo_root()
-    comfy_home = pathlib.Path(args.comfy_home) if args.comfy_home else _default_comfy_home(root)
+    comfy_home = (
+        pathlib.Path(args.comfy_home) if args.comfy_home else _default_comfy_home(root)
+    )
 
     raw_extra_args = (args.extra_args or "").strip()
     # Keep GPU/MPS as default runtime path; only opt into CPU when explicitly requested.
     # Also ignore placeholder values commonly used in .env.example.
     if raw_extra_args.lower() in {"changeme", "placeholder"}:
         raw_extra_args = ""
-    extra_args = [tok for tok in (raw_extra_args.split() if raw_extra_args else []) if tok]
+    extra_args = [
+        tok for tok in (raw_extra_args.split() if raw_extra_args else []) if tok
+    ]
 
     if args.action == "install":
         return _install_comfy(comfy_home)
     if args.action == "setup":
         return _setup_comfy(comfy_home, args.python_bin)
     if args.action == "start":
-        return _start(root, comfy_home, args.host, args.port, args.python_bin, extra_args=extra_args)
+        return _start(
+            root,
+            comfy_home,
+            args.host,
+            args.port,
+            args.python_bin,
+            extra_args=extra_args,
+        )
     if args.action == "stop":
         return _stop(root)
     return _status(root, args.host, args.port)

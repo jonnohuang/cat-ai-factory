@@ -7,7 +7,9 @@ import sys
 
 
 def _run(cmd: list[str]) -> None:
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    )
     print(proc.stdout, end="")
     if proc.returncode != 0:
         raise SystemExit(proc.returncode)
@@ -73,7 +75,9 @@ def main() -> int:
             str(keyframes),
         ]
     )
-    _run([sys.executable, "-m", "repo.tools.validate_segment_stitch_plan", str(seg_plan)])
+    _run(
+        [sys.executable, "-m", "repo.tools.validate_segment_stitch_plan", str(seg_plan)]
+    )
     _run([sys.executable, "-m", "repo.tools.smoke_analyzer_tool_versions"])
 
     print("OK: analyzer core pack smoke")

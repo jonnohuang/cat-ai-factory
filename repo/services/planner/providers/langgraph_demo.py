@@ -6,9 +6,9 @@ import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional, TypedDict
 
+from ..util.json_extract import extract_json_object
 from .base import BaseProvider
 from .gemini_ai_studio import GeminiAIStudioProvider
-from ..util.json_extract import extract_json_object
 
 
 class PlannerState(TypedDict, total=False):
@@ -36,7 +36,7 @@ class LangGraphDemoProvider(BaseProvider):
         quality_context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         try:
-            from langgraph.graph import StateGraph, END
+            from langgraph.graph import END, StateGraph
         except ImportError as ex:
             raise RuntimeError(
                 "LangGraph is not installed. Install with: pip install langgraph"
@@ -66,14 +66,14 @@ class LangGraphDemoProvider(BaseProvider):
 
             api_key = os.environ.get("GEMINI_API_KEY")
             if not api_key:
-                raise ValueError("GEMINI_API_KEY is required for CrewAI refinement step")
+                raise ValueError(
+                    "GEMINI_API_KEY is required for CrewAI refinement step"
+                )
 
             # Configure Gemini LLM
             model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
             llm = ChatGoogleGenerativeAI(
-                model=model_name,
-                google_api_key=api_key,
-                temperature=0.0
+                model=model_name, google_api_key=api_key, temperature=0.0
             )
 
             prompt = _build_crewai_prompt(
@@ -89,14 +89,16 @@ class LangGraphDemoProvider(BaseProvider):
                 backstory="You are a planner-only refinement step. Return JSON only.",
                 allow_delegation=False,
                 verbose=False,
-                llm=llm
+                llm=llm,
             )
             task = Task(
                 description=prompt,
                 agent=agent,
                 expected_output="A single JSON object that conforms to the job schema.",
             )
-            crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=False)
+            crew = Crew(
+                agents=[agent], tasks=[task], process=Process.sequential, verbose=False
+            )
             result = crew.kickoff()
             text = result.raw if hasattr(result, "raw") else str(result)
             job = extract_json_object(text)
@@ -149,7 +151,11 @@ def _validate_job(job: Dict[str, Any]) -> None:
             text=True,
         )
         if result.returncode != 0:
-            msg = result.stderr.strip() or result.stdout.strip() or "Job validation failed"
+            msg = (
+                result.stderr.strip()
+                or result.stdout.strip()
+                or "Job validation failed"
+            )
             raise RuntimeError(msg)
     finally:
         if os.path.exists(temp_path):
@@ -163,11 +169,17 @@ def _build_crewai_prompt(
     draft_job: Dict[str, Any],
 ) -> str:
     prd_json = json.dumps(prd, indent=None, separators=(",", ":"), ensure_ascii=True)
-    inbox_json = json.dumps(inbox, indent=None, separators=(",", ":"), ensure_ascii=True)
-    draft_json = json.dumps(draft_job, indent=None, separators=(",", ":"), ensure_ascii=True)
+    inbox_json = json.dumps(
+        inbox, indent=None, separators=(",", ":"), ensure_ascii=True
+    )
+    draft_json = json.dumps(
+        draft_job, indent=None, separators=(",", ":"), ensure_ascii=True
+    )
     registry_context = ""
     if hero_registry:
-        registry_json = json.dumps(hero_registry, indent=None, separators=(",", ":"), ensure_ascii=True)
+        registry_json = json.dumps(
+            hero_registry, indent=None, separators=(",", ":"), ensure_ascii=True
+        )
         registry_context = (
             "Hero Registry (Reference):\n"
             f"{registry_json}\n"

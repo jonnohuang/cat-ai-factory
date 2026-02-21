@@ -22,7 +22,9 @@ def main() -> int:
         print("ERROR: frame_labeling lane has no frames", file=sys.stderr)
         return 1
     if not bool(lane.get("facts_only_or_unknown")):
-        print("ERROR: frame_labeling facts_only_or_unknown must be true", file=sys.stderr)
+        print(
+            "ERROR: frame_labeling facts_only_or_unknown must be true", file=sys.stderr
+        )
         return 1
     print(f"frame_labels_relpath: {lane.get('relpath')}")
     print(f"frame_count: {lane.get('frame_count')}")

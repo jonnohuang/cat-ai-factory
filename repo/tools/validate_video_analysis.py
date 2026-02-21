@@ -11,6 +11,7 @@ Exit codes:
   0 = valid
   1 = invalid / error
 """
+
 from __future__ import annotations
 
 import json
@@ -47,7 +48,9 @@ def semantic_validate(data: dict[str, Any]) -> list[str]:
     loop_end = loop.get("loop_end_sec")
     if isinstance(loop_start, (int, float)) and isinstance(loop_end, (int, float)):
         if loop_end <= loop_start:
-            errors.append("pattern.looping.loop_end_sec must be > pattern.looping.loop_start_sec")
+            errors.append(
+                "pattern.looping.loop_end_sec must be > pattern.looping.loop_start_sec"
+            )
 
     beats = data.get("pattern", {}).get("choreography", {}).get("beats", [])
     if isinstance(beats, list):
@@ -66,7 +69,9 @@ def semantic_validate(data: dict[str, Any]) -> list[str]:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        eprint("Usage: python -m repo.tools.validate_video_analysis path/to/video-analysis.json")
+        eprint(
+            "Usage: python -m repo.tools.validate_video_analysis path/to/video-analysis.json"
+        )
         return 1
 
     target_path = pathlib.Path(argv[1]).resolve()

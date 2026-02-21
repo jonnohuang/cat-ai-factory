@@ -4,14 +4,14 @@ import json
 import os
 import subprocess
 import tempfile
-import urllib.parse
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
-from .base import BaseProvider
 from ..util.json_extract import extract_json_object
 from ..util.redact import redact_text
+from .base import BaseProvider
 
 
 class GeminiAIStudioProvider(BaseProvider):
@@ -23,7 +23,9 @@ class GeminiAIStudioProvider(BaseProvider):
     def default_model(self) -> str:
         return "gemini-1.5-flash"
 
-    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-1.5-flash") -> None:
+    def __init__(
+        self, api_key: Optional[str] = None, model: str = "gemini-1.5-flash"
+    ) -> None:
         env_name = "GEMINI_" + "API" + "_" + "KEY"
         self.api_key = api_key or os.environ.get(env_name)
         self.model = os.environ.get("GEMINI_MODEL", model)
@@ -88,7 +90,9 @@ class GeminiAIStudioProvider(BaseProvider):
             "generationConfig": {"temperature": 0.0, "maxOutputTokens": 4096},
         }
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(
+            url, data=data, headers={"Content-Type": "application/json"}
+        )
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 raw = resp.read().decode("utf-8")
@@ -150,8 +154,10 @@ def _build_prompt(
     quality_context: Optional[Dict[str, Any]] = None,
 ) -> str:
     prd_json = json.dumps(prd, indent=None, separators=(",", ":"), ensure_ascii=True)
-    inbox_json = json.dumps(inbox, indent=None, separators=(",", ":"), ensure_ascii=True)
-    
+    inbox_json = json.dumps(
+        inbox, indent=None, separators=(",", ":"), ensure_ascii=True
+    )
+
     registry_context = ""
     if hero_registry:
         # PR21: Compact JSON to save tokens
@@ -160,12 +166,19 @@ def _build_prompt(
         for hero in hero_registry.get("heroes", []):
             if not isinstance(hero, dict):
                 continue
-            reduced_heroes.append({
-                "id": hero.get("hero_id"),
-                "name": hero.get("name"),
-                "tags": hero.get("series_tags"),
-            })
-        registry_json = json.dumps({"heroes": reduced_heroes}, indent=None, separators=(",", ":"), ensure_ascii=True)
+            reduced_heroes.append(
+                {
+                    "id": hero.get("hero_id"),
+                    "name": hero.get("name"),
+                    "tags": hero.get("series_tags"),
+                }
+            )
+        registry_json = json.dumps(
+            {"heroes": reduced_heroes},
+            indent=None,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        )
         registry_context = (
             f"Hero Registry (Reference Material):\n"
             f"{registry_json}\n"
@@ -175,7 +188,9 @@ def _build_prompt(
 
     quality_context_block = ""
     if quality_context:
-        quality_json = json.dumps(quality_context, indent=None, separators=(",", ":"), ensure_ascii=True)
+        quality_json = json.dumps(
+            quality_context, indent=None, separators=(",", ":"), ensure_ascii=True
+        )
         quality_context_block = (
             "Quality Context (Planner-Only Reference):\n"
             f"{quality_json}\n"
@@ -224,7 +239,7 @@ def _build_repair_prompt(original_prompt: str, prior_response: str) -> str:
         "- No commentary\n"
         "- No trailing commas\n"
         "- Use double quotes for all strings\n"
-        "- Escape any embedded double quotes inside strings (\\\")\n"
+        '- Escape any embedded double quotes inside strings (\\")\n'
         "- Do NOT change the intended content; only fix JSON validity/escaping\n"
         "- If you mention a hero character in script/captions/shots, pick from the registry list and do not invent new names.\n\n"
         "Previous response to repair:\n"
@@ -237,7 +252,9 @@ def _looks_truncated(raw: str) -> bool:
     return ("{" in s) and ("}" not in s)
 
 
-def _build_schema_fix_prompt(original_prompt: str, prior_response: str, error_text: str) -> str:
+def _build_schema_fix_prompt(
+    original_prompt: str, prior_response: str, error_text: str
+) -> str:
     return (
         "Your previous response did not pass schema validation.\n"
         "Return ONLY a single JSON object. No markdown, no code fences, no commentary.\n"

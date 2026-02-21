@@ -14,7 +14,12 @@ def _repo_root() -> pathlib.Path:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _load_json(path: pathlib.Path) -> Optional[Dict[str, Any]]:
@@ -41,7 +46,9 @@ def _safe_rel(path: pathlib.Path, root: pathlib.Path) -> Optional[str]:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Emit non-authoritative qc_route_advice.v1 from qc_report")
+    parser = argparse.ArgumentParser(
+        description="Emit non-authoritative qc_route_advice.v1 from qc_report"
+    )
     parser.add_argument("--job-id", required=True)
     args = parser.parse_args(argv[1:])
 
@@ -54,7 +61,9 @@ def main(argv: list[str]) -> int:
         print("ERROR: missing qc_report.v1", file=sys.stderr)
         return 1
 
-    recommended_action = str(report.get("overall", {}).get("recommended_action", "escalate_hitl"))
+    recommended_action = str(
+        report.get("overall", {}).get("recommended_action", "escalate_hitl")
+    )
     failed = report.get("overall", {}).get("failed_gate_ids", [])
     reason = "policy-aligned recommendation from normalized gate failures"
     if isinstance(failed, list) and failed:

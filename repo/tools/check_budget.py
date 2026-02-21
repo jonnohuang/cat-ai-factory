@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import os
 import pathlib
 import sys
-import os
 
 # Add repo root to sys.path
 repo_root = pathlib.Path(__file__).resolve().parents[2]
 sys.path.append(str(repo_root))
 
 from repo.services.budget.tracker import BudgetTracker
+
 
 def main():
     parser = argparse.ArgumentParser(description="Cat AI Factory Budget Monitor")
@@ -32,12 +33,12 @@ def main():
 
     if args.set_daily is not None:
         print(f"Update your .env file: BUDGET_DAILY_USD_LIMIT={args.set_daily}")
-        
+
     if args.set_total is not None:
         print(f"Update your .env file: BUDGET_TOTAL_USD_LIMIT={args.set_total}")
 
     summary = tracker.get_usage_summary()
-    
+
     print("\n--- Budget Status ---")
     print(f"Daily Limit: ${summary['daily_limit']:.2f}")
     print(f"Daily Spent: ${summary['daily_spent']:.4f}")
@@ -51,6 +52,7 @@ def main():
     if not tracker.check_budget(0.0):
         print("!!! ALERT: Budget Limit Reached !!!")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

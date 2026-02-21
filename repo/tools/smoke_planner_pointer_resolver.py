@@ -25,7 +25,9 @@ def _load(path: pathlib.Path) -> Optional[Dict[str, Any]]:
 
 
 def _run(cmd: list[str], cwd: pathlib.Path) -> subprocess.CompletedProcess[str]:
-    proc = subprocess.run(cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.run(
+        cmd, cwd=str(cwd), text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     print(proc.stdout, end="")
     return proc
 
@@ -45,7 +47,13 @@ def main() -> int:
     analysis_id = "smoke-auto-pointer"
 
     pose_rel = "repo/examples/pose_checkpoints.v1.example.json"
-    manifest_path = root / "repo" / "canon" / "demo_analyses" / f"{analysis_id}.sample_ingest_manifest.v1.json"
+    manifest_path = (
+        root
+        / "repo"
+        / "canon"
+        / "demo_analyses"
+        / f"{analysis_id}.sample_ingest_manifest.v1.json"
+    )
     _write(
         manifest_path,
         {
@@ -55,7 +63,7 @@ def main() -> int:
             "generated_at": "2026-02-18T00:00:00Z",
             "source": {
                 "video_relpath": "sandbox/assets/demo/processed/smoke-auto-pointer.mp4",
-                "reference_aliases": ["smoke auto pointer", "mochi dance loop"]
+                "reference_aliases": ["smoke auto pointer", "mochi dance loop"],
             },
             "contracts": {
                 "video_analysis_relpath": "repo/examples/video_analysis.v1.example.json",
@@ -67,20 +75,20 @@ def main() -> int:
                 "quality_target_relpath": "repo/examples/quality_target.motion_strict.v1.example.json",
                 "continuity_pack_relpath": "repo/examples/episode_continuity_pack.v1.example.json",
                 "storyboard_relpath": "repo/examples/storyboard.v1.example.json",
-                "frame_labels_relpath": None
+                "frame_labels_relpath": None,
             },
             "assets": {
                 "hero_refs": ["mochi"],
                 "costume_refs": [],
                 "background_refs": [],
                 "audio_refs": [],
-                "style_tone_refs": []
+                "style_tone_refs": [],
             },
             "provenance": {
                 "ingest_tool": "smoke",
                 "tool_versions": {"smoke": "v1"},
-                "confidence": 1.0
-            }
+                "confidence": 1.0,
+            },
         },
     )
 
@@ -112,18 +120,38 @@ def main() -> int:
         print("ERROR: missing job json", file=sys.stderr)
         return 1
     mc = job.get("motion_contract")
-    if not isinstance(mc, dict) or not isinstance(mc.get("relpath"), str) or not mc.get("relpath"):
-        print("ERROR: pointer resolver did not produce motion_contract pointer", file=sys.stderr)
+    if (
+        not isinstance(mc, dict)
+        or not isinstance(mc.get("relpath"), str)
+        or not mc.get("relpath")
+    ):
+        print(
+            "ERROR: pointer resolver did not produce motion_contract pointer",
+            file=sys.stderr,
+        )
         return 1
 
     resolution = job.get("pointer_resolution")
-    if not isinstance(resolution, dict) or resolution.get("version") != "pointer_resolution.v1":
-        print("ERROR: missing pointer_resolution.v1 artifact in job contract", file=sys.stderr)
+    if (
+        not isinstance(resolution, dict)
+        or resolution.get("version") != "pointer_resolution.v1"
+    ):
+        print(
+            "ERROR: missing pointer_resolution.v1 artifact in job contract",
+            file=sys.stderr,
+        )
         return 1
     selected = resolution.get("selected", {})
-    motion_selected = selected.get("motion_contract") if isinstance(selected, dict) else None
-    if not isinstance(motion_selected, dict) or motion_selected.get("relpath") != mc.get("relpath"):
-        print("ERROR: pointer_resolution selected.motion_contract does not match effective job pointer", file=sys.stderr)
+    motion_selected = (
+        selected.get("motion_contract") if isinstance(selected, dict) else None
+    )
+    if not isinstance(motion_selected, dict) or motion_selected.get(
+        "relpath"
+    ) != mc.get("relpath"):
+        print(
+            "ERROR: pointer_resolution selected.motion_contract does not match effective job pointer",
+            file=sys.stderr,
+        )
         return 1
 
     print("OK: planner pointer resolver smoke")
