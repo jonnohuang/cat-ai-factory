@@ -19,6 +19,7 @@ repo_root = pathlib.Path(__file__).resolve().parents[3]
 sys.path.append(str(repo_root))
 
 from repo.services.budget.tracker import BudgetTracker
+from repo.services.orchestrator.director_service import DirectorService
 
 
 def repo_root_from_here() -> pathlib.Path:
@@ -759,6 +760,14 @@ def main(argv: List[str]) -> int:
         max_retries = max(0, args.max_retries)
         total_attempts = max_retries + 1
 
+        is_shot_by_shot = (
+            job.get("render", {}).get("segment_generation_contract") == "shot_by_shot"
+            or len(job.get("shots", [])) > 0
+        )
+        director = None
+        if is_shot_by_shot:
+            director = DirectorService(canonical_job_id, sandbox_root, repo_root)
+
         for attempt_index in range(total_attempts):
             attempt_id = next_attempt_id(attempts_root)
             attempt_dir = attempts_root / attempt_id
@@ -767,149 +776,220 @@ def main(argv: List[str]) -> int:
 
             transition("RUNNING", "ATTEMPT_START", attempt_id=attempt_id)
 
-            worker_log = attempt_dir / "worker.log"
-            pointers["worker_log"] = str(worker_log)
-            worker_cmd = [
-                py_exec,
-                "repo/worker/render_ffmpeg.py",
-                "--job",
-                str(job_path),
-            ]
-            retry_plan_path = logs_dir / "qc" / "retry_plan.v1.json"
-            worker_env: Dict[str, str] = {}
-            # Ensure workers can import from repo.*
-            worker_env["PYTHONPATH"] = str(repo_root)
-            if retry_plan_path.exists():
-                worker_env["CAF_RETRY_PLAN_PATH"] = str(retry_plan_path.resolve())
-                worker_env.update(provider_switch_env_from_retry_plan(retry_plan_path))
+            if director:
+                needed_shots = director.sync_shots(job)
+                if not needed_shots:
+                    # All shots ready, skip to assembly
+                    pass
+                else:
+                    for shot_id in needed_shots:
+                        shot_out_dir = director.get_shot_output_dir(shot_id)
+                        shot_out_dir.mkdir(parents=True, exist_ok=True)
 
-                retry_plan_payload = load_json_if_exists(retry_plan_path)
-                if isinstance(retry_plan_payload, dict):
-                    retry_block = retry_plan_payload.get("retry", {})
-                    segment_retry = retry_block.get("segment_retry", {})
-                    if segment_retry.get("mode") == "retry_selected":
-                        target_segments = segment_retry.get("target_segments", [])
-                        if isinstance(target_segments, list) and target_segments:
-                            first_target = target_segments[0]
-                            if isinstance(first_target, str) and first_target:
-                                worker_env["CAF_TARGET_SHOT_ID"] = first_target
-            worker_env["CAF_RETRY_ATTEMPT_ID"] = attempt_id
-            rc, timed_out = run_cmd(
-                worker_cmd,
-                worker_log,
-                env_overrides=worker_env,
-                timeout_sec=max(1, int(args.worker_timeout_sec)),
-            )
-            if rc != 0:
-                if timed_out:
-                    transition(
-                        "FAIL_WORKER",
-                        "WORKER_TIMEOUT",
-                        attempt_id=attempt_id,
-                        reason=f"worker timed out after {int(args.worker_timeout_sec)}s",
-                        details={"timeout_sec": int(args.worker_timeout_sec)},
-                    )
+                        worker_log = attempt_dir / f"worker_{shot_id}.log"
+                        worker_cmd = [
+                            py_exec,
+                            "repo/worker/render_ffmpeg.py",
+                            "--job",
+                            str(job_path),
+                        ]
+                        worker_env = {
+                            "PYTHONPATH": str(repo_root),
+                            "CAF_TARGET_SHOT_ID": shot_id,
+                            "CAF_RETRY_ATTEMPT_ID": attempt_id,
+                            "CAF_OUTPUT_OVERRIDE": str(shot_out_dir.resolve()),
+                        }
+                        # We don't propagate retry_plan for specific shot targeting yet,
+                        # but we could if needed.
+
+                        rc, timed_out = run_cmd(
+                            worker_cmd,
+                            worker_log,
+                            env_overrides=worker_env,
+                            timeout_sec=max(1, int(args.worker_timeout_sec)),
+                        )
+                        if rc != 0:
+                            # Log failure and continue or fail attempt?
+                            # For now, fail the attempt if any shot fails.
+                            transition(
+                                "FAIL_WORKER",
+                                "SHOT_FAILED",
+                                attempt_id=attempt_id,
+                                reason=f"Shot {shot_id} failed",
+                                details={"shot_id": shot_id, "exit_code": rc},
+                            )
+                            break
+                    else:
+                        # All shots in this attempt finished successfully
+                        director.sync_shots(job)  # update state
+
+                # Attempt assembly
+                success, err = director.assemble(job)
+                if success:
+                    transition("COMPLETED", "COMPLETED", attempt_id=attempt_id)
+                    return 0
                 else:
                     transition(
                         "FAIL_WORKER",
-                        "WORKER_FAILED",
+                        "ASSEMBLY_FAILED",
                         attempt_id=attempt_id,
-                        reason="worker failed",
-                        details={"exit_code": rc},
-                    )
-                if attempt_index < total_attempts - 1:
-                    continue
-                return 1
-
-            all_present, any_present, present, missing = outputs_status(output_dir)
-            if not all_present:
-                transition(
-                    "FAIL_OUTPUTS",
-                    "OUTPUTS_MISSING",
-                    attempt_id=attempt_id,
-                    reason="outputs missing after worker",
-                    details={"present": present, "missing": missing},
-                )
-                if attempt_index < total_attempts - 1:
-                    continue
-                return 1
-
-            transition("OUTPUTS_PRESENT", "OUTPUTS_PRESENT", attempt_id=attempt_id)
-            transition("LINEAGE_READY", "LINEAGE_READY", attempt_id=attempt_id)
-
-            lineage_log = attempt_dir / "lineage_verify.log"
-            pointers["lineage_log"] = str(lineage_log)
-            lineage_cmd = [py_exec, "repo/tools/lineage_verify.py", str(job_path)]
-            rc, _ = run_cmd(lineage_cmd, lineage_log)
-            if rc == 0:
-                transition("VERIFIED", "LINEAGE_OK", attempt_id=attempt_id)
-                action, reason, decision_ctx = quality_decision(attempt_id=attempt_id)
-                action_class = classify_action(action)
-                append_retry_attempt_lineage(
-                    lineage_path=lineage_contract_path,
-                    job_id=canonical_job_id,
-                    entry={
-                        "ts": now_ts(),
-                        "attempt_id": attempt_id,
-                        "source_attempt_id": (
-                            "preexisting-output" if force_retry_from_existing else None
-                        ),
-                        "decision_action": action,
-                        "decision_reason": reason,
-                        "resolution": action_class,
-                        "retry_type": decision_ctx.get("retry_type"),
-                        "segment_retry": decision_ctx.get("segment_retry"),
-                        "artifacts": {
-                            "quality_decision_relpath": decision_ctx.get(
-                                "quality_decision_relpath"
-                            ),
-                            "retry_plan_relpath": decision_ctx.get(
-                                "retry_plan_relpath"
-                            ),
-                            "result_relpath": (
-                                safe_rel(result_json, repo_root)
-                                if result_json.exists()
-                                else None
-                            ),
-                            "output_final_relpath": (
-                                safe_rel(output_dir / "final.mp4", repo_root)
-                                if (output_dir / "final.mp4").exists()
-                                else None
-                            ),
-                        },
-                    },
-                )
-                if action_class == "retry":
-                    transition(
-                        "FAIL_QUALITY",
-                        "QUALITY_RETRY",
-                        attempt_id=attempt_id,
-                        reason=reason,
+                        reason=err,
                     )
                     if attempt_index < total_attempts - 1:
                         continue
                     return 1
-                if action_class == "escalate":
-                    transition(
-                        "FAIL_QUALITY",
-                        "QUALITY_ESCALATED",
-                        attempt_id=attempt_id,
-                        reason=reason,
-                    )
-                    return 1
-                transition("COMPLETED", "COMPLETED", attempt_id=attempt_id)
-                return 0
 
-            transition(
-                "FAIL_VERIFY",
-                "LINEAGE_FAILED",
-                attempt_id=attempt_id,
-                reason="lineage verification failed",
-                details={"exit_code": rc},
-            )
-            if attempt_index < total_attempts - 1:
-                continue
-            return 1
+            else:
+                # Monolithic path (existing)
+                worker_log = attempt_dir / "worker.log"
+                pointers["worker_log"] = str(worker_log)
+                worker_cmd = [
+                    py_exec,
+                    "repo/worker/render_ffmpeg.py",
+                    "--job",
+                    str(job_path),
+                ]
+                retry_plan_path = logs_dir / "qc" / "retry_plan.v1.json"
+                worker_env: Dict[str, str] = {}
+                # Ensure workers can import from repo.*
+                worker_env["PYTHONPATH"] = str(repo_root)
+                if retry_plan_path.exists():
+                    worker_env["CAF_RETRY_PLAN_PATH"] = str(retry_plan_path.resolve())
+                    worker_env.update(
+                        provider_switch_env_from_retry_plan(retry_plan_path)
+                    )
+
+                    retry_plan_payload = load_json_if_exists(retry_plan_path)
+                    if isinstance(retry_plan_payload, dict):
+                        retry_block = retry_plan_payload.get("retry", {})
+                        segment_retry = retry_block.get("segment_retry", {})
+                        if segment_retry.get("mode") == "retry_selected":
+                            target_segments = segment_retry.get("target_segments", [])
+                            if isinstance(target_segments, list) and target_segments:
+                                first_target = target_segments[0]
+                                if isinstance(first_target, str) and first_target:
+                                    worker_env["CAF_TARGET_SHOT_ID"] = first_target
+                worker_env["CAF_RETRY_ATTEMPT_ID"] = attempt_id
+                rc, timed_out = run_cmd(
+                    worker_cmd,
+                    worker_log,
+                    env_overrides=worker_env,
+                    timeout_sec=max(1, int(args.worker_timeout_sec)),
+                )
+                if rc != 0:
+                    if timed_out:
+                        transition(
+                            "FAIL_WORKER",
+                            "WORKER_TIMEOUT",
+                            attempt_id=attempt_id,
+                            reason=f"worker timed out after {int(args.worker_timeout_sec)}s",
+                            details={"timeout_sec": int(args.worker_timeout_sec)},
+                        )
+                    else:
+                        transition(
+                            "FAIL_WORKER",
+                            "WORKER_FAILED",
+                            attempt_id=attempt_id,
+                            reason="worker failed",
+                            details={"exit_code": rc},
+                        )
+                    if attempt_index < total_attempts - 1:
+                        continue
+                    return 1
+
+                all_present, any_present, present, missing = outputs_status(output_dir)
+                if not all_present:
+                    transition(
+                        "FAIL_OUTPUTS",
+                        "OUTPUTS_MISSING",
+                        attempt_id=attempt_id,
+                        reason="outputs missing after worker",
+                        details={"present": present, "missing": missing},
+                    )
+                    if attempt_index < total_attempts - 1:
+                        continue
+                    return 1
+
+                transition("OUTPUTS_PRESENT", "OUTPUTS_PRESENT", attempt_id=attempt_id)
+                transition("LINEAGE_READY", "LINEAGE_READY", attempt_id=attempt_id)
+
+                lineage_log = attempt_dir / "lineage_verify.log"
+                pointers["lineage_log"] = str(lineage_log)
+                lineage_cmd = [py_exec, "repo/tools/lineage_verify.py", str(job_path)]
+                rc, _ = run_cmd(lineage_cmd, lineage_log)
+                if rc == 0:
+                    transition("VERIFIED", "LINEAGE_OK", attempt_id=attempt_id)
+                    action, reason, decision_ctx = quality_decision(
+                        attempt_id=attempt_id
+                    )
+                    action_class = classify_action(action)
+                    append_retry_attempt_lineage(
+                        lineage_path=lineage_contract_path,
+                        job_id=canonical_job_id,
+                        entry={
+                            "ts": now_ts(),
+                            "attempt_id": attempt_id,
+                            "source_attempt_id": (
+                                "preexisting-output"
+                                if force_retry_from_existing
+                                else None
+                            ),
+                            "decision_action": action,
+                            "decision_reason": reason,
+                            "resolution": action_class,
+                            "retry_type": decision_ctx.get("retry_type"),
+                            "segment_retry": decision_ctx.get("segment_retry"),
+                            "artifacts": {
+                                "quality_decision_relpath": decision_ctx.get(
+                                    "quality_decision_relpath"
+                                ),
+                                "retry_plan_relpath": decision_ctx.get(
+                                    "retry_plan_relpath"
+                                ),
+                                "result_relpath": (
+                                    safe_rel(result_json, repo_root)
+                                    if result_json.exists()
+                                    else None
+                                ),
+                                "output_final_relpath": (
+                                    safe_rel(output_dir / "final.mp4", repo_root)
+                                    if (output_dir / "final.mp4").exists()
+                                    else None
+                                ),
+                            },
+                        },
+                    )
+                    if action_class == "retry":
+                        transition(
+                            "FAIL_QUALITY",
+                            "QUALITY_RETRY",
+                            attempt_id=attempt_id,
+                            reason=reason,
+                        )
+                        if attempt_index < total_attempts - 1:
+                            continue
+                        return 1
+                    if action_class == "escalate":
+                        transition(
+                            "FAIL_QUALITY",
+                            "QUALITY_ESCALATED",
+                            attempt_id=attempt_id,
+                            reason=reason,
+                        )
+                        return 1
+                    transition("COMPLETED", "COMPLETED", attempt_id=attempt_id)
+                    return 0
+
+                transition(
+                    "FAIL_VERIFY",
+                    "LINEAGE_FAILED",
+                    attempt_id=attempt_id,
+                    reason="lineage verification failed",
+                    details={"exit_code": rc},
+                )
+                if attempt_index < total_attempts - 1:
+                    continue
+                return 1
 
         return 1
     finally:

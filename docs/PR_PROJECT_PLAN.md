@@ -1913,6 +1913,21 @@ Scope:
 Outcome:
 - Media management is shifted from code to deterministic, file-based RAG authority.
 
+---
+
+### PR-39 — Director Orchestration & Cloud Containerization
+Status: **COMPLETED**
+
+Scope:
+- Introduce **DirectorService**: Granular management of shot-by-shot generation, tracking, and assembly.
+- Shot-Aware Orchestration: Integrated `DirectorService` into `ralph_loop.py` to support targeted retries and parallel rendering.
+- Cloud Containerization: Provided production-grade `Dockerfile.worker`, `Dockerfile.planner`, and `cloudbuild.yaml` for GCP deployment.
+- ADR Acceptance: Formally accepted ADRs 0055 (Director Arch), 0056 (Identity Packs), and 0057 (n8n Boundary).
+
+Outcome:
+- The factory now supports high-fidelity, granular generation with significantly lower retry costs.
+- Phase 7 Cloud Migration infrastructure is now operational with container stubs and CI/CD config.
+
 
 ------------------------------------------------------------
 

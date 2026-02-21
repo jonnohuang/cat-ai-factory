@@ -3458,7 +3458,11 @@ def main():
     if not wm_path.exists():
         raise SystemExit(f"Missing watermark asset: {wm_path}")
 
-    out_dir = output_root / job_id
+    out_override = os.environ.get("CAF_OUTPUT_OVERRIDE", "").strip()
+    if out_override:
+        out_dir = pathlib.Path(out_override)
+    else:
+        out_dir = output_root / job_id
     out_dir.mkdir(parents=True, exist_ok=True)
     result_path = out_dir / "result.json"
 
