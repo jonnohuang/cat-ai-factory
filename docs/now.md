@@ -12,12 +12,12 @@ Update rules:
 
 ------------------------------------------------------------
 
-### 3. Current PR Status (PR-36)
+### 3. Current PR Status (PR-38)
 
 | Role | Status | Blocking |
 | :--- | :--- | :--- |
 | **ARCH** | **DONE** | **NO** |
-| **CODEX** | **IN PROG** | **YES** |
+| **CODEX** | **DONE** | **NO** |
 | **CLOUD** | WAITING | NO |
 
 #### ARCH (Architecture & Decisions)
@@ -27,8 +27,12 @@ Update rules:
 - **Output**: `pr36_acceptance_checklist.md` created. ADRs 0051-0054 Accepted.
 
 #### CODEX (Implementation)
-- **Status**: **Active (Final Verification)**
+- **Status**: **DONE**
 - **Completed**:
+    - **Asset RAG Manifest** (PR-38): Moves media paths from hardcoding to manifest-driven retrieval.
+    - **AssetResolver** utility for tag-based media lookups.
+    - **PointerResolver** refactored to use RAG for demo contracts.
+    - **VertexVeoProvider** refactored for dynamic reference image injection.
     - Deterministic Pointer Resolution (PR-35h).
     - QC Policy & Routing Authority (Fail-Closed).
     - Lab-to-Prod Promotion Queue.
@@ -37,6 +41,8 @@ Update rules:
     - **QC Policy Engine** bugfixes (NameError/ValueError) and hardening.
     - **Hero Image Generation** (Imagen 3) tool implemented.
 - **Recent Wins**:
+    - **Asset RAG** enabled (removed hardcoded paths for Mochi and Dance-Loop assets).
+    - **Asset Smoke Test** passed (verified deterministic tie-breaking and tag matching).
     - **Veo3 Mock Mode** enabled (cost-safe E2E verification path).
     - **QC Tool bugfixes** (resolved Orchestrator crashes due to NameError/ValueError).
     - **Motion Metadata Translation** enabled (Veo3 generative prompt injection).
@@ -49,6 +55,12 @@ Update rules:
 - ADR-0050 (Planner intelligence + lab bootstrap; proposed)
 
 ### What Changed (Diff Summary)
+- Implemented PR-38 Asset RAG Manifest:
+  - Created `repo/shared/asset_manifest.v1.json` + schema: authoritative media registry.
+  - Created `repo/services/planner/asset_resolver.py`: Tag-based media retrieval.
+  - Refactored `repo/services/planner/providers/vertex_ai.py` to use `AssetResolver`.
+  - Refactored `repo/services/planner/pointer_resolver.py` to use `AssetResolver` for demo contracts.
+  - Added `repo/tools/smoke_asset_rag.py` for verification.
 - Implemented PR-36 deterministic pointer resolution:
   - Created `repo/services/planner/pointer_resolver.py`: Deterministic resolver class.
   - Created `repo/tools/resolve_pointers.py`: CLI tool for resolution.

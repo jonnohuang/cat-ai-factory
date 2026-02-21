@@ -5,11 +5,13 @@ import json
 import os
 import pathlib
 from typing import Any, Dict, List, Optional
+from .asset_resolver import AssetResolver
 
 
 class PointerResolver:
     def __init__(self, repo_root: pathlib.Path):
         self.repo_root = repo_root
+        self.asset_resolver = AssetResolver(repo_root)
 
     def _exists(self, relpath: str) -> bool:
         return (self.repo_root / relpath).exists()
@@ -83,18 +85,18 @@ class PointerResolver:
         combined_intent = f"{motion_intent} {prompt_text}"
 
         if "dance" in combined_intent or "loop" in combined_intent:
-            # Check for demo dance loop analysis
-            pose = "repo/canon/demo_analyses/dance_loop.pose_checkpoints.v1.json"
-            if self._exists(pose):
-                pointers["pose_checkpoint"] = pose
+            # Check for demo dance loop analysis via AssetResolver
+            poses = self.asset_resolver.find_assets(["dance", "loop", "pose"], asset_type="contract")
+            if poses:
+                pointers["pose_checkpoint"] = poses[0]
             else:
-                 rejected.append({"candidate_relpath": "repo/canon/demo_analyses/dance_loop.pose_checkpoints.v1.json", "reason": "dance_context_missing_pose"})
+                rejected.append({"candidate_relpath": "dance_loop_pose_contract_rag", "reason": "not_found_in_asset_manifest"})
 
-            beat = "repo/canon/demo_analyses/dance_loop.beat_grid.v1.json"
-            if self._exists(beat):
-                pointers["beat_grid"] = beat
+            beats = self.asset_resolver.find_assets(["dance", "loop", "beat"], asset_type="contract")
+            if beats:
+                pointers["beat_grid"] = beats[0]
             else:
-                rejected.append({"candidate_relpath": "repo/canon/demo_analyses/dance_loop.beat_grid.v1.json", "reason": "dance_context_missing_beat"})
+                rejected.append({"candidate_relpath": "dance_loop_beat_contract_rag", "reason": "not_found_in_asset_manifest"})
 
         # 4. Engine Adapter Registry
         engine_reg = "repo/shared/engine_adapter_registry.v1.json"

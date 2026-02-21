@@ -1843,9 +1843,11 @@ Acceptance criteria:
 ---
 
 ### PR-36 — Deterministic quality convergence loop hardening (ARCH scope lock)
-(Active)
+Status: **COMPLETED**
 
-### PR-37.5: Director Primitives (PROPOSED)
+---
+
+### PR-37.5: Director Primitives (IMPLEMENTED)
 **Goal**: Transition from monolithic to granular shot-by-shot generation to enable the LangGraph Director vision.
 - **Shot-Aware Workers**: Update `render_veo.py` and `render_ffmpeg.py` to support `CAF_TARGET_SHOT_ID` for targeted generation/re-rendering.
 - **Granular QC**: Update `decide_quality_action.py` to emit `segment_retry` plans that point to specific `shot_id`s.
@@ -1853,7 +1855,7 @@ Acceptance criteria:
 
 ---
 
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Lock deterministic brief-to-pointer resolution authority:
@@ -1895,6 +1897,20 @@ Implemented in current slice:
 Outcome:
 - Autonomous quality convergence path is explicit, bounded, and contract-governed.
 - User expectations for brief->quality improvement align with deterministic production authority.
+
+---
+
+### PR-38 — Asset RAG Manifest (deterministic media retrieval)
+Status: **IMPLEMENTED**
+
+Scope:
+- Introduce `asset_manifest.v1.json` for raw media metadata (images, videos, contracts).
+- Implement `AssetResolver` in Planner to replace hardcoded paths in providers.
+- Refactor `vertex_ai.py` and `PointerResolver` to use manifest-driven asset selection.
+- Verify deterministic tie-breaking and tag-based retrieval.
+
+Outcome:
+- Media management is shifted from code to deterministic, file-based RAG authority.
 
 
 ------------------------------------------------------------
