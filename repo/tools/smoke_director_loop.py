@@ -12,6 +12,7 @@ import sys
 repo_root = pathlib.Path(__file__).resolve().parents[2]
 sys.path.append(str(repo_root))
 
+
 def setup_job(job_id: str):
     root = repo_root
     jobs_dir = root / "sandbox" / "jobs"
@@ -29,34 +30,38 @@ def setup_job(job_id: str):
         "render": {
             "segment_generation_contract": "shot_by_shot",
             "background_asset": "sandbox/assets/demo/dance_loop.mp4",
-        }
+        },
     }
     job_path.write_text(json.dumps(job_data, indent=2))
     return job_path
 
+
 def main():
     job_id = "smoke-director-loop"
     root = repo_root
-    
+
     # Clean up
     shutil.rmtree(root / "sandbox" / "output" / job_id, ignore_errors=True)
     shutil.rmtree(root / "sandbox" / "logs" / job_id, ignore_errors=True)
-    
+
     job_path = setup_job(job_id)
-    
+
     print(f"--- Running Orchestrator for {job_id} ---")
-    
+
     cmd = [
         sys.executable,
-        "-m", "repo.services.orchestrator.ralph_loop",
-        "--job", str(job_path),
-        "--max-retries", "1"
+        "-m",
+        "repo.services.orchestrator.ralph_loop",
+        "--job",
+        str(job_path),
+        "--max-retries",
+        "1",
     ]
-    
+
     env = os.environ.copy()
     env["PYTHONPATH"] = str(root)
-    env["CAF_VEO_MOCK"] = "1" # Use mock mode for faster testing
-    
+    env["CAF_VEO_MOCK"] = "1"  # Use mock mode for faster testing
+
     try:
         subprocess.check_call(cmd, env=env)
         print("Orchestrator finished successfully.")
@@ -67,11 +72,11 @@ def main():
     # Verify outputs
     out_dir = root / "sandbox" / "output" / job_id
     shots_dir = out_dir / "shots"
-    
+
     assert (shots_dir / "shot_1" / "final.mp4").exists(), "shot_1/final.mp4 missing"
     assert (shots_dir / "shot_2" / "final.mp4").exists(), "shot_2/final.mp4 missing"
     assert (out_dir / "final.mp4").exists(), "final assembled video missing"
-    
+
     # Verify director state
     state_file = root / "sandbox" / "logs" / job_id / "director" / "state.v1.json"
     assert state_file.exists(), "Director state file missing"
@@ -81,6 +86,7 @@ def main():
     assert state_data["assembly"]["status"] == "completed"
 
     print("SUCCESS: Director loop verified!")
+
 
 if __name__ == "__main__":
     main()

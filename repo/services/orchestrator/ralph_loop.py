@@ -760,7 +760,10 @@ def main(argv: List[str]) -> int:
         max_retries = max(0, args.max_retries)
         total_attempts = max_retries + 1
 
-        is_shot_by_shot = job.get("render", {}).get("segment_generation_contract") == "shot_by_shot" or len(job.get("shots", [])) > 0
+        is_shot_by_shot = (
+            job.get("render", {}).get("segment_generation_contract") == "shot_by_shot"
+            or len(job.get("shots", [])) > 0
+        )
         director = None
         if is_shot_by_shot:
             director = DirectorService(canonical_job_id, sandbox_root, repo_root)
@@ -782,7 +785,7 @@ def main(argv: List[str]) -> int:
                     for shot_id in needed_shots:
                         shot_out_dir = director.get_shot_output_dir(shot_id)
                         shot_out_dir.mkdir(parents=True, exist_ok=True)
-                        
+
                         worker_log = attempt_dir / f"worker_{shot_id}.log"
                         worker_cmd = [
                             py_exec,
@@ -794,11 +797,11 @@ def main(argv: List[str]) -> int:
                             "PYTHONPATH": str(repo_root),
                             "CAF_TARGET_SHOT_ID": shot_id,
                             "CAF_RETRY_ATTEMPT_ID": attempt_id,
-                            "CAF_OUTPUT_OVERRIDE": str(shot_out_dir.resolve())
+                            "CAF_OUTPUT_OVERRIDE": str(shot_out_dir.resolve()),
                         }
-                        # We don't propagate retry_plan for specific shot targeting yet, 
+                        # We don't propagate retry_plan for specific shot targeting yet,
                         # but we could if needed.
-                        
+
                         rc, timed_out = run_cmd(
                             worker_cmd,
                             worker_log,
@@ -813,12 +816,12 @@ def main(argv: List[str]) -> int:
                                 "SHOT_FAILED",
                                 attempt_id=attempt_id,
                                 reason=f"Shot {shot_id} failed",
-                                details={"shot_id": shot_id, "exit_code": rc}
+                                details={"shot_id": shot_id, "exit_code": rc},
                             )
                             break
                     else:
                         # All shots in this attempt finished successfully
-                        director.sync_shots(job) # update state
+                        director.sync_shots(job)  # update state
 
                 # Attempt assembly
                 success, err = director.assemble(job)
@@ -830,7 +833,7 @@ def main(argv: List[str]) -> int:
                         "FAIL_WORKER",
                         "ASSEMBLY_FAILED",
                         attempt_id=attempt_id,
-                        reason=err
+                        reason=err,
                     )
                     if attempt_index < total_attempts - 1:
                         continue
@@ -852,7 +855,9 @@ def main(argv: List[str]) -> int:
                 worker_env["PYTHONPATH"] = str(repo_root)
                 if retry_plan_path.exists():
                     worker_env["CAF_RETRY_PLAN_PATH"] = str(retry_plan_path.resolve())
-                    worker_env.update(provider_switch_env_from_retry_plan(retry_plan_path))
+                    worker_env.update(
+                        provider_switch_env_from_retry_plan(retry_plan_path)
+                    )
 
                     retry_plan_payload = load_json_if_exists(retry_plan_path)
                     if isinstance(retry_plan_payload, dict):
@@ -914,7 +919,9 @@ def main(argv: List[str]) -> int:
                 rc, _ = run_cmd(lineage_cmd, lineage_log)
                 if rc == 0:
                     transition("VERIFIED", "LINEAGE_OK", attempt_id=attempt_id)
-                    action, reason, decision_ctx = quality_decision(attempt_id=attempt_id)
+                    action, reason, decision_ctx = quality_decision(
+                        attempt_id=attempt_id
+                    )
                     action_class = classify_action(action)
                     append_retry_attempt_lineage(
                         lineage_path=lineage_contract_path,
@@ -923,7 +930,9 @@ def main(argv: List[str]) -> int:
                             "ts": now_ts(),
                             "attempt_id": attempt_id,
                             "source_attempt_id": (
-                                "preexisting-output" if force_retry_from_existing else None
+                                "preexisting-output"
+                                if force_retry_from_existing
+                                else None
                             ),
                             "decision_action": action,
                             "decision_reason": reason,
