@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..util.json_extract import extract_json_object
 from ..util.redact import redact_text
+from ..asset_resolver import AssetResolver
 from ...budget.pricing import (
     COST_GEMINI_PRO_INPUT_1M,
     COST_GEMINI_PRO_OUTPUT_1M,
@@ -65,6 +66,7 @@ class _VertexBaseProvider(BaseProvider):
         self._quality_context: Optional[Dict[str, Any]] = None
         self._last_reference_image_rels: List[str] = []
         self._budget = BudgetTracker()
+        self._asset_resolver = AssetResolver(_repo_root_path())
 
     def _preprocess_job_schema_defaults(self, job: Dict[str, Any]) -> Dict[str, Any]:
         """Ensures required schema fields are present and typed correctly before validation."""
@@ -710,7 +712,8 @@ class VertexVeoProvider(_VertexBaseProvider):
         if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
             print(f"INFO planner provider={self.name} CAF_VEO_MOCK=1; bypassing priced generation and budget tracking.")
             # Return real video bytes to satisfy analysis logic
-            source_demo = _repo_root_path() / "sandbox/assets/demo/dance_loop.mp4"
+            rel_path = self._asset_resolver.resolve_background_video(prompt or "") or "sandbox/assets/demo/dance_loop.mp4"
+            source_demo = _repo_root_path() / rel_path
             if source_demo.exists():
                 return source_demo.read_bytes()
             return b"VEO_MOCK_VIDEO_BYTES"
@@ -931,25 +934,11 @@ class VertexVeoProvider(_VertexBaseProvider):
                     refs.append(p)
 
         context = _job_context_text(job, prd)
-        if "mochi" in context:
-            for rel in (
-                "assets/demo/mochi_front.png",
-                "assets/demo/mochi_profile.png",
-                "assets/demo/mochi_jump.png",
-            ):
-                p = _repo_root_path() / "sandbox" / rel
-                if p.exists():
-                    refs.append(p)
-        if _is_dance_context(context):
-            for rel in (
-                "assets/demo/dance_loop_snapshot.png",
-                "assets/demo/dance_loop_ref_01.png",
-                "assets/demo/dance_loop_ref_02.png",
-                "assets/demo/dance_loop_ref_03.png",
-            ):
-                p = _repo_root_path() / "sandbox" / rel
-                if p.exists():
-                    refs.append(p)
+        resolved_refs = self._asset_resolver.resolve_reference_images(context)
+        for rel in resolved_refs:
+            p = _repo_root_path() / rel
+            if p.exists():
+                refs.append(p)
 
         # Deduplicate and cap.
         uniq: List[pathlib.Path] = []

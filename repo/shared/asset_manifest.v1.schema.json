@@ -1,0 +1,70 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "AssetManifest",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "version",
+        "assets"
+    ],
+    "properties": {
+        "version": {
+            "type": "string",
+            "const": "asset_manifest.v1"
+        },
+        "generated_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "assets": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "asset_id",
+                    "type",
+                    "relpath",
+                    "tags"
+                ],
+                "properties": {
+                    "asset_id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9-_]+$",
+                        "description": "Unique identifier for the asset."
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "image",
+                            "video",
+                            "audio",
+                            "contract"
+                        ],
+                        "description": "The category of the asset."
+                    },
+                    "relpath": {
+                        "type": "string",
+                        "description": "Repository-relative path to the asset file."
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Keywords for retrieval (e.g. 'mochi', 'dance', 'background')."
+                    },
+                    "priority": {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Retrieval priority (higher is better)."
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "description": "Optional type-specific metadata (resolution, duration, etc.)"
+                    }
+                }
+            }
+        }
+    }
+}

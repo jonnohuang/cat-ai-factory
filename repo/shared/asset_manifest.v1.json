@@ -1,0 +1,127 @@
+{
+    "version": "asset_manifest.v1",
+    "generated_at": "2026-02-20T14:05:00Z",
+    "assets": [
+        {
+            "asset_id": "mochi-front",
+            "type": "image",
+            "relpath": "sandbox/assets/demo/mochi_front.png",
+            "tags": [
+                "hero",
+                "mochi",
+                "front",
+                "reference"
+            ],
+            "priority": 110
+        },
+        {
+            "asset_id": "mochi-profile",
+            "type": "image",
+            "relpath": "sandbox/assets/demo/mochi_profile.png",
+            "tags": [
+                "hero",
+                "mochi",
+                "profile",
+                "reference"
+            ],
+            "priority": 90
+        },
+        {
+            "asset_id": "mochi-jump",
+            "type": "image",
+            "relpath": "sandbox/assets/demo/mochi_jump.png",
+            "tags": [
+                "hero",
+                "mochi",
+                "dynamic",
+                "reference"
+            ],
+            "priority": 80
+        },
+        {
+            "asset_id": "dance-loop-bg",
+            "type": "video",
+            "relpath": "sandbox/assets/demo/dance_loop.mp4",
+            "tags": [
+                "background",
+                "dance",
+                "loop",
+                "demo"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "dance-loop-snapshot",
+            "type": "image",
+            "relpath": "sandbox/assets/demo/dance_loop_snapshot.png",
+            "tags": [
+                "background",
+                "dance",
+                "loop",
+                "reference",
+                "snapshot"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "dance-loop-ref-01",
+            "type": "image",
+            "relpath": "sandbox/assets/demo/dance_loop_ref_01.png",
+            "tags": [
+                "dance",
+                "loop",
+                "reference",
+                "group"
+            ],
+            "priority": 90
+        },
+        {
+            "asset_id": "dance-loop-ref-02",
+            "type": "image",
+            "relpath": "sandbox/assets/demo/dance_loop_ref_02.png",
+            "tags": [
+                "dance",
+                "loop",
+                "reference",
+                "group"
+            ],
+            "priority": 80
+        },
+        {
+            "asset_id": "dance-loop-ref-03",
+            "type": "image",
+            "relpath": "sandbox/assets/demo/dance_loop_ref_03.png",
+            "tags": [
+                "dance",
+                "loop",
+                "reference",
+                "group"
+            ],
+            "priority": 70
+        },
+        {
+            "asset_id": "dance-loop-pose",
+            "type": "contract",
+            "relpath": "repo/canon/demo_analyses/dance-loop.pose_checkpoints.v1.json",
+            "tags": [
+                "dance",
+                "loop",
+                "pose",
+                "contract"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "dance-loop-beat",
+            "type": "contract",
+            "relpath": "repo/canon/demo_analyses/dance-loop.beat_grid.v1.json",
+            "tags": [
+                "dance",
+                "loop",
+                "beat",
+                "contract"
+            ],
+            "priority": 100
+        }
+    ]
+}
