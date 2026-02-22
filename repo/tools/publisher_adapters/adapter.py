@@ -21,6 +21,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from repo.dist.dist_reframer import reframe_video
+
 from .copy_format import clip_id_dirname, format_copy
 
 # --- Secret Scanning (Reused from validate_publish_plan) ---
@@ -237,7 +239,8 @@ class SharedBundleBuilder:
                     )
 
                 dst_video = clip_dir / "video" / "final.mp4"
-                shutil.copy2(abs_src_video, dst_video)
+                # Use Distribution Plane reframer instead of raw copy
+                reframe_video(abs_src_video, dst_video, platform)
 
                 # B. Captions (Optional)
                 potential_srt = abs_src_video.parent / "final.srt"

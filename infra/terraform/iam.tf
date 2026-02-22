@@ -22,6 +22,12 @@ resource "google_storage_bucket_iam_member" "outputs_admin" {
   member = "serviceAccount:${google_service_account.runner.email}"
 }
 
+resource "google_storage_bucket_iam_member" "dist_artifacts_admin" {
+  bucket = google_storage_bucket.dist_artifacts.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.runner.email}"
+}
+
 # Grant Firestore Access
 resource "google_project_iam_member" "firestore_user" {
   project = var.project_id

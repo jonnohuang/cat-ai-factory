@@ -124,14 +124,24 @@ flowchart TB
     ORCH[Orchestrator:\nvalidate job\nensure lineage\ntrigger worker\nretry safely]
   end
 
-  subgraph W[Worker Plane — deterministic renderer]
+  subgraph W[Worker Plane — Production (deterministic)]
     WORK[FFmpeg-first renderer:\ncompositing + captions + audio]
     ASSETS[/sandbox/assets/.../]
-    OUT[/sandbox/output/<job_id>/\nfinal.mp4 + final.srt + result.json/]
+    MASTER[/sandbox/output/<job_id>/\nfinal.mp4 (1080x1080) + result.json/]
     LOGS[/sandbox/logs/<job_id>.../]
     ASSETS --> WORK
-    WORK --> OUT
+    WORK --> MASTER
     WORK --> LOGS
+  end
+
+  subgraph D[Distribution Plane — Export (automated)]
+    RUNNER[Distribution Runner:\npolls inbox for approvals]
+    REFR[Dist Reframer:\nreframes 1:1 to 9:16 / 4:5 / 16:9]
+    BUNDLE[/sandbox/dist_artifacts/<job_id>/bundles/\ntiktok/ instagram/ youtube/]
+    
+    MASTER --> RUNNER
+    RUNNER --> REFR
+    REFR --> BUNDLE
   end
 
   JOB --> ORCH
@@ -145,12 +155,13 @@ flowchart LR
   PIPE --> SRT[final.srt]
   PIPE --> META[result.json\nchecksums + versions]
 
-  subgraph PIPE
     A1[dialogue_reaction:\ntrim + captions + audio normalize]
     A2[meme_narrative:\nscene list + punch-in + shake + sfx cues + captions]
     A3[dance_loop:\nBPM loop + sine motion preset + captions]
     A4[flight_composite:\nfg png + bg + fake camera preset + captions]
   end
+
+  PIPE --> OUT[Production Master\n1080x1080 @ 24fps]
 
 ------------------------------------------------------------
 
@@ -239,6 +250,8 @@ Expected outputs:
 ## Worker Rendering Strategy (v0.1)
 
 - FFmpeg-first pipeline.
+- **Resolution Lock**: Production masters are locked to `1080x1080` (Square) at `24 fps`.
+- **Smart Scaling**: Vertical assets used in the square 1:1 master are center-cropped for safety.
 - Deterministic filtergraphs per archetype.
 - Motion presets are math-based and parameterized by fixed integers where possible.
 - Captions:

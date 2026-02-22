@@ -11,6 +11,7 @@ This guide covers the full CAF media stack:
   - `job.json`, `qc_policy.v1.json`, `qc_report.v1.json`
 - Deterministic runtime authority:
   - Controller + Worker decisions from policy/report contracts
+  - Distribution Runner (automated reframing/bundling)
 - Advisory-only:
   - OpenClaw lab suggestions
   - multimodal diagnostics
@@ -77,6 +78,15 @@ This guide covers the full CAF media stack:
   - optional:
     - `sandbox/logs/<job_id>/qc/qc_route_advice.v1.json`
     - `sandbox/logs/<job_id>/qc/lab_qc_loop_summary.v1.json`
+### Distribution Engine (Export Transformation)
+- Tools:
+  - `repo/dist/dist_reframer.py` (FFmpeg-based reframer)
+  - `repo/dist/dist_runner.py` (Automated orchestration/poller)
+- Plane:
+  - Distribution Plane
+- Main artifacts:
+  - platform-specific bundles under `sandbox/dist_artifacts/<job_id>/bundles/`
+  - state tracking: `sandbox/dist_artifacts/<job_id>/<platform>.state.json`
 
 ## Generation/Provider Adapters
 

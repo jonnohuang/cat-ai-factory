@@ -65,3 +65,19 @@ resource "google_cloud_run_v2_service" "worker" {
     }
   }
 }
+
+resource "google_cloud_run_v2_service" "dist_runner" {
+  name     = "caf-dist-runner"
+  location = var.region
+  
+  template {
+    service_account = google_service_account.runner.email
+    containers {
+      image = "us-docker.pkg.dev/cloudrun/container/hello" # Placeholder
+      env {
+        name  = "CAF_INGRESS_MODE"
+        value = "cloud"
+      }
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+    "job_id": "example-square-dev",
+    "date": "2026-02-21",
+    "niche": "dance",
+    "lane": "ai_video",
+    "video": {
+        "length_seconds": 12,
+        "aspect_ratio": "1:1",
+        "fps": 24,
+        "resolution": "1080x1080"
+    },
+    "audio": {
+        "mode": "platform_trending",
+        "notes": "Silent master for dev stabilization."
+    },
+    "script": {
+        "hook": "Square stabilization test.",
+        "voiceover": "Testing 1080x1080 dev resolution for standardizing the Production Plane master.",
+        "ending": "CAF Dev standardized."
+    },
+    "shots": [
+        {
+            "shot_id": "shot_0001",
+            "t": 0,
+            "visual": "Test pattern cat",
+            "action": "stare",
+            "caption": "Dev Step 1"
+        },
+        {
+            "shot_id": "shot_0002",
+            "t": 2,
+            "visual": "Test pattern cat",
+            "action": "blink",
+            "caption": "Dev Step 2"
+        },
+        {
+            "shot_id": "shot_0003",
+            "t": 4,
+            "visual": "Test pattern cat",
+            "action": "yawn",
+            "caption": "Dev Step 3"
+        },
+        {
+            "shot_id": "shot_0004",
+            "t": 6,
+            "visual": "Test pattern cat",
+            "action": "stretch",
+            "caption": "Dev Step 4"
+        },
+        {
+            "shot_id": "shot_0005",
+            "t": 8,
+            "visual": "Test pattern cat",
+            "action": "nap",
+            "caption": "Dev Step 5"
+        },
+        {
+            "shot_id": "shot_0006",
+            "t": 10,
+            "visual": "Test pattern cat",
+            "action": "wake up",
+            "caption": "Dev Step 6"
+        }
+    ],
+    "captions": [
+        "Dev Step 1",
+        "Dev Step 2",
+        "Dev Step 3",
+        "Dev Step 4",
+        "Dev Step 5"
+    ],
+    "hashtags": [
+        "#dev",
+        "#standardized",
+        "#square"
+    ],
+    "render": {
+        "background_asset": "assets/demo/dance_loop.mp4",
+        "subtitle_style": "big_bottom",
+        "output_basename": "square_dev_test"
+    }
+}

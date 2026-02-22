@@ -58,7 +58,8 @@
         "aspect_ratio": {
           "type": "string",
           "enum": [
-            "9:16"
+            "9:16",
+            "1:1"
           ]
         },
         "fps": {
@@ -69,7 +70,8 @@
         "resolution": {
           "type": "string",
           "enum": [
-            "1080x1920"
+            "1080x1920",
+            "1080x1080"
           ]
         }
       }
