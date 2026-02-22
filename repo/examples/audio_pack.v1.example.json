@@ -1,0 +1,28 @@
+{
+    "version": "audio_pack.v1",
+    "pack_id": "caf_signature_v1",
+    "tracks": [
+        {
+            "track_id": "mochi_meow_trap",
+            "path": "repo/assets/audio/caf_signature_v1/mochi_meow_trap.wav",
+            "bpm": 128,
+            "duration_s": 15.0,
+            "tags": [
+                "energetic",
+                "trap",
+                "meow"
+            ]
+        },
+        {
+            "track_id": "cat_nap_lofi",
+            "path": "repo/assets/audio/caf_signature_v1/cat_nap_lofi.wav",
+            "bpm": 80,
+            "duration_s": 30.0,
+            "tags": [
+                "chill",
+                "lofi",
+                "sleepy"
+            ]
+        }
+    ]
+}

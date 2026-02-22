@@ -2518,6 +2518,120 @@ def has_audio_stream(path: pathlib.Path) -> bool:
         return False
 
 
+def resolve_audio_strategy(
+    job: dict, sandbox_root: pathlib.Path, repo_root: pathlib.Path
+) -> dict:
+    """
+    Hybrid Audio Strategy resolution (ADR-0058).
+    Returns a unified audio plan for the worker.
+    """
+    audio_cfg = job.get("audio", {})
+    mode = audio_cfg.get("mode", "legacy")
+
+    if mode == "platform_trending":
+        return {
+            "mode": mode,
+            "audio_path": None,
+            "audio_source": "silence",
+            "has_bg_audio_fallback": False,
+        }
+
+    if mode in ("licensed_pack", "original_pack"):
+        pack_id = audio_cfg.get("audio_pack_id")
+        track_id = audio_cfg.get("track_id")
+        if not pack_id or not track_id:
+            print(
+                f"WARNING: mode '{mode}' requires audio_pack_id and track_id. Falling back to silence."
+            )
+            return {
+                "mode": mode,
+                "audio_path": None,
+                "audio_source": "silence",
+                "has_bg_audio_fallback": False,
+            }
+
+        # Resolve pack registry
+        registry_path = repo_root / "repo" / "shared" / "audio_packs" / "v1.json"
+        if not registry_path.exists():
+            # Try example path for local testing/bootstrapping
+            registry_path = repo_root / "repo" / "examples" / "audio_pack.v1.example.json"
+
+        if not registry_path.exists():
+            print(
+                f"WARNING: Audio pack registry missing: {registry_path}. Falling back to silence."
+            )
+            return {
+                "mode": mode,
+                "audio_path": None,
+                "audio_source": "silence",
+                "has_bg_audio_fallback": False,
+            }
+
+        try:
+            registry = load_json_file(registry_path)
+            found_track = None
+            for track in registry.get("tracks", []):
+                if track.get("track_id") == track_id:
+                    found_track = track
+                    break
+
+            if not found_track:
+                print(
+                    f"WARNING: Track '{track_id}' not found in pack. Falling back to silence."
+                )
+                return {
+                    "mode": mode,
+                    "audio_path": None,
+                    "audio_source": "silence",
+                    "has_bg_audio_fallback": False,
+                }
+
+            clean_path = found_track["path"]
+            # Asset might be in repo (shared) or sandbox (cached)
+            # resolve_project_relpath handles this logic safely
+            p = resolve_project_relpath(clean_path, repo_root, sandbox_root)
+            if not p.exists():
+                print(f"WARNING: Pack asset missing: {p}. Falling back to silence.")
+                return {
+                    "mode": mode,
+                    "audio_path": None,
+                    "audio_source": "silence",
+                    "has_bg_audio_fallback": False,
+                }
+
+            return {
+                "mode": mode,
+                "audio_path": p,
+                "audio_source": "pack_asset",
+                "has_bg_audio_fallback": False,
+            }
+        except Exception as e:
+            print(f"ERROR: Audio pack resolution failed: {e}")
+            return {
+                "mode": mode,
+                "audio_path": None,
+                "audio_source": "silence",
+                "has_bg_audio_fallback": False,
+            }
+
+    # Legacy mode / Fallback
+    audio_path = resolve_audio_asset(job, sandbox_root)
+    if audio_path:
+        return {
+            "mode": "legacy",
+            "audio_path": audio_path,
+            "audio_source": "job_asset",
+            "has_bg_audio_fallback": True,
+        }
+
+    return {
+        "mode": "legacy",
+        "audio_path": None,
+        "audio_source": "ambient",
+        "has_bg_audio_fallback": True,
+    }
+
+
 def resolve_audio_asset(job: dict, sandbox_root: pathlib.Path) -> pathlib.Path | None:
     if "audio" not in job or "audio_asset" not in job["audio"]:
         return None
@@ -2721,20 +2835,20 @@ def render_image_motion(
         filter_chain.append(f"[base]{zp_expr}[bg]")
 
     # -- Audio Inputs --
-    # Prio: Job Asset > Silence (Images have no BG audio)
-    audio_asset = resolve_audio_asset(job, sandbox_root)
-    has_bg_audio = False  # Images don't have audio stream
-    audio_source = "silence"
+    # Prio: Strategy Mode > Silence
+    strategy = resolve_audio_strategy(job, sandbox_root, repo_root_from_here())
+    audio_source = strategy["audio_source"]
+    audio_path = strategy["audio_path"]
+    has_bg_audio = False
     audio_input_idx = -1
 
-    if audio_asset:
-        audio_source = "job_asset"
+    if audio_path:
         # -stream_loop -1 allows audio to loop if shorter than video duration
-        inputs.extend(["-stream_loop", "-1", "-i", str(audio_asset)])
+        inputs.extend(["-stream_loop", "-1", "-i", str(audio_path)])
         audio_input_idx = next_input_idx
         next_input_idx += 1
     else:
-        audio_source = "silence"
+        audio_source = strategy["audio_source"]
         # Inject deterministic silence
         inputs.extend(
             [
@@ -2871,7 +2985,7 @@ def render_image_motion(
             "opacity": OPACITY,
         },
         "audio_source": audio_source,
-        "audio_asset_path": str(audio_asset) if audio_asset else None,
+        "audio_asset_path": str(audio_path) if audio_path else None,
         "has_bg_audio": has_bg_audio,
         "motion_preset": preset,
         "seed_frames_count": len(safe_seeds),
@@ -2950,23 +3064,23 @@ def render_standard(
     inputs.extend(["-i", str(bg)])
     next_input_idx += 1
 
-    # -- Audio Logic (Standard) --
-    # Prio: Job Asset > BG Audio > Silence
-    audio_asset = resolve_audio_asset(job, sandbox_root)
-    has_bg_audio = has_audio_stream(bg)
-    audio_source = "silence"
+    # -- Audio Logic (ADR-0058) --
+    strategy = resolve_audio_strategy(job, sandbox_root, repo_root_from_here())
+    audio_source = strategy["audio_source"]
+    audio_path = strategy["audio_path"]
     audio_input_idx = -1
 
-    if audio_asset:
-        audio_source = "job_asset"
-        inputs.extend(["-stream_loop", "-1", "-i", str(audio_asset)])
+    has_bg_audio = has_audio_stream(bg)
+
+    if audio_path:
+        inputs.extend(["-stream_loop", "-1", "-i", str(audio_path)])
         audio_input_idx = next_input_idx
         next_input_idx += 1
-    elif has_bg_audio:
+    elif strategy["has_bg_audio_fallback"] and has_bg_audio:
         audio_source = "bg_audio"
         audio_input_idx = current_bg_idx  # Use BG input
     else:
-        audio_source = "silence"
+        # Final fallback to silence (or platform_trending intent)
         inputs.extend(
             [
                 "-f",
@@ -3110,7 +3224,7 @@ def render_standard(
             "opacity": OPACITY,
         },
         "audio_source": audio_source,
-        "audio_asset_path": str(audio_asset) if audio_asset else None,
+        "audio_asset_path": str(audio_path) if audio_path else None,
         "has_bg_audio": has_bg_audio,
         "subtitles_status": subtitles_status,
         "ffmpeg_cmd": final_cmd_logical,
@@ -3154,9 +3268,23 @@ def render_dance_swap(
 
     inputs = ["-i", str(source_video), "-i", str(fg_asset), "-i", str(wm_path)]
     source_idx, fg_idx, wm_idx = 0, 1, 2
-    audio_source = "bg_audio" if has_audio_stream(source_video) else "silence"
-    audio_input_idx = source_idx
-    if audio_source == "silence":
+
+    # -- Audio Logic (ADR-0058) --
+    strategy = resolve_audio_strategy(job, sandbox_root, repo_root_from_here())
+    audio_source = strategy["audio_source"]
+    audio_path = strategy["audio_path"]
+    audio_input_idx = -1
+
+    has_bg_audio = has_audio_stream(source_video)
+
+    if audio_path:
+        inputs.extend(["-stream_loop", "-1", "-i", str(audio_path)])
+        audio_input_idx = 3  # Next after base 3
+    elif strategy["has_bg_audio_fallback"] and has_bg_audio:
+        audio_source = "bg_audio"
+        audio_input_idx = source_idx
+    else:
+        # Final fallback to silence (or platform_trending intent)
         inputs.extend(
             [
                 "-f",

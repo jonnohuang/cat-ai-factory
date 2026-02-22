@@ -1,0 +1,83 @@
+{
+    "job_id": "example-mixed-master",
+    "date": "2026-02-21",
+    "niche": "brand",
+    "lane": "ai_video",
+    "video": {
+        "length_seconds": 15,
+        "aspect_ratio": "9:16",
+        "fps": 24,
+        "resolution": "1080x1920"
+    },
+    "audio": {
+        "mode": "licensed_pack",
+        "audio_pack_id": "caf_signature_v1",
+        "track_id": "mochi_meow_trap"
+    },
+    "script": {
+        "hook": "Signature sound.",
+        "voiceover": "Exclusive track by Mochi. This is how a factory cat grooves.",
+        "ending": "Cat AI Factory original."
+    },
+    "shots": [
+        {
+            "shot_id": "shot_0001",
+            "t": 0,
+            "visual": "Studio setting",
+            "action": "cat on decks",
+            "caption": "MC Mochi"
+        },
+        {
+            "shot_id": "shot_0002",
+            "t": 2,
+            "visual": "Close up",
+            "action": "ear twitch",
+            "caption": "Deep listening"
+        },
+        {
+            "shot_id": "shot_0003",
+            "t": 4,
+            "visual": "Wide shot",
+            "action": "bass stomp",
+            "caption": "The Beat"
+        },
+        {
+            "shot_id": "shot_0004",
+            "t": 8,
+            "visual": "Flashy lights",
+            "action": "disco move",
+            "caption": "Signature"
+        },
+        {
+            "shot_id": "shot_0005",
+            "t": 10,
+            "visual": "Mirrorball cat",
+            "action": "spin",
+            "caption": "Glow"
+        },
+        {
+            "shot_id": "shot_0006",
+            "t": 13,
+            "visual": "Factory exit",
+            "action": "strut",
+            "caption": "CAF Out."
+        }
+    ],
+    "captions": [
+        "MC Mochi",
+        "Deep listening",
+        "The Beat",
+        "Signature",
+        "Glow"
+    ],
+    "hashtags": [
+        "#cafmusic",
+        "#original",
+        "#brandcat"
+    ],
+    "render": {
+        "background_asset": "sandbox/assets/demo/studio.mp4",
+        "subtitle_style": "big_bottom",
+        "output_basename": "brand_mixed_master"
+    }
+}

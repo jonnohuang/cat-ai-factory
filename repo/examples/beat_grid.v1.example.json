@@ -1,12 +1,32 @@
 {
   "version": "beat_grid.v1",
-  "analysis_id": "demo-dance-loop-mochi-01",
-  "source_video_relpath": "sandbox/assets/demo/mochi_dance_loop_swap.mp4",
-  "bpm_estimate": 124.0,
-  "beats": [
-    {"t_sec": 0.00, "strength": 0.93},
-    {"t_sec": 0.48, "strength": 0.88},
-    {"t_sec": 0.97, "strength": 0.90},
-    {"t_sec": 1.45, "strength": 0.86}
+  "bpm": 128,
+  "beats_per_bar": 4,
+  "offset_ms": 150,
+  "events": [
+    {
+      "type": "cut",
+      "time_s": 0.0,
+      "beat": 1,
+      "label": "intro"
+    },
+    {
+      "type": "cut",
+      "time_s": 1.875,
+      "beat": 5,
+      "label": "shot_0001"
+    },
+    {
+      "type": "move",
+      "time_s": 3.75,
+      "beat": 9,
+      "label": "hero_action"
+    },
+    {
+      "type": "drop",
+      "time_s": 7.5,
+      "beat": 17,
+      "label": "main_drop"
+    }
   ]
 }

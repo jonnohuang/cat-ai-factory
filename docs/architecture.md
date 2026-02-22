@@ -118,8 +118,10 @@ These are inputs only. The Planner MUST NOT modify them.
   - `repo/shared/series_bible.v1.json`
   - `repo/shared/episode_ledger.v1.json`
 
-- Audio selection (license-safe manifest):
-  - `sandbox/assets/audio/audio_manifest.v1.json`
+- Audio selection & alignment (Hybrid strategy):
+  - `repo/shared/audio_packs/v1.json` (Internal licensed/original packs)
+  - `beat_grid.v1` (Deterministic timing metadata)
+  - `sandbox/assets/audio/audio_manifest.v1.json` (Legacy selection manifest)
 
 - RAG (planner-only; deterministic, file-based):
   - `repo/shared/rag_manifest.v1.json`

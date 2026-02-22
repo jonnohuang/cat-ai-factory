@@ -1750,3 +1750,36 @@ References:
 **Consequences**:
 - **Benefit**: Decouples "Ops Automation" from "Factory Logic".
 - **Benefit**: Prevents "logic leak" into low-code tools.
+ 
+ ------------------------------------------------------------
+ 
+ ## ADR-0058 — Hybrid Audio Strategy (Silent Master vs. Licensed Packs)
+ Date: 2026-02-21
+ Status: Accepted
+ 
+ Context:
+ - CAF needs a scalable way to handle audio that supports both platform-native virality (trending audio) and brand-safe commercial usage (licensed packs).
+ - Trending audio on TikTok/IG is a distribution-layer asset; CAF should not store or redistribute it.
+ - Licensed/original audio must be mixed deterministically inside the factory for multi-platform reuse.
+ - Choreography-preserving generation requires deterministic timing (beat grids) across the media pipeline.
+ 
+ Decision:
+ - Formalize a Hybrid Audio Strategy with three modes:
+   1. **Platform Trending Mode**: Worker exports a silent master; human/ops aligns audio in-platform.
+   2. **Licensed Pack Mode**: Worker mixes internal license-safe audio tracks.
+   3. **Original CAF Audio Mode**: Worker mixes original signature CAF motifs.
+ - Introduce **Beat Grid System** (`beat_grid.v1`): Deterministic metadata specifying BPM and event timing for cuts and moves.
+ - Planner Plane: Responsible for declarative selection of audio mode and BPM.
+ - Control Plane: Enforces beat grid constraints and cut cadence.
+ - Worker Plane: Performs deterministic mixing or silencing based on the mode.
+ 
+ Consequences:
+ - Protects the project from copyright liability via "Silent Masters" for trending content.
+ - Enables frame-perfect choreography via the Beat Grid metadata.
+ - Preserves the three-plane invariant by keeping media logic inside the media layer.
+ 
+ References:
+ - docs/master.md
+ - AGENTS.md
+ - docs/system-requirements.md (FR-17)
+ - docs/PR_PROJECT_PLAN.md (PR-40)

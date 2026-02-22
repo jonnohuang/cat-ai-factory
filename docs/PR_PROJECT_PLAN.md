@@ -816,7 +816,7 @@ Outcome:
 ---
 
 ### PR-30 — Terraform infra
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Terraform for Cloud Run + Cloud Tasks + Firestore + GCS (placeholders only in repo)
@@ -829,7 +829,7 @@ Outcome:
 
 ---
 
-## Phase 8 — Media Quality & Recast Contracts (ACTIVE)
+## Phase 8 — Media Quality & Recast Contracts (COMPLETED)
 
 Purpose: lock deterministic media contracts and quality/recast pathways without breaking
 three-plane authority or cloud sequencing.
@@ -1071,7 +1071,7 @@ Outcome:
 ---
 
 ### PR-34.6 — Internal Baseline V2 motion-preserve pipeline (deterministic, non-overlay)
-Status: **ACTIVE**
+Status: **COMPLETED**
 
 Scope:
 - Add a deterministic internal baseline path that improves quality without overlay recast and without external HITL dependency:
@@ -1927,6 +1927,21 @@ Scope:
 Outcome:
 - The factory now supports high-fidelity, granular generation with significantly lower retry costs.
 - Phase 7 Cloud Migration infrastructure is now operational with container stubs and CI/CD config.
+
+---
+
+### PR-40 — Hybrid Audio Strategy
+Status: **COMPLETED**
+
+Scope:
+- Formalize **ADR-0058**: Establish the hybrid audio posture (Silent Master vs. Licensed Packs).
+- **Beat Grid System**: Introduce `beat_grid.v1` as deterministic metadata for choreography-preserving generation.
+- **Worker Modes**: Support `silent_master` for trending audio and `mixed_master` for licensed/original audio.
+- **Planner Logic**: Implement audio-aware planning to align shot transitions with the beat grid.
+
+Outcome:
+- High-quality, beat-locked video output with zero copyright liability for trending audio paths.
+- Reusable brand-safe original audio library for paid/multi-platform campaigns.
 
 
 ------------------------------------------------------------

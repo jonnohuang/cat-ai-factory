@@ -173,20 +173,20 @@ The system MUST support multilingual copy for captions and platform text.
 - Contracts MUST support N languages via language-map structures.
 - Spanish (`es`) is explicitly deferred.
 
-### FR-17 — Audio included in export bundles (required)
-Audio is part of the posting workflow.
+### FR-17 — Hybrid Audio Strategy (Platform-native + Brand-safe)
+Audio is a deterministic media-plane asset layer.
 
-- Every clip export bundle MUST include:
-  - `audio_plan.json`
-  - `audio_notes.txt`
-- Audio is represented as:
-  1) audio strategy metadata, and
-  2) optional bundled audio assets (SFX stingers, optional voiceover track)
+- Every clip MUST support one of three audio modes:
+  1. `platform_trending`: Export a **Silent Master**; alignment happens in-platform (No licensing risk).
+  2. `licensed_pack`: Mix internal license-safe audio tracks for multi-platform reuse.
+  3. `original_pack`: Mix signature CAF motifs for brand moat.
+- Every clip MUST adhere to a **Beat Grid** metadata contract if choreography is required.
+- Audio is part of the posting workflow: export bundles include `audio_plan.json` and `audio_notes.txt`.
 
 Non-goals (v1):
-- no music generation
-- no automated trending-music selection
+- no real-time music generation
 - no scraping platform trends
+- no automated rights management
 
 ### FR-18 — Series continuity layer (contracts-only; required for “daily era” quality)
 To maintain higher-quality comedy and continuity without autonomy creep, CAF MUST support a minimal,

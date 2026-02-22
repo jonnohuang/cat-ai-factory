@@ -322,7 +322,9 @@ Deterministic, CPU-bound execution that produces publish-ready artifacts.
 
 * render deterministic video + captions from job contract + assets
 * apply deterministic watermark overlay
-* guarantee `final.mp4` always has an audio stream (no silent MP4)
+* **Audio Strategy**:
+  - `platform_trending` mode: Export **Silent Master** (silent MP4 allowed).
+  - `licensed_pack` / `original_pack` mode: Guarantee audio stream presence (mixed + normalized).
 * may emit deterministic stage artifacts/manifests under `sandbox/output/<job_id>/**`
 
 **Reads**

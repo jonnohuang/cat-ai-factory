@@ -1,0 +1,40 @@
+{
+    "version": "audio_pack.v1",
+    "pack_id": "caf_signature_v1",
+    "tracks": [
+        {
+            "track_id": "mochi_meow_trap",
+            "path": "repo/assets/audio/caf_signature_v1/mochi_meow_trap.wav",
+            "bpm": 128,
+            "duration_s": 15.0,
+            "tags": [
+                "energetic",
+                "trap",
+                "meow",
+                "dance"
+            ]
+        },
+        {
+            "track_id": "cat_nap_lofi",
+            "path": "repo/assets/audio/caf_signature_v1/cat_nap_lofi.wav",
+            "bpm": 80,
+            "duration_s": 30.0,
+            "tags": [
+                "chill",
+                "lofi",
+                "sleepy"
+            ]
+        },
+        {
+            "track_id": "cat_walk_funk",
+            "path": "repo/assets/audio/caf_signature_v1/cat_walk_funk.wav",
+            "bpm": 115,
+            "duration_s": 20.0,
+            "tags": [
+                "funky",
+                "walking",
+                "groovy"
+            ]
+        }
+    ]
+}
