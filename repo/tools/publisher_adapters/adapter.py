@@ -21,8 +21,9 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from .copy_format import clip_id_dirname, format_copy
 from repo.dist.dist_reframer import reframe_video
+
+from .copy_format import clip_id_dirname, format_copy
 
 # --- Secret Scanning (Reused from validate_publish_plan) ---
 SECRET_PATTERNS = [

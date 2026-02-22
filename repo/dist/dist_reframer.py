@@ -1,8 +1,10 @@
-import os
+import logging
 import pathlib
 import subprocess
-import sys
-from typing import Optional
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
+logger = logging.getLogger("dist_reframer")
 
 def reframe_video(
     src_path: pathlib.Path,
