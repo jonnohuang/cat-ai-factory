@@ -37,6 +37,11 @@ SCALE_FACTOR = 0.12
 MIN_WM_WIDTH = 64
 MAX_WM_WIDTH = 256
 
+# Production Plane Standards (ADR-0059, ADR-0060)
+PRODUCTION_W = 1080
+PRODUCTION_H = 1080
+PRODUCTION_FPS = 24
+
 
 def repo_root_from_here() -> pathlib.Path:
     # repo/worker/render_ffmpeg.py -> <repo_root>
@@ -1075,17 +1080,17 @@ def _ensure_video_from_comfy_media(
     # Convert image output to deterministic short video so render pipeline can consume it.
     video_cfg = job.get("video") if isinstance(job.get("video"), dict) else {}
     duration = int(video_cfg.get("length_seconds", 12) or 12)
-    fps = int(video_cfg.get("fps", 30) or 30)
-    resolution = str(video_cfg.get("resolution", "1080x1920"))
+    fps = int(video_cfg.get("fps", PRODUCTION_FPS) or PRODUCTION_FPS)
+    resolution = str(video_cfg.get("resolution", f"{PRODUCTION_W}x{PRODUCTION_H}"))
     if "x" in resolution:
         w_s, h_s = resolution.lower().split("x", 1)
         try:
             w = int(w_s)
             h = int(h_s)
         except Exception:
-            w, h = 1080, 1920
+            w, h = PRODUCTION_W, PRODUCTION_H
     else:
-        w, h = 1080, 1920
+        w, h = PRODUCTION_W, PRODUCTION_H
 
     video_path = out_dir / "generated" / "comfy_source.mp4"
     video_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2757,7 +2762,7 @@ def render_image_motion(
     # 3. Determine Duration and FPS
     # job.video.length_seconds is authoritative
     duration = job["video"]["length_seconds"]
-    fps = job["video"].get("fps", 30)
+    fps = job["video"].get("fps", PRODUCTION_FPS)
     total_frames = int(duration * fps)
 
     # 4. Filter Graph Construction
@@ -2766,9 +2771,10 @@ def render_image_motion(
 
     next_input_idx = 0  # Unified input counter
 
-    # Constants
-    VIDEO_W = 1080
-    VIDEO_H = 1920
+    # Job-aware resolution (prio: contract > global standard)
+    video_cfg = job.get("video", {})
+    VIDEO_W = int(video_cfg.get("resolution", "1080x1080").split("x")[0]) if "x" in str(video_cfg.get("resolution")) else PRODUCTION_W
+    VIDEO_H = int(video_cfg.get("resolution", "1080x1080").split("x")[1]) if "x" in str(video_cfg.get("resolution")) else PRODUCTION_H
 
     # Base scale/crop filter
     scale_crop = f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,crop={VIDEO_W}:{VIDEO_H}"
@@ -3024,10 +3030,19 @@ def render_standard(
     raw_wm_width = math.floor(video_w * SCALE_FACTOR)
     wm_width = max(MIN_WM_WIDTH, min(raw_wm_width, MAX_WM_WIDTH))
 
+    # Target resolution (prio: contract > global standard)
+    video_cfg = job.get("video", {})
+    res_str = str(video_cfg.get("resolution", f"{PRODUCTION_W}x{PRODUCTION_H}"))
+    if "x" in res_str:
+        target_w = int(res_str.split("x")[0])
+        target_h = int(res_str.split("x")[1])
+    else:
+        target_w, target_h = PRODUCTION_W, PRODUCTION_H
+
     # Duration and FPS
     lane = str(job.get("lane", ""))
     job_duration = int(job["video"]["length_seconds"])
-    fps_i = int(job["video"]["fps"])
+    fps_i = int(job["video"].get("fps", PRODUCTION_FPS) or PRODUCTION_FPS)
     duration_i = job_duration
 
     # Quality-first lane-A mode:
@@ -3104,7 +3119,9 @@ def render_standard(
         f.append(
             f"[{wm_input_idx}:v]format=rgba,colorchannelmixer=aa={OPACITY},scale={wm_width}:-1[wm]"
         )
-        current_bg_ref = f"[{current_bg_idx}:v]"
+        # Force background to target resolution (Scale + Crop to avoid pillarboxing in Production Master)
+        f.append(f"[{current_bg_idx}:v]scale={target_w}:{target_h}:force_original_aspect_ratio=increase,crop={target_w}:{target_h}[v_scaled]")
+        current_bg_ref = "[v_scaled]"
 
         # Apply subtitles (optional).
         # Only use subtitles if the file is non-empty/valid
@@ -3252,10 +3269,19 @@ def render_dance_swap(
     srt_path = out_dir / "final.srt"
     subtitles_status = prepare_subtitles_file(job, srt_path, sandbox_root)
 
-    fps_i = int(job["video"].get("fps", 30) or 30)
-    duration_i = int(job["video"]["length_seconds"])
+    video_cfg = job.get("video", {})
+    duration_i = int(video_cfg.get("length_seconds", 12) or 12)
+    fps_i = int(video_cfg.get("fps", PRODUCTION_FPS) or PRODUCTION_FPS)
     duration = str(duration_i)
     fps = str(fps_i)
+
+    # Target resolution (prio: contract > global standard)
+    res_str = str(video_cfg.get("resolution", f"{PRODUCTION_W}x{PRODUCTION_H}"))
+    if "x" in res_str:
+        target_w = int(res_str.split("x")[0])
+        target_h = int(res_str.split("x")[1])
+    else:
+        target_w, target_h = PRODUCTION_W, PRODUCTION_H
 
     slot = ds["slot"]
     slot_x = int(slot["x"])
@@ -3313,7 +3339,9 @@ def render_dance_swap(
 
     def _build_filter(with_subs: bool) -> str:
         parts = [fg_core]
-        base_ref = f"[{source_idx}:v]"
+        # Force background to target resolution (Scale + Crop to avoid pillarboxing in Production Master)
+        parts.append(f"[{source_idx}:v]scale={target_w}:{target_h}:force_original_aspect_ratio=increase,crop={target_w}:{target_h}[v_scaled]")
+        base_ref = "[v_scaled]"
         if with_subs:
             safe_srt = escape_ffmpeg_path(srt_path)
             parts.append(f"{base_ref}subtitles=filename='{safe_srt}'[v_sub]")

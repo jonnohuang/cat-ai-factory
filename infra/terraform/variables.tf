@@ -24,6 +24,11 @@ variable "outputs_bucket_name" {
   type        = string
 }
 
+variable "dist_artifacts_bucket_name" {
+  description = "GCS bucket for derived distribution artifacts"
+  type        = string
+}
+
 variable "firestore_database_id" {
   description = "The ID of the Firestore database"
   type        = string

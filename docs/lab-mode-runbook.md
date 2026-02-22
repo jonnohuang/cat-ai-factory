@@ -10,6 +10,7 @@ Lab mode is for controlled experiments:
 - collect evidence for policy promotion
 
 Lab mode is not production authority by default.
+- **Resolution Lock**: Even in lab mode, production-bound media should adhere to the **1080x1080 @ 24fps** master resolution for consistent quality gating.
 
 ## Environment Setup
 
@@ -92,7 +93,7 @@ Key per-job artifacts:
 - `sandbox/logs/<job_id>/qc/qc_report.v1.json`
 - `sandbox/logs/<job_id>/qc/quality_decision.v1.json`
 - `sandbox/logs/<job_id>/qc/lab_qc_loop_summary.v1.json`
-- `sandbox/output/<job_id>/final.mp4`
+- `sandbox/output/<job_id>/final.mp4` (1080x1080)
 
 Matrix summary fields to inspect:
 - `best_provider`
@@ -164,3 +165,6 @@ Outputs:
 
 Design rule:
 - non-CLI promotion remains file-contract driven and auditable.
+
+## Exporting for Distribution
+Once a lab experiment is validated and promoted, it enters the production pipeline where the **Distribution Runner** handles platform-specific reframing (9:16, 4:5, 16:9). See `docs/video-workflow-end-to-end.md` for the approval flow.

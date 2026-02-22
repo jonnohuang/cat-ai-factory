@@ -67,7 +67,9 @@ PRD / Instructions
 → `job.json` (structured contract)  
 → Control Plane (Ralph Loop orchestrator)  
 → Worker (FFmpeg renderer)  
-→ MP4 + captions  
+→ MP4 (1080x1080 Production Master)  
+→ Distribution Plane (Reframer + Runner)
+→ Platform-specific Bundles (9:16, 4:5, 16:9)
 
 Optional ingress (adapter-only):
 
@@ -150,9 +152,10 @@ CAF includes a required “Ops/Distribution” layer which remains OUTSIDE the f
 
 It is responsible for:
 - approvals (human-in-the-loop)
-- publisher adapters (bundle-first, platform-specific)
+- publisher adapters (bundle-first, platform-specific reframing)
+- automated Distribution Runner (poller + orchestrator)
 - idempotent publish state tracking
- - optional ops workflow automation (e.g., n8n) for notifications/approvals only
+- optional ops workflow automation (e.g., n8n) for notifications/approvals only
 
 Hard constraints:
 - MUST NOT mutate `job.json`

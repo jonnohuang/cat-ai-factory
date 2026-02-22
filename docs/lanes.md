@@ -22,7 +22,7 @@ If `lane` is omitted, the job is treated as a generic/legacy job (fully supporte
 
 - **Worker Determinism**: The Worker MAY route based on explicit blocks (e.g., `image_motion`, `template`) to select a deterministic recipe. Lane is a hint only. Routing must be deterministic and must not change output paths. The Worker remains fully deterministic: it renders only from `job.json` + sandbox assets and never calls LLMs or networks.
 - **Output Stability**: Regardless of lane, the canonical worker outputs are ALWAYS:
-  - `/sandbox/output/<job_id>/final.mp4`
+  - `/sandbox/output/<job_id>/final.mp4` (locked to **1080x1080 @ 24fps**)
   - `/sandbox/output/<job_id>/final.srt` (if captions are present)
   - `/sandbox/output/<job_id>/result.json`
 - **No LLM in Worker**: "AI Video" generation happens in the Planner plane (or pre-worker), delivering video assets to the Worker. The Worker never calls generation APIs.

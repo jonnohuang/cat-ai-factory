@@ -1928,7 +1928,18 @@ Outcome:
 - The factory now supports high-fidelity, granular generation with significantly lower retry costs.
 - Phase 7 Cloud Migration infrastructure is now operational with container stubs and CI/CD config.
 
----
+--- [ ] **PR-40: Hybrid Audio Strategy** - Standardized audio modes and beat alignment. [COMPLETED]
+
+# Phase 9: Media Architecture v2 (v0.2 Readiness)
+- [x] **PR-41: Production Plane Optimization** - Standardize dev master resolution (1080x1080) and optimize FFmpeg engine. [COMPLETED]
+- [x] **PR-42: Distribution Plane (Publish Pack Engine)** - Implement reframer, safe-zone enforcement, and platform-specific metadata. [COMPLETED]
+- [x] **PR-43: Distribution Runner** - Add poller and publisher orchestration logic. [COMPLETED]
+
+# Phase 10: Multi-Channel Launch (v0.3 Roadmap)
+- [ ] **PR-44: Handoff Registry** - Formalize the `POSTED` state and artifact registry for live content. [NEXT]
+- [ ] **PR-45: Cloud Archive Automation** - Implement automatic move-to-cloud for finalized bundles and production masters.
+- [ ] **PR-46: Feedback Loop Ingress** - Basic analytics ingestion from external platforms.
+**
 
 ### PR-40 — Hybrid Audio Strategy
 Status: **COMPLETED**

@@ -16,10 +16,10 @@ Authority:
 Cat AI Factory is a **headless, file-contract, deterministic** content factory for producing short-form videos.
 
 Core invariant:
-Planner (Clawdbot) → Control Plane (Ralph Loop) → Worker (FFmpeg)
+Planner (Clawdbot) → Production Plane (Worker) → Distribution Plane (Publish Pack Engine)
 
 - Planner is the only nondeterministic component (LLM-driven).
-- Control Plane + Worker must remain deterministic and retry-safe.
+- Control Plane + Production Plane (Worker) must remain deterministic and retry-safe.
 - Files are the bus: no shared memory, no agent-to-agent RPC.
 
 ------------------------------------------------------------
@@ -49,7 +49,7 @@ Planner (Clawdbot) → Control Plane (Ralph Loop) → Worker (FFmpeg)
 
 ### FR-05 — Planner autonomy target
 - The long-term target is **autonomous planning** (no human-in-loop planner).
-- Human approval gates may exist for nondeterministic external actions (e.g., publishing), not for core planning.
+- Human approval gates may exist for nondeterministic external actions (e.g., in the Distribution Plane), not for core planning.
 
 ### FR-06 — LLM provider strategy (phased)
 - LOCAL: Planner calls Gemini via **Google AI Studio API key**.
@@ -100,8 +100,8 @@ Telegram daily planning MUST support optional creativity hints for the Planner.
 - Backward compatible: if omitted, behavior is unchanged.
 - Telegram MUST remain an adapter and MUST NOT bypass the file-bus.
 
-### FR-10 — Ops/Distribution is outside the factory (required)
-Ops/Distribution automation (e.g., runners, publisher adapters, bundles) MUST remain outside the three-plane factory.
+### FR-10 — Distribution Plane (Ops/Distribution)
+The Distribution Plane (Publish Pack Engine) MUST remain outside the three-plane factory (Planning/Production) authority but is a first-class media plane.
 
 It MAY:
 - read factory outputs under `/sandbox/output/<job_id>/`
@@ -716,6 +716,10 @@ The system SHOULD support explicit identity-pack references (multi-frame charact
 ### FR-28.28 — Pose-Gated Quality Control
 The system MUST support rejecting generations where the motion/choreography diverges from the extracted pose landmarks (`pose_seq.json`).
 
+
+### FR-29 — Dev Master Resolution Lock
+The system MUST standardize on `1080x1080 @ 24fps` for the Production Plane dev master.
+- Rationale: High-quality square "canon" ensures stable motion/identity while shortening debug loops and simplifying 9:16/16:9 reframing in the Distribution Plane.
 
 ------------------------------------------------------------
 

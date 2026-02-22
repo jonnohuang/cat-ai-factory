@@ -1,8 +1,8 @@
-# Ops/Distribution: Publish Contracts & Idempotency
+# Distribution Plane: Publish Contracts & Media Adapters
 
 **Status: Binding (ADR-0010..ADR-0013)**
 
-This document outlines the proposed (non-binding) file contracts for the Ops/Distribution layer. This layer sits outside the core Planner/Control/Worker planes and is responsible for publishing content to external platforms.
+This document outlines the file contracts for the **Distribution Plane** (formerly Ops/Distribution). This layer sits outside the core **Factory** (Planning/Production) and is responsible for platform-specific media transformations and publishing.
 
 References:
 - `docs/master.md` (Ops/Distribution Layer)
@@ -12,7 +12,7 @@ References:
 
 ---
 
-## 1. Core Principle: Derived, Immutable Artifacts
+## 1. Core Principle: The Publish Pack Engine
 
 The Ops/Distribution layer **MUST NOT** modify worker outputs. Instead, it creates **derived artifacts** in a dedicated location.
 
@@ -190,3 +190,23 @@ sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/
 3. Operator pastes text from `clips/<clip_id>/copy/copy.en.txt` (or target language).
 4. Operator applies audio per instructions in `clips/<clip_id>/audio/audio_notes.txt`.
 5. Operator clicks "Post".
+The Distribution Plane is the authority for platform-specific media transformations. It consumes the **Canonical Master** from the Production Plane.
+
+### Implementation: `dist_reframer.py`
+The reframer uses FFmpeg to generate derived variants with blurred-padding and safe-zone enforcement.
+
+### Standard Transformations
+| Platform | Target Aspect Ratio | Scaling Policy | Output Basis | Safe-Zone |
+|---|---|---|---|---|
+| TikTok/Reels/Shorts | 9:16 | Blurred-padding | 1080x1920 | 0.92x Scale |
+| Instagram Feed | 4:5 | Blurred-padding | 1080x1350 | 1.0x Scale |
+| YouTube (Long) | 16:9 | Blurred-padding | 1920x1080 | 1.0x Scale |
+
+### Safe-Zone Enforcement
+On vertical platforms (9:16), the 1:1 master is slightly downscaled (0.92x) before being centered. This ensures that the platform-specific UI (like the right-side heart/comment icons) does not obscure the core content of the square master.
+
+### Invariants
+- Reframing logic is deterministic.
+- Transform parameters are applied dynamically by the `SharedBundleBuilder` during bundle generation.
+- Reframed media is stored in the export bundle (`clips/<clip_id>/video/final.mp4`).
+- Core worker outputs are NEVER modified.

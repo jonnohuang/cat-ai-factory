@@ -9,11 +9,11 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
 
 ## Architecture Invariants
 
-- Three-plane separation (non-negotiable):
-  - Planner → produces job.json only (no side effects; EpisodePlan v1 planned)
-  - Control Plane → deterministic orchestrator (reconciler/state machine)
-  - Worker → deterministic renderer (no LLM usage)
-  - Clarification: 3-plane orchestration may use a multi-stage deterministic Worker pipeline; `job.json` remains authority.
+- Three-plane media lifecycle (non-negotiable):
+  - Planning Plane → Strategic interpretation. Produces `job.json`.
+  - Production Plane (The Factory) → Deterministic execution. Produces a single **Canonical Master**.
+  - Distribution Plane (Publish Pack Engine) → Platform-specific packaging (reframing/metadata).
+- Master Resolution Lock: `1080x1080 @ 24fps` for dev/stabilization.
 
 - Files are the bus:
   - No shared memory
@@ -74,7 +74,7 @@ flowchart TB
     LOGS[/sandbox/logs/<job_id>/**/]
   end
 
-  subgraph W[Worker Plane — Renderer (deterministic; no LLM)]
+  subgraph W[Production Plane — Worker (deterministic; no LLM)]
     ASSETS[/sandbox/assets/**/]
     WORK[FFmpeg Worker\n(idempotent execution)]
     OUTDIR[/sandbox/output/<job_id>/**/]
@@ -196,11 +196,10 @@ Notes:
 
 ------------------------------------------------------------
 
-## Diagram 3 — Ops/Distribution (Outside the Factory)
+## Diagram 3 — Distribution Plane (Outside the Factory)
 
-Ops/Distribution is outside the core factory (Planner / Control Plane / Worker).
-It consumes events + immutable artifacts and performs nondeterministic external work
-(approvals, notifications, publishing) without mutating worker outputs.
+The Distribution Plane is outside the core Factory (Planning / Production).
+It consumes the **Canonical Master** and immutable artifacts to perform platform-specific work.
 
 flowchart TB
   %% Core factory (unchanged)
@@ -243,8 +242,8 @@ flowchart TB
   OUTDIR -->|sync/upload| GCS
   LOGS -->|sync/upload| GCS
 
-  %% Ops/Distribution layer (outside factory)
-  subgraph OPS[Ops/Distribution (Outside the Factory)]
+  %% Distribution Plane (outside factory)
+  subgraph DIST[Distribution Plane (Outside the Factory)]
     N8N[n8n / cron / scripts\n(triggers + notify + approval)]
     APPROVE[Human Approval Gate\n(Telegram/Slack/Email)]
     RUNNER[Local Distribution Runner\n(polls artifacts; deterministic)]

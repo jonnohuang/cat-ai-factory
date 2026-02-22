@@ -39,21 +39,17 @@ All components communicate through explicit artifacts, which enables:
 
 CAF is permanently structured into three planes:
 
-* **Planner Plane** (Clawdbot)
+* **Planning Plane** (Clawdbot)
+  * Strategic interpretation.
+  * Produces `job.json`.
 
-  * LLM-driven (nondeterministic)
-  * produces contracts only
+* **Production Plane** (Worker / Renderer)
+  * Deterministic execution.
+  * Produces the **Canonical Master**.
 
-* **Control Plane** (Ralph Loop)
-
-  * deterministic reconciler/state machine
-  * idempotency, retries, audit logging
-
-* **Worker Plane** (Renderer / FFmpeg)
-
-  * deterministic execution
-  * no LLM
-  * retry-safe
+* **Distribution Plane** (Publish Pack Engine)
+  * Platform-specific packaging (reframing/metadata).
+  * Outside the factory authority.
 
 ### 2) Files are the bus
 
@@ -119,8 +115,7 @@ If the JSON contract also contains a `job_id` field and it differs:
 
 * `sandbox/inbox/*.json`
 
-### Ops/Distribution writes only
-
+### Distribution Plane writes only
 * `sandbox/dist_artifacts/<job_id>/**`
 
 Hard rules:
@@ -313,7 +308,7 @@ Deterministic reconciler/state machine.
 
 ---
 
-### 🛠 Worker — Renderer (FFmpeg) (Worker Plane)
+### 🛠 Production Plane — Worker / Renderer (FFmpeg)
 
 **Purpose**
 Deterministic, CPU-bound execution that produces publish-ready artifacts.
@@ -326,6 +321,9 @@ Deterministic, CPU-bound execution that produces publish-ready artifacts.
   - `platform_trending` mode: Export **Silent Master** (silent MP4 allowed).
   - `licensed_pack` / `original_pack` mode: Guarantee audio stream presence (mixed + normalized).
 * may emit deterministic stage artifacts/manifests under `sandbox/output/<job_id>/**`
+* **Media Standard**:
+  - Dev Master resolution is locked at `1080x1080 @ 24fps` (Square 1:1).
+  - All reframing (9:16) logic belongs to the Distribution Plane.
 
 **Reads**
 
@@ -443,7 +441,7 @@ Provide a guided UI for structured planning inputs.
 
 ---
 
-## Ops/Distribution (Outside the Factory)
+## Distribution Plane — Publish Pack Engine (Outside the Factory)
 
 Ops/Distribution performs nondeterministic external work.
 

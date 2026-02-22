@@ -1783,3 +1783,38 @@ References:
  - AGENTS.md
  - docs/system-requirements.md (FR-17)
  - docs/PR_PROJECT_PLAN.md (PR-40)
+
+------------------------------------------------------------
+
+## ADR-0059: Dev Master Resolution Standardization
+
+**Status**: PROPOSED
+**Context**: To shorten the iteration loop while we stabilize motion/identity/temporal consistency, we need a canonical "dev master" resolution that balances debug signal with rendering speed. Square (1:1) is the core "factory canon" resolution.
+
+**Decision**:
+1.  **Dev Master**: Standardize on `1080x1080 @ 24fps`.
+2.  **Canonical Aspect Ratio**: Production Plane (Factory) will focus on square 1:1 masters.
+3.  **Tiering Strategy**:
+    - `dev`: 1080x1080 @ 24fps
+    - `staging`: 1440x1440 @ 30fps
+    - `production`: 2160x2160 @ 30fps
+
+**Consequences**:
+- Shortens debug feedback loop.
+- Simplifies reframing logic in the Distribution Plane.
+- Requires updating `job.json` schema to include square resolution and ratio.
+
+## ADR-0060: Media Architecture v2 (Publish Pack Engine)
+
+**Status**: PROPOSED
+**Context**: Decoupling physical rendering from platform-specific productization.
+
+**Decision**: Evolve from a two-stage process to a three-plane media lifecycle:
+1.  **Planning Plane**: Strategic directive (Brief -> Directive).
+2.  **Production Plane (The Factory)**: Engine execution (Frame/Motion/Video/Audio/Editor). Produces a **Single Canonical Master**.
+3.  **Distribution Plane (Publish Pack Engine)**: Downstream consumer for reframing, safe-zones, and platform-specific packaging.
+
+**Consequences**:
+- Moves reframing out of the core Worker.
+- Directory separation: `/master` (Factory) vs `/dist` (Publish Packs).
+- ADR-0021 (Bundles) survives but is relocated to the Distribution Plane.

@@ -58,6 +58,7 @@ Depending on lane and enabled features, QC runner/decision engine may consume:
 ## Gate Categories
 
 Common gate dimensions:
+- **Technical/Production Lock**: Resolution must be exactly `1080x1080` and frame rate `24 fps`.
 - identity consistency
 - motion/temporal stability
 - seam/loop quality

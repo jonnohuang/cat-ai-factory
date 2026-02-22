@@ -38,6 +38,9 @@ Canonical flow:
 | `sandbox/logs/<job_id>/qc/quality_decision.v1.json` | `decide_quality_action` | Controller | Deterministic next action |
 | `sandbox/dist_artifacts/<job_id>/viggle_pack/**` | HITL export tools | External recast operator | External recast package |
 | `sandbox/inbox/viggle-reingest-*.json` | Re-ingest pointer tool | Re-ingest processor | External result handoff |
+| `sandbox/inbox/approve-*.json` | User (via Telegram/CLI) | Distribution Runner | Human-in-the-loop publish approval |
+| `sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/**` | Distribution Runner | Operator / Publisher | Ready-to-post export bundle |
+| `sandbox/dist_artifacts/<job_id>/<platform>.state.json` | Distribution Runner | Status tools, Operator | Publication state tracking |
 
 ## 0.2) Engine Feed Wiring
 
@@ -60,8 +63,13 @@ Canonical flow:
 
 - Editor engine feed (Worker deterministic assembly):
   - reads: `job.json`, assets, staged clips/segments/audio
-  - writes: `final.mp4`, `final.srt`, `result.json`, optional debug/stage outputs
+  - writes: `final.mp4` (1080x1080), `final.srt`, `result.json`
   - consumed by: QC and distribution (this is the main production path today)
+
+- Distribution engine feed (Media Transformation):
+  - reads: `final.mp4` (1080x1080), `publish_plan.json`, `inbox/approve-*.json`
+  - writes: Platform-specific bundles (9:16, 4:5, 16:9), `platform.state.json`
+  - consumed by: Operator / External Publisher
 
 - QC engine feed:
   - reads: `qc_policy.v1`, worker outputs, stage reports, quality artifacts
@@ -269,14 +277,38 @@ python3 -m repo.tools.finalize_viggle_reingest --job-id <job_id>
 
 ### Inputs
 - immutable worker outputs under `sandbox/output/<job_id>/`
-- approval/publish artifacts
+- `sandbox/dist_artifacts/<job_id>/publish_plan.json`
+- `sandbox/inbox/approve-<job_id>-<platform>-<nonce>.json`
+
+### Commands (Automated)
+The **Distribution Runner** polls the inbox and orchestrates the reframing:
+```bash
+# Start the runner (usually runs as a service)
+python3 -m repo.dist.dist_runner
+```
+
+To bridge the human approval (Manual or via Telegram):
+```bash
+# Example manual approval artifact
+cat > sandbox/inbox/approve-<job_id>-tiktok-v1.json <<EOF
+{
+  "job_id": "<job_id>",
+  "platform": "tiktok",
+  "approved": true,
+  "nonce": "v1"
+}
+EOF
+```
 
 ### Outputs
-- derived distribution artifacts only:
-  - `sandbox/dist_artifacts/<job_id>/**`
+- derived distribution artifacts:
+  - `sandbox/dist_artifacts/<job_id>/bundles/<platform>/v1/**`
+- state tracking:
+  - `sandbox/dist_artifacts/<job_id>/tiktok.state.json` (example)
 
 See:
 - `docs/publish-contracts.md`
+- `docs/telegram-commands.md`
 
 ## 9) Lab Mode Variant (Provider Matrix)
 

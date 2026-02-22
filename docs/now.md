@@ -28,6 +28,9 @@ Status: **COMPLETED**
 #### CODEX (Implementation)
 - **Status**: **DONE**
 - **Completed**:
+    - **Distribution Runner (PR-43)**: Implemented automated orchestration for bundle generation via the `inbox` bus.
+    - **Distribution Plane (PR-42)**: Implemented `dist_reframer.py` for platform-specific (9:16, 4:5, 16:9) media transformations with Safe-Zone enforcement.
+    - **Production Plane Optimization (PR-41)**: Standardized dev master resolution to 1080x1080 @ 24fps.
     - **Hybrid Audio Strategy (PR-40)**: Implemented across Planner and Worker.
     - **Worker Audio Support**: Added `platform_trending` (silent master) and `licensed_pack` (mixed master) paths.
     - **Planner Intelligence**: Added `AudioResolver` for intent-based pack selection and `GridResolver` for beat-locked shot alignment.
@@ -37,8 +40,10 @@ Status: **COMPLETED**
     - **End-to-End Verified**: Validated via `smoke_audio_modes.py` and `smoke_planner_audio.py`.
 
 ### Decisions / ADRs Touched
-- ADR-0058 (Hybrid Audio Strategy)
-- ADR-0055..0057 (Director Primitives)
+- ADR-0059 (Dev Master Resolution Standardization) [LOCKED]
+- ADR-0060 (Media Architecture v2) [LOCKED]
+- Documentation Alignment (Architecture, SysReq, Agents, Publish) [DONE]
+Primitives)
 - ADR-0051 (Pointer Authority)
 
 ### What Changed (Diff Summary)
@@ -60,7 +65,8 @@ Status: **COMPLETED**
   - Worker remains deterministic and output-bound
 
 ### Next Action (Owner + Task)
-- USER/ARCH/CODEX: v0.2 Planning for Cloud-Native Production (Phase 7 Resume).
+- CODEX: Awaiting instructions for Phase 10 (Multi-Channel Launch).
+- USER: Review the Phase 10 roadmap in PR_PROJECT_PLAN.md.
 
 ### ARCH Invariant Status
 1) **Three-plane separation**: **LOCKED** (Planner/Control/Worker)
