@@ -1,0 +1,85 @@
+{
+    "job_id": "example-silent-master",
+    "date": "2026-02-21",
+    "niche": "dance",
+    "lane": "ai_video",
+    "video": {
+        "length_seconds": 15,
+        "aspect_ratio": "9:16",
+        "fps": 24,
+        "resolution": "1080x1920"
+    },
+    "audio": {
+        "mode": "platform_trending",
+        "audio_asset": "tiktok:71234567890",
+        "beat_alignment": {
+            "relpath": "repo/examples/beat_grid.v1.example.json"
+        }
+    },
+    "script": {
+        "hook": "Wait for the drop...",
+        "voiceover": "This cat has better rhythm than you. Watch the tail flick on the beat.",
+        "ending": "Follow for more meowsic."
+    },
+    "shots": [
+        {
+            "shot_id": "shot_0001",
+            "t": 0,
+            "visual": "Cat preparing",
+            "action": "stare",
+            "caption": "Ready?"
+        },
+        {
+            "shot_id": "shot_0002",
+            "t": 2,
+            "visual": "Cat start moving",
+            "action": "paw step",
+            "caption": "Set..."
+        },
+        {
+            "shot_id": "shot_0003",
+            "t": 4,
+            "visual": "Cat dancing",
+            "action": "rhythmic shake",
+            "caption": "Go!"
+        },
+        {
+            "shot_id": "shot_0004",
+            "t": 8,
+            "visual": "Cat jump",
+            "action": "leap",
+            "caption": "The Drop"
+        },
+        {
+            "shot_id": "shot_0005",
+            "t": 10,
+            "visual": "Slow mo cat",
+            "action": "tail flick",
+            "caption": "Vibe"
+        },
+        {
+            "shot_id": "shot_0006",
+            "t": 13,
+            "visual": "Cat pose",
+            "action": "look at camera",
+            "caption": "Done."
+        }
+    ],
+    "captions": [
+        "Ready?",
+        "Set...",
+        "Go!",
+        "The Drop",
+        "Vibe"
+    ],
+    "hashtags": [
+        "#catdance",
+        "#trending",
+        "#caf"
+    ],
+    "render": {
+        "background_asset": "sandbox/assets/demo/dance_loop.mp4",
+        "subtitle_style": "big_bottom",
+        "output_basename": "dance_silent_master"
+    }
+}

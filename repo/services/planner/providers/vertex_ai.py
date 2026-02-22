@@ -22,6 +22,8 @@ from ...budget.pricing import (
 )
 from ...budget.tracker import BudgetTracker
 from ..asset_resolver import AssetResolver
+from ..audio_resolver import AudioResolver
+from ..grid_resolver import GridResolver
 from ..util.json_extract import extract_json_object
 from ..util.redact import redact_text
 from .base import BaseProvider
@@ -67,6 +69,8 @@ class _VertexBaseProvider(BaseProvider):
         self._last_reference_image_rels: List[str] = []
         self._budget = BudgetTracker()
         self._asset_resolver = AssetResolver(_repo_root_path())
+        self._audio_resolver = AudioResolver(_repo_root_path())
+        self._grid_resolver = GridResolver(_repo_root_path())
 
     def _preprocess_job_schema_defaults(self, job: Dict[str, Any]) -> Dict[str, Any]:
         """Ensures required schema fields are present and typed correctly before validation."""
@@ -276,6 +280,16 @@ class _VertexBaseProvider(BaseProvider):
         """
         self._attach_default_audio(job, prd)
 
+        # PR-40 Beat alignment integration
+        audio_strategy = job.get("audio", {})
+        duration = float(job.get("video", {}).get("length_seconds", 15))
+        grid = self._grid_resolver.resolve_beat_grid(audio_strategy, duration)
+
+        shots = job.get("shots", [])
+        if shots:
+            job["shots"] = self._grid_resolver.snap_shots_to_grid(shots, grid)
+            job["audio"]["beat_alignment"] = grid # Embed grid metadata in job contract
+
         # Ensure the rich prompt (with motion/style tokens) is preserved for the worker
         hero_desc = _hero_prompt_descriptor(self._selected_hero)
         rich_prompt = _seed_prompt_from_job(job, prd, hero_desc, self._quality_context)
@@ -354,15 +368,21 @@ class _VertexBaseProvider(BaseProvider):
     def _attach_default_audio(self, job: Dict[str, Any], prd: Dict[str, Any]) -> None:
         existing = job.get("audio")
         if isinstance(existing, dict) and existing.get("audio_asset"):
+            # If model already provided a concrete audio_asset path, honor it for legacy
+            return
+        if isinstance(existing, dict) and existing.get("mode") and existing.get("mode") != "legacy":
+            # If a mode is already set (and it's not legacy), honor it
             return
 
         context_text = _job_context_text(job, prd)
-        audio_asset = _pick_default_audio_asset(context_text)
-        if not audio_asset:
-            return
 
-        job["audio"] = {"audio_asset": audio_asset}
-        print(f"INFO planner provider={self.name} audio_asset_selected={audio_asset}")
+        # PR-40 Hybrid Audio Strategy integration
+        strategy = self._audio_resolver.resolve_audio_strategy(context_text)
+        job["audio"] = strategy
+
+        mode = strategy.get("mode")
+        asset = strategy.get("audio_asset")
+        print(f"INFO planner provider={self.name} audio_strategy_selected={mode} asset={asset}")
 
     def _try_generate_seed_frames(
         self, job: Dict[str, Any], prd: Dict[str, Any]
@@ -1476,6 +1496,12 @@ def _job_context_text(job: Dict[str, Any], prd: Dict[str, Any]) -> str:
         p = prd.get("prompt")
         if isinstance(p, str):
             parts.append(p)
+        b = prd.get("brief")
+        if isinstance(b, str):
+            parts.append(b)
+        it = prd.get("intent")
+        if isinstance(it, str):
+            parts.append(it)
     niche = job.get("niche")
     if isinstance(niche, str):
         parts.append(niche)

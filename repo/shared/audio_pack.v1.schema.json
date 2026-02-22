@@ -1,0 +1,52 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Audio Pack v1",
+    "description": "Registry for license-safe audio assets.",
+    "type": "object",
+    "required": [
+        "version",
+        "pack_id",
+        "tracks"
+    ],
+    "properties": {
+        "version": {
+            "type": "string",
+            "const": "audio_pack.v1"
+        },
+        "pack_id": {
+            "type": "string"
+        },
+        "tracks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "track_id",
+                    "path",
+                    "bpm"
+                ],
+                "properties": {
+                    "track_id": {
+                        "type": "string"
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path to the audio file in the repo/sandbox."
+                    },
+                    "bpm": {
+                        "type": "number"
+                    },
+                    "duration_s": {
+                        "type": "number"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

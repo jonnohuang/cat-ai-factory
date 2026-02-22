@@ -218,11 +218,40 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "audio_asset"
+        "mode"
       ],
       "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "platform_trending",
+            "licensed_pack",
+            "original_pack"
+          ],
+          "default": "platform_trending"
+        },
         "audio_asset": {
+          "type": "string",
+          "description": "Legacy path or platform reference (non-authoritative in pack modes)."
+        },
+        "audio_pack_id": {
           "type": "string"
+        },
+        "track_id": {
+          "type": "string"
+        },
+        "beat_alignment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "relpath"
+          ],
+          "properties": {
+            "relpath": {
+              "type": "string",
+              "pattern": "^(assets|output|sandbox/assets|sandbox/output|repo/canon|repo/examples)/.+\\.json$"
+            }
+          }
         }
       }
     },
