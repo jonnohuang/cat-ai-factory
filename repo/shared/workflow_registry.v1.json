@@ -1,0 +1,76 @@
+{
+    "version": "1.0",
+    "workflows": [
+        {
+            "workflow_id": "comfy_stabilized_v1",
+            "engine": "comfyui",
+            "relpath": "repo/workflows/comfy/feline_stabilization_v1.json",
+            "tags": [
+                "feline",
+                "stabilized",
+                "hero_safe"
+            ],
+            "capabilities": {
+                "supports_pose": true,
+                "supports_identity": true,
+                "max_resolution": "1024x1024",
+                "optimal_motion_range": "medium"
+            }
+        },
+        {
+            "workflow_id": "comfy_identity_strong",
+            "engine": "comfyui",
+            "relpath": "repo/workflows/comfy/feline_stabilization_v1.json",
+            "tags": [
+                "feline",
+                "identity_heavy"
+            ],
+            "capabilities": {
+                "supports_pose": true,
+                "supports_identity": true,
+                "max_resolution": "1024x1024"
+            },
+            "default_parameters": {
+                "latent_blend": {
+                    "blend_factor": 0.7
+                },
+                "sampler": {
+                    "denoise": 0.75,
+                    "cfg": 8.0
+                }
+            }
+        },
+        {
+            "workflow_id": "val_production_v1",
+            "engine": "veo",
+            "tags": [
+                "feline",
+                "high_fidelity",
+                "dialogue"
+            ],
+            "capabilities": {
+                "supports_identity": true,
+                "supports_i2v": true,
+                "max_resolution": "1024x1024"
+            },
+            "default_parameters": {
+                "aspect_ratio": "9:16",
+                "fps": 24
+            }
+        }
+    ],
+    "resolution_policies": {
+        "letterbox": {
+            "mode": "pad",
+            "color": "black"
+        },
+        "crop_center": {
+            "mode": "crop",
+            "anchor": "center"
+        },
+        "pad_reflect": {
+            "mode": "pad",
+            "type": "reflect"
+        }
+    }
+}

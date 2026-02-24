@@ -1,0 +1,24 @@
+{
+    "version": "vpl_index.v1",
+    "patterns": [
+        {
+            "pattern_id": "dance_loop_v1",
+            "name": "Classic High-Energy Dance Loop",
+            "description": "Standard 8-second loop optimized for trending audio and seamless seams.",
+            "tags": [
+                "dance",
+                "loop",
+                "high-energy"
+            ],
+            "bpm": 128,
+            "artifacts": {
+                "profile": "repo/canon/viral_patterns/dance_loop_v1/demo_profile.json",
+                "hook": "repo/canon/viral_patterns/dance_loop_v1/hook_template.yaml",
+                "shot": "repo/canon/viral_patterns/dance_loop_v1/shot_template.yaml",
+                "loop": "repo/canon/viral_patterns/dance_loop_v1/loop_template.yaml",
+                "audio": "repo/canon/viral_patterns/dance_loop_v1/audio_template.yaml",
+                "scorecard": "repo/canon/viral_patterns/dance_loop_v1/scorecard.json"
+            }
+        }
+    ]
+}

@@ -32,11 +32,11 @@
     "default_action_on_missing_report": {
       "type": "string",
       "enum": [
-        "proceed_finalize",
-        "retry_motion",
-        "retry_recast",
-        "block_for_costume",
-        "escalate_hitl"
+        "PROCEED",
+        "RETRY_STAGE",
+        "SWITCH_POLICY",
+        "ESCALATE_USER",
+        "ABORT"
       ]
     },
     "gates": {
@@ -78,10 +78,21 @@
           "failure_action": {
             "type": "string",
             "enum": [
-              "retry_motion",
-              "retry_recast",
-              "block_for_costume",
-              "escalate_hitl"
+              "PROCEED",
+              "RETRY_STAGE",
+              "SWITCH_POLICY",
+              "ESCALATE_USER",
+              "ABORT"
+            ]
+          },
+          "target_stage": {
+            "type": "string",
+            "enum": [
+              "artifact",
+              "frame",
+              "motion",
+              "video",
+              "editor"
             ]
           }
         }
@@ -101,20 +112,22 @@
           "items": {
             "type": "string",
             "enum": [
-              "retry_motion",
-              "retry_recast",
-              "block_for_costume",
-              "escalate_hitl"
+              "PROCEED",
+              "RETRY_STAGE",
+              "SWITCH_POLICY",
+              "ESCALATE_USER",
+              "ABORT"
             ]
           }
         },
         "fallback_action": {
           "type": "string",
           "enum": [
-            "retry_motion",
-            "retry_recast",
-            "block_for_costume",
-            "escalate_hitl"
+            "PROCEED",
+            "RETRY_STAGE",
+            "SWITCH_POLICY",
+            "ESCALATE_USER",
+            "ABORT"
           ]
         }
       }
@@ -153,10 +166,11 @@
               "action": {
                 "type": "string",
                 "enum": [
-                  "retry_motion",
-                  "retry_recast",
-                  "block_for_costume",
-                  "escalate_hitl"
+                  "PROCEED",
+                  "RETRY_STAGE",
+                  "SWITCH_POLICY",
+                  "ESCALATE_USER",
+                  "ABORT"
                 ]
               }
             }
@@ -218,10 +232,11 @@
           "items": {
             "type": "string",
             "enum": [
-              "retry_motion",
-              "retry_recast",
-              "block_for_costume",
-              "escalate_hitl"
+              "PROCEED",
+              "RETRY_STAGE",
+              "SWITCH_POLICY",
+              "ESCALATE_USER",
+              "ABORT"
             ]
           }
         }
@@ -244,20 +259,22 @@
           "items": {
             "type": "string",
             "enum": [
-              "retry_motion",
-              "retry_recast",
-              "block_for_costume",
-              "escalate_hitl"
+              "PROCEED",
+              "RETRY_STAGE",
+              "SWITCH_POLICY",
+              "ESCALATE_USER",
+              "ABORT"
             ]
           }
         },
         "rollback_action": {
           "type": "string",
           "enum": [
-            "retry_motion",
-            "retry_recast",
-            "block_for_costume",
-            "escalate_hitl"
+            "PROCEED",
+            "RETRY_STAGE",
+            "SWITCH_POLICY",
+            "ESCALATE_USER",
+            "ABORT"
           ]
         }
       }

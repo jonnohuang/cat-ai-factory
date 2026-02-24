@@ -1,0 +1,8 @@
+version: hook_template.v1
+hook_type: zoom_punch
+first_frame_intent: Mocchi staring intensely at the camera, close-up.
+beat_alignment_sec: 0.5
+caption_hook_style: Bold yellow text overlay
+constraints:
+  min_motion_intensity: 0.8
+  required_facial_expression: determined

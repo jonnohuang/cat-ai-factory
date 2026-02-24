@@ -1,0 +1,19 @@
+{
+    "identity_id": "calico-junior",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/calico-junior/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "junior calico cat",
+            "black, orange, and white patches",
+            "yellow dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

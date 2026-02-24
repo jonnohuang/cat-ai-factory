@@ -1,0 +1,47 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "CameraPack",
+    "description": "Modular camera and framing rule definition (e.g. Wide, Close-up).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "camera_pack_id",
+        "version",
+        "content"
+    ],
+    "properties": {
+        "camera_pack_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Kebab-case ID for the camera pack."
+        },
+        "version": {
+            "type": "string",
+            "const": "camera_pack.v1"
+        },
+        "content": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "cues"
+            ],
+            "properties": {
+                "shot_type": {
+                    "type": "string",
+                    "description": "Type of shot (e.g. full-body, medium, portrait)."
+                },
+                "movement_type": {
+                    "type": "string",
+                    "description": "Type of camera movement (e.g. static, pan, dolly)."
+                },
+                "cues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Tokens describing the framing and camera state."
+                }
+            }
+        }
+    }
+}

@@ -70,7 +70,7 @@ python3 -m repo.tools.run_lab_qc_loop \
 ```bash
 python3 -m repo.tools.run_lab_qc_loop \
   --prompt "Mochi dance loop continuity lab" \
-  --providers "vertex_veo,wan_dashscope,comfyui_video,sora_lab,meta_ai_lab" \
+  --providers "vertex_veo,wan_2_2,wan_dashscope,comfyui_video,sora_lab,meta_ai_lab" \
   --route-mode lab \
   --max-attempts 2 \
   --max-retries 1

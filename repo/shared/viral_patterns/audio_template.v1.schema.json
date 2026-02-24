@@ -1,0 +1,70 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/viral_patterns/audio_template.v1.schema.json",
+    "title": "Audio Template v1",
+    "description": "Beat grid and sync anchor rules for viral patterns.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "version",
+        "bpm_range",
+        "beat_grid_spacing"
+    ],
+    "properties": {
+        "version": {
+            "const": "audio_template.v1"
+        },
+        "bpm_range": {
+            "type": "object",
+            "required": [
+                "min",
+                "max"
+            ],
+            "properties": {
+                "min": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                },
+                "max": {
+                    "type": "integer",
+                    "shared": "min"
+                }
+            }
+        },
+        "beat_grid_spacing": {
+            "type": "number",
+            "description": "Spacing in seconds between major beats."
+        },
+        "sync_anchors": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "timestamp_sec",
+                    "intent"
+                ],
+                "properties": {
+                    "timestamp_sec": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "intent": {
+                        "type": "string",
+                        "enum": [
+                            "beat_drop",
+                            "shot_change",
+                            "motion_peak",
+                            "caption_reveal"
+                        ]
+                    }
+                }
+            }
+        },
+        "motion_amplitude_multiplier": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 5.0,
+            "default": 1.0
+        }
+    }
+}

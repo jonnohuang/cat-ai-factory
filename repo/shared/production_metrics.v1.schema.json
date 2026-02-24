@@ -1,0 +1,138 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Production Metrics v1",
+    "description": "Deterministic metrics produced by the absolute_analyzer for the Production Supervisor.",
+    "type": "object",
+    "properties": {
+        "version": {
+            "type": "string",
+            "const": "1.0"
+        },
+        "job_id": {
+            "type": "string"
+        },
+        "attempt_id": {
+            "type": "string"
+        },
+        "ts": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "visual_metrics": {
+            "type": "object",
+            "properties": {
+                "image_resolution": {
+                    "type": "string",
+                    "pattern": "^[0-9]+x[0-9]+$"
+                },
+                "aspect_ratio": {
+                    "type": "number"
+                },
+                "feline_detected": {
+                    "type": "object",
+                    "properties": {
+                        "present": {
+                            "type": "boolean"
+                        },
+                        "confidence": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "pose_detection_ratio": {
+                            "type": "number",
+                            "description": "Ratio of frames with valid MediaPipe pose data."
+                        },
+                        "pose_fallback_active": {
+                            "type": "boolean",
+                            "description": "True if system fell back to raw frames due to low detection."
+                        }
+                    }
+                },
+                "human_detected": {
+                    "type": "object",
+                    "properties": {
+                        "present": {
+                            "type": "boolean"
+                        },
+                        "confidence": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        }
+                    }
+                },
+                "pose_score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "motion_score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "blur_score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "identity_similarity_score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                }
+            }
+        },
+        "engine_metrics": {
+            "type": "object",
+            "properties": {
+                "engine_id": {
+                    "type": "string"
+                },
+                "execution_time_seconds": {
+                    "type": "number"
+                },
+                "memory_peak_mb": {
+                    "type": "number"
+                },
+                "queue_wait_time_seconds": {
+                    "type": "number"
+                },
+                "stage_durations": {
+                    "type": "object",
+                    "properties": {
+                        "preprocessing_mediapipe": {
+                            "type": "number"
+                        },
+                        "comfyui_submission": {
+                            "type": "number"
+                        },
+                        "comfyui_render": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "failure_flags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "is_hallucination": {
+            "type": "boolean"
+        },
+        "quality_gate_passed": {
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "version",
+        "job_id",
+        "attempt_id",
+        "ts",
+        "visual_metrics"
+    ]
+}

@@ -1,0 +1,21 @@
+{
+    "identity_id": "dino-engineer",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/dino/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "grey mackerel tabby cat",
+            "high-contrast forehead M mark",
+            "green dinosaur hoodie",
+            "methodical expression",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "unstable fur pattern",
+            "extra ears",
+            "humanoid features"
+        ]
+    }
+}

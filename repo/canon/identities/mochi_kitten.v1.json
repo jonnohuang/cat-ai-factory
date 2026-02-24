@@ -1,0 +1,24 @@
+{
+    "identity_id": "mochi-kitten",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/mochi-kitten/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "tiny kitten",
+            "grey mackerel tabby cat",
+            "white chest bib",
+            "white paws",
+            "green dinosaur onesie",
+            "large eyes",
+            "soft fluffy fur",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "adult cat proportions",
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

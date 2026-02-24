@@ -1,0 +1,57 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/viral_patterns/shot_template.v1.schema.json",
+    "title": "Shot Template v1",
+    "description": "Narrative grammar and camera movement constraints.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "version",
+        "shots"
+    ],
+    "properties": {
+        "version": {
+            "const": "shot_template.v1"
+        },
+        "shots": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "shot_index",
+                    "camera_grammar",
+                    "pacing_intent"
+                ],
+                "properties": {
+                    "shot_index": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "camera_grammar": {
+                        "type": "string",
+                        "enum": [
+                            "static",
+                            "zoom_in",
+                            "zoom_out",
+                            "pan_left",
+                            "pan_right",
+                            "orbit",
+                            "handheld_shake"
+                        ]
+                    },
+                    "pacing_intent": {
+                        "type": "string"
+                    },
+                    "duration_relative": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "transition_type": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}

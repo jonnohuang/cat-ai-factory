@@ -1,0 +1,20 @@
+{
+    "identity_id": "leo-boss",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/leo-boss/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "adult male lion",
+            "large mane",
+            "royal gold dragon onesie",
+            "boss personality",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

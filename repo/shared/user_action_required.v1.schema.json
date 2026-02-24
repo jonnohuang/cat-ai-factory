@@ -1,0 +1,53 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "User Action Required v1",
+    "description": "Structured escalation artifact for manual intervention in Production Plane failures.",
+    "type": "object",
+    "required": [
+        "version",
+        "job_id",
+        "reason",
+        "required_artifact",
+        "expected_format"
+    ],
+    "properties": {
+        "version": {
+            "type": "string",
+            "const": "user_action_required.v1"
+        },
+        "job_id": {
+            "type": "string"
+        },
+        "reason": {
+            "type": "string",
+            "enum": [
+                "ARTIFACT_MISSING",
+                "ARTIFACT_CORRUPTED",
+                "CONTRACT_VIOLATION",
+                "IDENTITY_CONFLICT",
+                "LOW_CONFIDENCE_DETECTION",
+                "RETRY_BUDGET_EXCEEDED"
+            ]
+        },
+        "required_artifact": {
+            "type": "string",
+            "description": "The specific field or file that needs user correction."
+        },
+        "expected_format": {
+            "type": "string",
+            "description": "Hint for the user on how to provide the fix (e.g. 'image/png', 'prompt string')."
+        },
+        "threshold_failed": {
+            "type": "string",
+            "description": "Optional description of the metric that caused the escalation."
+        },
+        "example_fix": {
+            "type": "string",
+            "description": "Concrete example of a valid input."
+        },
+        "escalation_ts": {
+            "type": "string",
+            "format": "date-time"
+        }
+    }
+}

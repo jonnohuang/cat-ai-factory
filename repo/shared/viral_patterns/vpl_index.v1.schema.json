@@ -1,0 +1,91 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/viral_patterns/vpl_index.v1.schema.json",
+    "title": "VPL Index v1",
+    "description": "Registry of available viral patterns and their associated templates.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "version",
+        "patterns"
+    ],
+    "properties": {
+        "version": {
+            "const": "vpl_index.v1"
+        },
+        "patterns": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "pattern_id",
+                    "name",
+                    "tags",
+                    "artifacts"
+                ],
+                "properties": {
+                    "pattern_id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+_v[0-9]+$"
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "bpm": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "artifacts": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                            "profile",
+                            "hook",
+                            "shot",
+                            "loop",
+                            "audio",
+                            "scorecard"
+                        ],
+                        "properties": {
+                            "profile": {
+                                "type": "string",
+                                "pattern": "^repo/canon/viral_patterns/.+/demo_profile.json$"
+                            },
+                            "hook": {
+                                "type": "string",
+                                "pattern": "^repo/canon/viral_patterns/.+/hook_template.yaml$"
+                            },
+                            "shot": {
+                                "type": "string",
+                                "pattern": "^repo/canon/viral_patterns/.+/shot_template.yaml$"
+                            },
+                            "loop": {
+                                "type": "string",
+                                "pattern": "^repo/canon/viral_patterns/.+/loop_template.yaml$"
+                            },
+                            "audio": {
+                                "type": "string",
+                                "pattern": "^repo/canon/viral_patterns/.+/audio_template.yaml$"
+                            },
+                            "scorecard": {
+                                "type": "string",
+                                "pattern": "^repo/canon/viral_patterns/.+/scorecard.json$"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

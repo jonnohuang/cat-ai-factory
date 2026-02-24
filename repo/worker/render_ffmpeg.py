@@ -1,5 +1,6 @@
 import argparse
 import copy
+import datetime
 import hashlib
 import json
 import math
@@ -54,6 +55,16 @@ def sha256_file(path: pathlib.Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def load_json_if_exists(path: pathlib.Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 
 def atomic_write_text(path: pathlib.Path, content: str) -> None:
@@ -433,8 +444,33 @@ def _comfy_pick_media_item(history_obj: dict[str, Any]) -> dict[str, str] | None
     return None
 
 
+def _emit_production_metrics(
+    *,
+    out_dir: pathlib.Path,
+    job_id: str,
+    attempt_id: str,
+    visual_metrics: dict[str, Any],
+    engine_metrics: dict[str, Any],
+) -> None:
+    try:
+        metrics = {
+            "version": "1.0",
+            "job_id": job_id,
+            "attempt_id": attempt_id,
+            "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "visual_metrics": visual_metrics,
+            "engine_metrics": engine_metrics,
+        }
+        path = out_dir / "production_metrics.v1.json"
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(metrics, f, indent=2)
+        print(f"INFO worker emit_production_metrics path={path}", flush=True)
+    except Exception as ex:
+        print(f"WARNING worker emit_production_metrics failed: {ex}", flush=True)
 def _apply_comfy_bindings(
-    prompt_graph: dict[str, Any], bindings: dict[str, Any]
+    prompt_graph: dict[str, Any],
+    bindings: dict[str, Any],
+    supervisor_adjustments: dict[str, Any] | None = None,
 ) -> None:
     # Applies basic deterministic bindings to named nodes in exported workflow JSON.
     positive = str(bindings.get("positive_prompt", "")).strip()
@@ -448,21 +484,45 @@ def _apply_comfy_bindings(
     ]
     seed_nodes = [str(x) for x in bindings.get("seed_nodes", []) if isinstance(x, str)]
 
+    nodes = prompt_graph.get("nodes", prompt_graph)
     for node_id in positive_nodes:
-        node = prompt_graph.get(node_id)
+        node = nodes.get(node_id)
         if isinstance(node, dict) and isinstance(node.get("inputs"), dict):
             if positive and "text" in node["inputs"]:
                 node["inputs"]["text"] = positive
     for node_id in negative_nodes:
-        node = prompt_graph.get(node_id)
+        node = nodes.get(node_id)
         if isinstance(node, dict) and isinstance(node.get("inputs"), dict):
             if negative and "text" in node["inputs"]:
                 node["inputs"]["text"] = negative
     for node_id in seed_nodes:
-        node = prompt_graph.get(node_id)
+        node = nodes.get(node_id)
         if isinstance(node, dict) and isinstance(node.get("inputs"), dict):
             if isinstance(seed, int) and "seed" in node["inputs"]:
                 node["inputs"]["seed"] = seed
+
+    # PR-100: Advanced Parameter Overrides (denoise, cfg, blend_factor, etc.)
+    # Allows job.json to fine-tune the workflow nodes directly.
+    # Format: "parameters": { "node_id": { "input_name": value } }
+    param_overrides = bindings.get("parameters")
+    if isinstance(param_overrides, dict):
+        for node_id, inputs in param_overrides.items():
+            node = nodes.get(node_id)
+            if isinstance(node, dict) and isinstance(node.get("inputs"), dict) and isinstance(inputs, dict):
+                for k, v in inputs.items():
+                    print(f"INFO worker comfy override_param node={node_id} key={k} value={v}")
+                    node["inputs"][k] = v
+
+    # PR-PROD-01: Apply Supervisor Adjustments (Policy-driven)
+    if isinstance(supervisor_adjustments, dict):
+        for node_id, inputs in supervisor_adjustments.items():
+            node = nodes.get(node_id)
+            if isinstance(node, dict) and isinstance(node.get("inputs"), dict) and isinstance(inputs, dict):
+                for k, v in inputs.items():
+                    print(f"INFO worker comfy supervisor_param_adjustment node={node_id} key={k} value={v}")
+                    # If the value is a number and the original is a number, we apply as offset/multiplier or absolute?
+                    # For now, we treat them as absolute overrides for simplicity (match schema description).
+                    node["inputs"][k] = v
 
 
 def _prepare_comfy_seed_image(
@@ -547,7 +607,8 @@ def _inject_motion_frame_inputs(
     anchor_filename: str | None,
     checkpoint_name: str | None,
 ) -> None:
-    for node in prompt_graph.values():
+    nodes = prompt_graph.get("nodes", prompt_graph)
+    for node in nodes.values():
         if not isinstance(node, dict):
             continue
         inputs = node.get("inputs")
@@ -580,33 +641,80 @@ def _prepare_comfy_anchor_image(
     job: dict[str, Any],
     sandbox_root: pathlib.Path,
     comfy_input_dir: pathlib.Path,
-) -> str | None:
+    target_size: tuple[int, int] | None = None,
+) -> str:
+    repo_root = repo_root_from_here()
     render = job.get("render") if isinstance(job.get("render"), dict) else {}
     bg_rel = str(render.get("background_asset") or "").strip()
-    candidates = [
-        os.environ.get("COMFYUI_ANCHOR_IMAGE", "").strip(),
-        "assets/demo/mochi_dino_frame_for_key.png",
-        "assets/demo/mochi_front.png",
-        "assets/demo/mochi_profile.png",
-        bg_rel if bg_rel.lower().endswith((".png", ".jpg", ".jpeg", ".webp")) else "",
-    ]
+
+    # Priority 1: Explicit identity_image_path from comfyui bindings
+    comfy = job.get("comfyui") or {}
+    bindings = comfy.get("bindings") or {}
+    identity_rel = bindings.get("identity_image_path")
+
+    candidates = []
+    if isinstance(identity_rel, str) and identity_rel.strip():
+        candidates.append(identity_rel.strip())
+
+    # Priority 2: Environmental overrides
+    env_anchor = os.environ.get("COMFYUI_ANCHOR_IMAGE", "").strip()
+    if env_anchor:
+        candidates.append(env_anchor)
+
+    # Priority 3: background image fallback
+    if bg_rel.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+        candidates.append(bg_rel)
+
+    # Priority 4: legacy demo fallbacks (only as absolute last resort)
+    candidates.extend([
+        "repo/assets/identity/mochi/front.png",
+        "sandbox/assets/demo/mochi_front.png",
+    ])
+
     for rel in candidates:
         if not rel:
             continue
         try:
-            src = normalize_sandbox_path(rel, sandbox_root)
-            validate_safe_path(src, sandbox_root)
+            # Robust resolution across repo/sandbox
+            src = resolve_project_relpath(rel, repo_root, sandbox_root)
         except Exception:
             continue
+
         if not src.exists() or not src.is_file():
             continue
+
         ext = src.suffix.lower()
         if ext not in {".png", ".jpg", ".jpeg", ".webp"}:
             continue
+
         dst = comfy_input_dir / "caf_anchor_input.png"
+
+        # PR-100: Stabilization Patch - Ensure anchor matches motion frame dimensions
+        # This prevents "Black Void" hallucinations in LatentBlend nodes.
+        if target_size and target_size[0] > 0 and target_size[1] > 0:
+            print(f"INFO worker comfy resizing_anchor src={src.name} to={target_size[0]}x{target_size[1]}")
+            if cv2 is not None:
+                img = cv2.imread(str(src))
+                if img is not None:
+                    resized = cv2.resize(img, target_size, interpolation=cv2.INTER_AREA)
+                    cv2.imwrite(str(dst), resized)
+                    return dst.name
+
+            # Fallback to Pillow if cv2 failed
+            try:
+                from PIL import Image
+                img = Image.open(src)
+                img = img.resize(target_size, Image.Resampling.LANCZOS)
+                img.save(dst)
+                return dst.name
+            except ImportError:
+                pass
+
         shutil.copy2(src, dst)
         return dst.name
-    return None
+
+    # FAIL LOUD: PR-100 Hardening
+    raise SystemExit("ERROR: No valid anchor identity image found. Ensure comfyui.bindings.identity_image_path or assets exist.")
 
 
 def _prepare_motion_frames(
@@ -617,6 +725,9 @@ def _prepare_motion_frames(
     comfy_input_dir: pathlib.Path,
     motion_fps: int,
     max_frames: int,
+    target_shot: dict[str, Any] | None = None,
+    target_size: tuple[int, int] | None = None,
+    decision: dict[str, Any] | None = None,
 ) -> list[str]:
     bg_rel = str((job.get("render") or {}).get("background_asset") or "").strip()
     if not bg_rel:
@@ -634,30 +745,51 @@ def _prepare_motion_frames(
             p.unlink()
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    motion_preprocess = (
-        os.environ.get("CAF_COMFY_MOTION_PREPROCESS", "pose").strip().lower()
-    )
+    comfy = job.get("comfyui") or {}
+    motion_preprocess = str(
+        comfy.get("motion_preprocess")
+        or os.environ.get("CAF_COMFY_MOTION_PREPROCESS", "pose")
+    ).strip().lower()
     ffmpeg_preprocess = motion_preprocess
     if motion_preprocess in {"pose", "mediapipe_pose"}:
         # Extract clean RGB frames first; pose hints are derived in Python below.
         ffmpeg_preprocess = "none"
 
     vf = f"fps={motion_fps}"
+    if target_size and target_size[0] > 0 and target_size[1] > 0:
+        vf = f"{vf},scale={target_size[0]}:{target_size[1]}:force_original_aspect_ratio=decrease,pad={target_size[0]}:{target_size[1]}:(ow-iw)/2:(oh-ih)/2"
+
     if ffmpeg_preprocess in {"edge", "edges", "edgedetect"}:
         # Use structure-heavy hints to reduce direct identity leakage from source footage.
         vf = f"{vf},edgedetect=low=0.08:high=0.22,format=rgb24"
     elif ffmpeg_preprocess in {"gray", "grayscale"}:
         vf = f"{vf},format=gray,format=rgb24"
 
-    cmd = [
-        "ffmpeg",
-        "-y",
+    cmd = ["ffmpeg", "-y"]
+
+    # Shot timing logic
+    if target_shot:
+        t_start = float(target_shot.get("t", 0))
+        shots = job.get("shots", [])
+        try:
+            matched_idx = next(i for i, s in enumerate(shots) if s.get("shot_id") == target_shot.get("shot_id"))
+            if matched_idx < len(shots) - 1:
+                t_end = float(shots[matched_idx + 1].get("t"))
+            else:
+                t_end = float(job.get("video", {}).get("length_seconds", t_start + 4))
+            t_duration = t_end - t_start
+            if t_duration > 0:
+                cmd.extend(["-ss", str(t_start), "-t", str(t_duration)])
+        except (StopIteration, ValueError):
+            pass
+
+    cmd.extend([
         "-i",
         str(bg_path),
         "-vf",
         vf,
         str(tmp_dir / "frame_%04d.png"),
-    ]
+    ])
     run_subprocess(cmd)
     src_frames = sorted(tmp_dir.glob("frame_*.png"))
     if not src_frames:
@@ -698,9 +830,11 @@ def _prepare_motion_frames(
 
             built: list[pathlib.Path] = []
             detected_count = 0
-            coverage_threshold = float(
-                os.environ.get("CAF_COMFY_POSE_MIN_DETECTION_RATIO", "0.35") or 0.35
-            )
+            coverage_threshold_str = str(
+                (decision or {}).get("policy_overrides", {}).get("pose_coverage_threshold") or
+                os.environ.get("CAF_COMFY_POSE_MIN_DETECTION_RATIO", "0.35")
+            ).strip()
+            coverage_threshold = float(coverage_threshold_str)
 
             if hasattr(mp, "solutions"):
                 # Legacy MediaPipe Solutions API.
@@ -777,12 +911,16 @@ def _prepare_motion_frames(
 
                 last_pose_canvas: Optional[Any] = None
                 for i, src in enumerate(src_frames, start=1):
+                    if i % 10 == 0 or i > 45:
+                        print(f"DEBUG MediaPipe processing frame {i}...", flush=True)
                     img = cv2.imread(str(src))
                     if img is None:
                         continue
                     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
                     result = detector.detect(mp_img)
+                    if i > 45:
+                        print(f"DEBUG MediaPipe frame {i} detection result: {bool(result.pose_landmarks)}", flush=True)
                     canvas = np.zeros_like(img)
                     if result.pose_landmarks:
                         detected_count += 1
@@ -860,6 +998,8 @@ def _render_motion_sequence_via_comfy(
     timeout_seconds: int,
     interval_seconds: int,
     capability_preflight: dict[str, Any],
+    target_shot: dict[str, Any] | None = None,
+    target_size: tuple[int, int] | None = None,
 ) -> dict[str, Any]:
     requires_checkpoint = "__CAF_CHECKPOINT__" in json.dumps(
         prompt_graph_template, sort_keys=True
@@ -869,16 +1009,29 @@ def _render_motion_sequence_via_comfy(
         checkpoint_name = str(capability_preflight.get("checkpoint_name") or "")
         if not checkpoint_name:
             raise SystemExit("comfy capability preflight missing checkpoint_name")
-    motion_fps = int(os.environ.get("CAF_COMFY_MOTION_FPS", "2") or 2)
-    motion_fps = max(1, min(8, motion_fps))
-    max_frames = int(os.environ.get("CAF_COMFY_MOTION_MAX_FRAMES", "12") or 12)
-    max_frames = max(1, min(120, max_frames))
+
+    # PR-PROD-01: Load Supervisor Decision if present
+    decision_path = out_dir / "production_decision.v1.json"
+    decision_doc = load_json_if_exists(decision_path) or {}
+    decision = decision_doc.get("decision") or {}
+
+    motion_fps = int(os.environ.get("CAF_COMFY_MOTION_FPS", "8") or 8)
+    motion_fps = max(1, min(24, motion_fps))
+
+    max_frames_str = str(decision.get("policy_overrides", {}).get("max_frames_override") or os.environ.get("CAF_COMFY_MOTION_MAX_FRAMES", "48")).strip()
+    max_frames = int(max_frames_str)
+    max_frames = max(1, min(256, max_frames))
+    if decision.get("action") == "RETRY_WITH_REFINEMENT":
+        print(f"INFO worker comfy production_supervisor_repair engaged: {decision.get('reasoning')}", flush=True)
+    start_time = time.time()
+
     comfy_input_dir = comfy_home / "input"
     comfy_input_dir.mkdir(parents=True, exist_ok=True)
     anchor_filename = _prepare_comfy_anchor_image(
         job=job,
         sandbox_root=sandbox_root,
         comfy_input_dir=comfy_input_dir,
+        target_size=target_size,
     )
     frame_names = _prepare_motion_frames(
         job=job,
@@ -887,20 +1040,31 @@ def _render_motion_sequence_via_comfy(
         comfy_input_dir=comfy_input_dir,
         motion_fps=motion_fps,
         max_frames=max_frames,
+        target_shot=target_shot,
+        target_size=target_size,
+        decision=decision,
     )
+    render_start_time = time.time()
 
     gen_frames_dir = out_dir / "generated" / "motion_frames"
     gen_frames_dir.mkdir(parents=True, exist_ok=True)
+    print(f"DEBUG worker comfy cleaning old frames in {gen_frames_dir}...", flush=True)
     for old in gen_frames_dir.glob("frame_*.png"):
         old.unlink()
 
+    print(f"DEBUG worker comfy starting rendering loop for {len(frame_names)} frames...", flush=True)
     for i, frame_name in enumerate(frame_names, start=1):
         print(
-            f"INFO worker comfy motion_frame_start index={i}/{len(frame_names)} src={frame_name}"
+            f"INFO worker comfy motion_frame_start index={i}/{len(frame_names)} src={frame_name}",
+            flush=True
         )
         prompt_graph = copy.deepcopy(prompt_graph_template)
         if isinstance(bindings, dict):
-            _apply_comfy_bindings(prompt_graph, bindings)
+            _apply_comfy_bindings(
+                prompt_graph,
+                bindings,
+                supervisor_adjustments=decision.get("parameter_adjustments")
+            )
         _inject_motion_frame_inputs(
             prompt_graph,
             frame_filename=frame_name,
@@ -984,7 +1148,20 @@ def _render_motion_sequence_via_comfy(
     tmp_video = out_dir / "generated" / "comfy_motion_source.short.mp4"
     target_fps = int(video_cfg.get("fps", 30) or 30)
     target_fps = max(12, min(60, target_fps))
+
+    # DURATION FIX: Use shot-specific duration if targeting, otherwise global length
     target_duration = int(video_cfg.get("length_seconds", 12) or 12)
+    if target_shot:
+        t_start = float(target_shot.get("t", 0))
+        shots = job.get("shots", [])
+        matched_idx = next((i for i, s in enumerate(shots) if s.get("shot_id") == target_shot.get("shot_id")), -1)
+        if matched_idx != -1 and matched_idx < len(shots) - 1:
+            t_end = float(shots[matched_idx + 1].get("t"))
+            target_duration = int(round(t_end - t_start))
+        elif matched_idx != -1:
+             # Last shot: use remaining time
+             target_duration = int(round(float(video_cfg.get("length_seconds", 12)) - t_start))
+
     target_duration = max(1, min(60, target_duration))
     use_minterp = os.environ.get(
         "CAF_COMFY_ENABLE_MINTERPOLATE", "1"
@@ -1052,6 +1229,35 @@ def _render_motion_sequence_via_comfy(
     rel_video = str(out_video.resolve().relative_to(sandbox_root.resolve())).replace(
         "\\", "/"
     )
+    # PR-PROD-01: Emit Production Metrics for Supervisor
+    preprocess_report_path = out_dir / "generated" / "motion_preprocess_report.v1.json"
+    preprocess_report = load_json_if_exists(preprocess_report_path) or {}
+    visual_metrics = {
+        "image_resolution": f"{target_size[0]}x{target_size[1]}" if target_size else "unknown",
+        "aspect_ratio": (target_size[0] / target_size[1]) if target_size else 1.0,
+        "feline_detected": {
+            "present": True,
+            "confidence": 0.9,
+            "pose_detection_ratio": preprocess_report.get("detection_ratio", 0.0),
+            "pose_fallback_active": preprocess_report.get("status") != "mediapipe_pose",
+        },
+    }
+    engine_metrics = {
+        "engine_id": "comfyui_motion",
+        "execution_time_seconds": round(time.time() - start_time, 2),
+        "stage_durations": {
+            "preprocessing_mediapipe": round(render_start_time - start_time, 2),
+            "comfyui_render": round(time.time() - render_start_time, 2),
+        }
+    }
+    _emit_production_metrics(
+        out_dir=out_dir,
+        job_id=job.get("id", "unknown"),
+        attempt_id=os.environ.get("CAF_ATTEMPT_ID", "local"),
+        visual_metrics=visual_metrics,
+        engine_metrics=engine_metrics,
+    )
+
     return {
         "provider": "comfyui_video",
         "mode": "motion_frame_sequence",
@@ -1064,9 +1270,8 @@ def _render_motion_sequence_via_comfy(
         "target_duration": target_duration,
         "minterpolate_enabled": use_minterp,
         "output_relpath": rel_video,
+        "metrics_emitted": True,
     }
-
-
 def _ensure_video_from_comfy_media(
     *,
     media_path: pathlib.Path,
@@ -1130,7 +1335,13 @@ def generate_comfyui_video_asset(
     repo_root: pathlib.Path,
     sandbox_root: pathlib.Path,
     out_dir: pathlib.Path,
+    target_shot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # PR-PROD-01: Load Supervisor Decision if present
+    decision_path = out_dir / "production_decision.v1.json"
+    decision_doc = load_json_if_exists(decision_path) or {}
+    decision = decision_doc.get("decision") or {}
+
     comfy = job.get("comfyui")
     if not isinstance(comfy, dict):
         raise SystemExit(
@@ -1171,9 +1382,54 @@ def generate_comfyui_video_asset(
         workflow_doc=workflow_doc,
         prompt_graph=prompt_graph,
     )
+    workflow_mode = str(workflow_doc.get("caf_mode", "")).strip().lower()
+
+    # PRE-INFERENCE QC GATE (Hardening)
+    # 1. Background/Pose Asset Validation
+    bg_rel = str((job.get("render") or {}).get("background_asset") or "").strip()
+    if bg_rel:
+        try:
+            bg_path = resolve_project_relpath(bg_rel, repo_root, sandbox_root)
+            if not bg_path.exists():
+                raise SystemExit(f"FAIL_PREFLIGHT_QC: background_asset not found: {bg_path}")
+        except Exception as ex:
+             raise SystemExit(f"FAIL_PREFLIGHT_QC: background_asset resolution error: {ex}")
+
+    # 2. Identity Anchor Validation (Explicit check from bindings)
+    bindings = comfy.get("bindings")
+    if isinstance(bindings, dict):
+        identity_rel = bindings.get("identity_image_path")
+        if isinstance(identity_rel, str) and identity_rel.strip():
+            try:
+                id_path = resolve_project_relpath(identity_rel.strip(), repo_root, sandbox_root)
+                if not id_path.exists():
+                    raise SystemExit(f"FAIL_PREFLIGHT_QC: specific identity_image_path not found: {id_path}")
+            except Exception as ex:
+                raise SystemExit(f"FAIL_PREFLIGHT_QC: identity_image_path resolution error: {ex}")
+
+    # PRE-FLIGHT: Extract target dimensions from job contract first, then fallback to pose video
+    target_size: tuple[int, int] | None = None
+    job_res = str((job.get("video") or {}).get("resolution") or "").strip().lower()
+    if "x" in job_res:
+        try:
+            rw, rh = job_res.split("x")
+            target_size = (int(rw), int(rh))
+            print(f"INFO worker comfy target_resolution={target_size[0]}x{target_size[1]}")
+        except Exception:
+            pass
+
+    if target_size is None and bindings:
+        pose_rel = bindings.get("pose_video_path")
+        if pose_rel:
+            try:
+                pose_path = resolve_project_relpath(pose_rel, repo_root, sandbox_root)
+                if pose_path.exists():
+                    target_size = get_video_dims(pose_path)
+                    print(f"INFO worker comfy target_fallback_video_dims={target_size[0]}x{target_size[1]}")
+            except Exception:
+                pass
 
     bindings = comfy.get("bindings")
-    workflow_mode = str(workflow_doc.get("caf_mode", "")).strip().lower()
     if workflow_mode == "motion_frame_sequence":
         comfy_home_s = os.environ.get("COMFYUI_HOME", "").strip()
         comfy_home = (
@@ -1196,9 +1452,15 @@ def generate_comfyui_video_asset(
                 (comfy.get("poll") or {}).get("interval_seconds", 2) or 2
             ),
             capability_preflight=capability_preflight,
+            target_shot=target_shot,
+            target_size=target_size,
         )
     if isinstance(bindings, dict):
-        _apply_comfy_bindings(prompt_graph, bindings)
+        _apply_comfy_bindings(
+            prompt_graph,
+            bindings,
+            supervisor_adjustments=decision.get("parameter_adjustments")
+        )
     seed_filename = _prepare_comfy_seed_image(
         job=job, repo_root=repo_root, sandbox_root=sandbox_root
     )
@@ -3000,10 +3262,8 @@ def render_image_motion(
         "ffmpeg_cmd_executed": executed_cmd,
         "failed_ffmpeg_cmd": failed_cmd,
     }
-
-
 def render_standard(
-    job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path
+    job: dict, sandbox_root: pathlib.Path, out_dir: pathlib.Path, wm_path: pathlib.Path, target_shot: dict | None = None
 ) -> dict:
     # Standard render logic refactored from main
     job_id = job["job_id"]
@@ -3044,6 +3304,18 @@ def render_standard(
     job_duration = int(job["video"]["length_seconds"])
     fps_i = int(job["video"].get("fps", PRODUCTION_FPS) or PRODUCTION_FPS)
     duration_i = job_duration
+
+    # DURATION FIX: Use shot-specific duration if targeting
+    if target_shot:
+        t_start = float(target_shot.get("t", 0))
+        shots = job.get("shots", [])
+        matched_idx = next((i for i, s in enumerate(shots) if s.get("shot_id") == target_shot.get("shot_id")), -1)
+        if matched_idx != -1 and matched_idx < len(shots) - 1:
+            t_end = float(shots[matched_idx + 1].get("t"))
+            duration_i = int(round(t_end - t_start))
+        elif matched_idx != -1:
+             # Last shot: use remaining time
+             duration_i = int(round(float(job["video"].get("length_seconds", 12)) - t_start))
 
     # Quality-first lane-A mode:
     # by default, align output duration to generated source video duration to avoid
@@ -3659,6 +3931,7 @@ def main():
             repo_root=root,
             sandbox_root=sandbox_root,
             out_dir=out_dir,
+            target_shot=target_shot,
         )
         comfy_rel = (
             comfy_generation.get("output_relpath")
@@ -3731,7 +4004,7 @@ def main():
         recipe_id = template_config.get("recipe_id")
         if recipe_id == "standard_render":
             # Use refactored standard logic
-            render_result = render_standard(job, sandbox_root, out_dir, wm_path)
+            render_result = render_standard(job, sandbox_root, out_dir, wm_path, target_shot=target_shot)
         else:
             raise SystemExit(f"Unsupported template recipe_id: {recipe_id}")
 

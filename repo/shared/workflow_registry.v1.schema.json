@@ -1,0 +1,74 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Workflow Registry v1",
+    "description": "Standardized registry of engine workflows and their capabilities.",
+    "type": "object",
+    "properties": {
+        "version": {
+            "type": "string",
+            "const": "1.0"
+        },
+        "workflows": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "workflow_id": {
+                        "type": "string"
+                    },
+                    "engine": {
+                        "type": "string",
+                        "enum": [
+                            "comfyui",
+                            "wan",
+                            "veo",
+                            "ffmpeg"
+                        ]
+                    },
+                    "relpath": {
+                        "type": "string"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "capabilities": {
+                        "type": "object",
+                        "properties": {
+                            "supports_pose": {
+                                "type": "boolean"
+                            },
+                            "supports_identity": {
+                                "type": "boolean"
+                            },
+                            "max_resolution": {
+                                "type": "string"
+                            },
+                            "optimal_motion_range": {
+                                "type": "string",
+                                "enum": [
+                                    "low",
+                                    "medium",
+                                    "high",
+                                    "all"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "workflow_id",
+                    "engine",
+                    "relpath",
+                    "tags"
+                ]
+            }
+        }
+    },
+    "required": [
+        "version",
+        "workflows"
+    ]
+}

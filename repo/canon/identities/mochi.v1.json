@@ -1,0 +1,23 @@
+{
+    "identity_id": "mochi-ops",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/mochi/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "grey mackerel tabby cat",
+            "white chest bib",
+            "white paws",
+            "green dinosaur onesie",
+            "neutral studio lighting",
+            "consistent facial proportions"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "missing markings",
+            "unstable lighting",
+            "human hands"
+        ]
+    }
+}

@@ -25,11 +25,13 @@ For the authoritative system invariants, see:
 
 Cat AI Factory is a deterministic short-form meme assembly engine.
 
-High-performing cat Shorts/Reels do not require “AI video generation.”
-They are built from deterministic compositing + editing illusions, with AI used
-only for planning and writing.
+High-performing cat Shorts/Reels are built from a balance of deterministic compositing and high-performance generative motion.
 
-The worker must remain deterministic and infrastructure-enforced.
+While v0.1 focused on "deterministic editing illusions," v0.2 (Phase 12) introduces the **Guided Seed Pattern**:
+- **Draft Pass**: Wan 2.2 (High-Performance Motion) generates the pose/identity-stable latent.
+- **Refine Pass**: Veo3/Comfy (High-Photo Quality) refines the draft into final cinema-quality frames.
+
+The worker remains deterministic and infrastructure-enforced, consuming these generative lanes as structured service providers.
 
 
 ------------------------------------------------------------
@@ -91,6 +93,11 @@ Cat AI Factory supports a small registry of deterministic production archetypes.
 - Source: cat PNG + moving background
 - Core: scale + translation + slight rotation + motion blur; “fake camera” sells depth
 - Worker: deterministic compositing presets
+
+### 5) hybrid_motion (Phase 12)
+- Source: identity anchor + dance trace
+- Core: Guided Seed pattern (Wan 2.2 draft -> Veo3 refine)
+- Worker: generative lane orchestration + artifact handoff
 
 ### Non-core (not a factory primitive)
 cozy_real_life:

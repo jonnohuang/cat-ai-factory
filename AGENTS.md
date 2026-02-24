@@ -160,8 +160,13 @@ Video Analyzer (planner-only metadata canon):
 
 Voice/style registries (planner/control metadata inputs):
 
-* `repo/shared/voice_registry.v1.json` (when present)
-* `repo/shared/style_registry.v1.json` (when present)
+* `repo/shared/style_registry.v1.json`
+
+Experience Database (Control Plane metrics & decisions):
+
+* `production_metrics.v1` (Technical diagnostics)
+* `production_decision.v1` (Policy-based repair triggers)
+* schema: `repo/shared/production_*.schema.json`
 
 PlanRequest (UI-agnostic plan input contract):
 
@@ -219,12 +224,14 @@ This section describes the core local-first system.
 ### 🎬 The Director — Orchestrator-Above-Orchestrator (Planner Plane)
 
 **Purpose**
-Orchestrates the granular, multi-stage pipeline (Brief -> Shot -> Frame -> Motion -> Assembly).
+Orchestrates the granular, multi-stage pipeline (Brief -> Shot -> Frame -> Motion -> Assembly) and manages high-performance GPU handoffs.
 
 **Responsibilities**
 - **Pipeline Logic**: Maps high-level creative specs to individual shot-level work orders.
-- **Granular Retries**: Directs the Control Plane to re-roll specific shots based on QC failures.
-- **Feedback Inversion**: Translates QC reports and OpenClaw advice into "Prompt Deltas" for subsequent attempts.
+- **Hybrid Control (Guided Seed)**: Orchestrates "Draft Pass" (Wan 2.2) and "Refine Pass" (Veo3/Comfy) coordination.
+- **GPU Resource Management**: Triggers high-performance lanes for motion-critical shots.
+- **Granularity First**: Directs the Control Plane to re-roll specific shots rather than full clips.
+- **Feedback Inversion**: Translates QC reports into "Prompt/Seed Deltas" for subsequent attempts.
 - **Idempotent Assembly**: Ensures final video stitching is consistent across r-rendered clips.
 
 **Authority**
@@ -276,6 +283,28 @@ Translate intent into structured, machine-readable work contracts.
 
 ---
 
+### 👮 Production Supervisor — Control Plane Reasoning (Control Plane)
+
+**Purpose**
+Evaluate run metrics and select repair policies to resolve generation defects. The **sole reasoning authority** for QC interpretation.
+
+**Responsibilities**
+- **Interpret**: Ingests `qc_report.v1.json` from any stage gate.
+- **Reason**: Diagnoses failure root causes (e.g., identity drift vs. motion jitter).
+- **Control**: Selects bounded repair actions (`SWITCH_POLICY`, `RETRY_STAGE`).
+- **Escalate**: Generates `user_action_required.json` for unrecoverable Category C failures.
+
+**Reads**
+- `sandbox/logs/<job_id>/**/qc_report.v1.json`
+- `sandbox/output/<job_id>/(result|production_metrics).v1.json`
+- `repo/shared/workflow_registry.v1.json`
+
+**Writes (ONLY)**
+- `sandbox/logs/<job_id>/qc/production_decision.v1.json`
+- `sandbox/logs/<job_id>/qc/user_action_required.json`
+
+---
+
 ### 🧠 Ralph Loop — Orchestrator (Control Plane)
 
 **Purpose**
@@ -284,7 +313,8 @@ Deterministic reconciler/state machine.
 **Responsibilities**
 
 * interpret `job.json`
-* decide which deterministic steps should run
+* invoke **Production Supervisor** for audit/repair assessment
+* decide which deterministic steps should run based on Supervisor decisions
 * enforce retries and idempotency
 * write audit-friendly state/log artifacts
 * optionally fast-path completion when outputs already exist and pass QC
@@ -316,8 +346,8 @@ Deterministic, CPU-bound execution that produces publish-ready artifacts.
 **Responsibilities**
 
 * render deterministic video + captions from job contract + assets
-* apply deterministic watermark overlay
-* **Audio Strategy**:
+* **Contract Fulfillment**: Guarantee output adheres to the stage-level I/O contract.
+* **No Self-Healing**: MUST NOT attempt internal retries or dynamic parameter changes; all repairs route through the Supervisor.
   - `platform_trending` mode: Export **Silent Master** (silent MP4 allowed).
   - `licensed_pack` / `original_pack` mode: Guarantee audio stream presence (mixed + normalized).
 * may emit deterministic stage artifacts/manifests under `sandbox/output/<job_id>/**`
@@ -692,17 +722,17 @@ The **Control Plane (`Ralph Loop`)** executes the deterministic recipe defined i
         *   Burns captions (if `captions` present).
         *   Produces `final.mp4`.
 
-### 5. Quality Control (QC Engine)
+### 5. Quality Control & Supervised Repair
 
-Verification is automated and deterministic.
+Verification is automated and reasoning-driven.
 
 *   **QC Engine**:
-    *   Tool: `repo/tools/decide_quality_action.py` (invoked by Ralph).
-    *   Logic:
-        *   Checks `quality_target` thresholds (e.g., `identity_consistency > 0.7`).
-        *   Validates artifact lineage (ensure `final.mp4` matches `job.json` spec).
-        *   Enforces `fail-closed` policy for missing inputs/reports.
-    *   Output: `quality_decision.v1.json` (Pass/Fail/Retry).
+    *   Tool: `repo.tools.run_qc_runner`
+    *   Logic: Checks `quality_target` thresholds and emits `qc_report.v1.json`.
+*   **Production Supervisor**:
+    *   Function: Evaulates `qc_report.v1.json` + `production_metrics.v1.json`.
+    *   Action: Selects repair policy or escalates.
+    *   Output: `production_decision.v1.json` (Pass/Fail/Retry).
 
 ### 6. Troubleshooting & Gotchas
 

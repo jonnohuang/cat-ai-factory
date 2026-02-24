@@ -1,0 +1,172 @@
+{
+  "job_id": "snowy-kitten-dancing-in-dance-loop-comfy-v2",
+  "date": "2026-02-22",
+  "lane": "ai_video",
+  "niche": "cats",
+  "video": {
+    "length_seconds": 12,
+    "aspect_ratio": "9:16",
+    "fps": 30,
+    "resolution": "1080x1920"
+  },
+  "script": {
+    "hook": "Mochi dance loop test",
+    "voiceover": "ComfyUI adapter scaffold run for: snowy-kitten dancing in dance-loop-demo style photoreal studio lighting. Use workflow caf_dance_loop_v1 and keep continuity stable for QC gates.",
+    "ending": "Loop cleanly for retry checks."
+  },
+  "shots": [
+    {
+      "t": 0,
+      "visual": "wide stage",
+      "action": "start groove | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+      "caption": "Mochi starts"
+    },
+    {
+      "t": 4,
+      "visual": "mid shot",
+      "action": "side step | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+      "caption": "On beat"
+    },
+    {
+      "t": 4,
+      "visual": "mid shot",
+      "action": "spin | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+      "caption": "Spin"
+    },
+    {
+      "t": 7,
+      "visual": "wide stage",
+      "action": "pose hit | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+      "caption": "Pose"
+    },
+    {
+      "t": 7,
+      "visual": "mid shot",
+      "action": "bounce | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+      "caption": "Bounce"
+    },
+    {
+      "t": 11,
+      "visual": "wide stage",
+      "action": "reset | facts:camera=locked,brightness=mid,palette=#5F6A7A",
+      "caption": "Loop"
+    }
+  ],
+  "captions": [
+    "Mochi",
+    "On beat",
+    "ComfyUI lane",
+    "Loop"
+  ],
+  "hashtags": [
+    "#cat",
+    "#shorts",
+    "#dance",
+    "#loop",
+    "#high_energy"
+  ],
+  "render": {
+    "background_asset": "assets/demo/processed/dance_loop.mp4",
+    "subtitle_style": "big_bottom",
+    "output_basename": "snowy-kitten-dancing-in-dance-loop-demo-style-ph-caf-dance-loop-v1-comfy"
+  },
+  "continuity_pack": {
+    "relpath": "repo/examples/episode_continuity_pack.identity_only.v1.example.json"
+  },
+  "comfyui": {
+    "provider": "comfyui_video",
+    "base_url": "http://127.0.0.1:8188",
+    "workflow_id": "caf_dance_loop_v1",
+    "workflow_relpath": "repo/workflows/comfy/caf_dance_loop_v1.json",
+    "client_id": "dffea5b2-12c2-4b3f-bb42-fed5b8be65eb",
+    "bindings": {
+      "positive_prompt": "snowy-kitten dancing in dance-loop-demo style photoreal studio lighting. single hero character, Snowy white solid, blue eyes, Light blue dino hoodie; clean and professional., full body, smooth motion, high fidelity, 8k.",
+      "negative_prompt": "human, person, woman, man, human face, human body, multiple characters, crowd, duplicate subject, extra limbs, giant ears, mouse ears, identity drift, costume drift, flicker, background drift, blur, low detail, deformed face",
+      "seed": 123456,
+      "positive_nodes": [
+        "input_prompt",
+        "identity_prompt"
+      ],
+      "negative_nodes": [
+        "input_negative_prompt"
+      ],
+      "seed_nodes": [
+        "sampler"
+      ],
+      "identity_image_path": "sandbox/assets/demo/mochi_anchor.png",
+      "pose_video_path": "assets/demo/processed/dance_loop.mp4"
+    },
+    "poll": {
+      "timeout_seconds": 900,
+      "interval_seconds": 2
+    }
+  },
+  "generation_policy": {
+    "registry_relpath": "repo/shared/engine_adapter_registry.v1.json",
+    "baseline_video_provider": "comfyui_video",
+    "baseline_frame_provider": "vertex_imagen",
+    "route_mode": "production",
+    "selected_video_provider": "comfyui_video",
+    "selected_frame_provider": "vertex_imagen",
+    "video_provider_order": [
+      "comfyui_video"
+    ],
+    "frame_provider_order": [
+      "vertex_imagen"
+    ],
+    "lab_challenger_order": [],
+    "motion_constraints": [],
+    "post_process_order": []
+  },
+  "quality_target": {
+    "relpath": "repo/examples/quality_target.motion_strict.v1.example.json"
+  },
+  "hero": {
+    "hero_id": "snowy-white",
+    "identity_pack_ref": "repo/canon/identities/snowy.v1.json"
+  },
+  "motion_contract": {
+    "relpath": "repo/canon/demo_analyses/dance-loop.pose_checkpoints.v1.json",
+    "contract_version": "pose_checkpoints.v1"
+  },
+  "engine_adapter_registry": {
+    "relpath": "repo/shared/engine_adapter_registry.v1.json"
+  },
+  "segment_stitch": {
+    "plan_relpath": "repo/examples/segment_stitch_plan.v1.example.json",
+    "enabled": true
+  },
+  "pointer_resolution": {
+    "version": "pointer_resolution.v1",
+    "job_id": "job-resolving",
+    "generated_at": "2026-02-22T19:44:43.480092+00:00",
+    "brief_intent": {
+      "prompt": "snowy-kitten dancing in dance-loop-demo style photoreal studio lighting",
+      "heroes": [
+        "snowy-white",
+        "snowy-kitten"
+      ],
+      "style_id": "dance-loop-demo"
+    },
+    "resolution_policy": "prefer_canon_strict_motion",
+    "pointers": {
+      "hero_registry": "repo/shared/hero_registry.v1.json",
+      "series_bible": "repo/shared/series_bible.v1.json",
+      "engine_adapter_registry": "repo/shared/engine_adapter_registry.v1.json",
+      "promotion_registry": "repo/shared/promotion_registry.v1.json",
+      "audio_manifest": "sandbox/assets/audio/audio_manifest.v1.json",
+      "quality_target": "repo/examples/quality_target.motion_strict.v1.example.json",
+      "motion_template": "repo/canon/motion/dance_loop.v1.json",
+      "pose_checkpoint": "repo/canon/demo_analyses/dance-loop.pose_checkpoints.v1.json",
+      "beat_grid": "repo/canon/demo_analyses/dance-loop.beat_grid.v1.json",
+      "identity_pack_snowy-white": "repo/canon/identities/snowy.v1.json",
+      "identity_pack_snowy-kitten": "repo/canon/identities/snowy_kitten.v1.json",
+      "style_registry": "repo/shared/style_registry.v1.json",
+      "pack_style-pack-photoreal": "repo/canon/styles/photoreal.v1.json",
+      "pack_light-pack-studio": "repo/canon/lighting/studio_neutral.v1.json",
+      "pack_camera-pack-locked-full-body": "repo/canon/camera/locked_full_body.v1.json"
+    },
+    "rejected_candidates": [],
+    "fallback_path_used": false
+  }
+}

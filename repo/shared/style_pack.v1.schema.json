@@ -1,0 +1,50 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "StylePack",
+    "description": "Modular visual base style definition (e.g. Photoreal, Ghibli).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "style_pack_id",
+        "version",
+        "content"
+    ],
+    "properties": {
+        "style_pack_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Kebab-case ID for the style pack."
+        },
+        "version": {
+            "type": "string",
+            "const": "style_pack.v1"
+        },
+        "content": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "positive_cues"
+            ],
+            "properties": {
+                "positive_cues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Tokens to encourage the style."
+                },
+                "negative_cues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Tokens to avoid for this style."
+                },
+                "engine_hints": {
+                    "type": "object",
+                    "description": "Optional hints for specific rendering engines (e.g. ComfyUI nodes)."
+                }
+            }
+        }
+    }
+}

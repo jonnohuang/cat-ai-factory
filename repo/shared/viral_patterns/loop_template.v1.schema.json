@@ -1,0 +1,42 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/viral_patterns/loop_template.v1.schema.json",
+    "title": "Loop Template v1",
+    "description": "Seam engineering and pose alignment for seamless loops.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "version",
+        "opening_pose_intent",
+        "closing_pose_intent",
+        "seam_strategy"
+    ],
+    "properties": {
+        "version": {
+            "const": "loop_template.v1"
+        },
+        "opening_pose_intent": {
+            "type": "string",
+            "description": "Visual anchor for the very first frame of the loop."
+        },
+        "closing_pose_intent": {
+            "type": "string",
+            "description": "Visual anchor for the very last frame, intended to match the opening."
+        },
+        "seam_strategy": {
+            "type": "string",
+            "enum": [
+                "pose_match",
+                "motion_blur_fade",
+                "cut_on_beat",
+                "object_wipe"
+            ]
+        },
+        "alignment_threshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Tightness of pose matching required at the seam."
+        }
+    }
+}

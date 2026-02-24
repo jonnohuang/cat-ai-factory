@@ -1,0 +1,53 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/viral_patterns/hook_template.v1.schema.json",
+    "title": "Hook Template v1",
+    "description": "Pattern-break and visual intent for the first 3 seconds.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "version",
+        "hook_type",
+        "first_frame_intent",
+        "beat_alignment_sec"
+    ],
+    "properties": {
+        "version": {
+            "const": "hook_template.v1"
+        },
+        "hook_type": {
+            "type": "string",
+            "enum": [
+                "stare",
+                "action_reveal",
+                "fast_cut",
+                "zoom_punch",
+                "text_overlay"
+            ]
+        },
+        "first_frame_intent": {
+            "type": "string",
+            "description": "Visual instruction for the very first frame."
+        },
+        "beat_alignment_sec": {
+            "type": "number",
+            "description": "Timestamp where the first major pattern break or beat drop occurs."
+        },
+        "caption_hook_style": {
+            "type": "string"
+        },
+        "constraints": {
+            "type": "object",
+            "properties": {
+                "min_motion_intensity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "required_facial_expression": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

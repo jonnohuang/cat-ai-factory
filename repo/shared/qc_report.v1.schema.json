@@ -87,10 +87,23 @@
           "status": {
             "type": "string",
             "enum": [
-              "pass",
-              "fail",
-              "unknown"
+              "PASS",
+              "SOFT_FAIL",
+              "HARD_FAIL",
+              "UNKNOWN"
             ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ]
+          },
+          "repairable": {
+            "type": "boolean"
           },
           "score": {
             "type": [
@@ -157,11 +170,11 @@
         "recommended_action": {
           "type": "string",
           "enum": [
-            "proceed_finalize",
-            "retry_motion",
-            "retry_recast",
-            "block_for_costume",
-            "escalate_hitl"
+            "PROCEED",
+            "RETRY_STAGE",
+            "SWITCH_POLICY",
+            "ESCALATE_USER",
+            "ABORT"
           ]
         }
       }

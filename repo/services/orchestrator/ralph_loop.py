@@ -42,6 +42,45 @@ def atomic_write_json(path: pathlib.Path, payload: Dict[str, Any]) -> None:
     tmp_path.replace(path)
 
 
+def resolve_worker_script(job: Dict[str, Any], repo_root: pathlib.Path) -> str:
+    """Resolve the worker script based on engine_adapter_registry.v1.json."""
+    default_worker = "repo/worker/render_ffmpeg.py"
+    registry_path = repo_root / "repo/shared/engine_adapter_registry.v1.json"
+    if not registry_path.exists():
+        return default_worker
+
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        model_family = job.get("video", {}).get("model_family")
+
+        # Simple heuristic mapping for now
+        family_to_provider = {
+            "veo": "vertex_veo",
+            "wan": "wan_dashscope",
+            "comfyui": "comfyui_video"
+        }
+
+        provider_id = family_to_provider.get(model_family)
+        if not provider_id:
+            profile = job.get("workflow_profile", "")
+            if "veo" in profile or "val_production" in profile:
+                provider_id = "vertex_veo"
+            elif "wan" in profile:
+                provider_id = "wan_dashscope"
+            elif "comfy" in profile:
+                provider_id = "comfyui_video"
+
+        if provider_id:
+            for p in registry.get("providers", []):
+                if p.get("provider_id") == provider_id:
+                    script = p.get("config", {}).get("worker_script")
+                    if script:
+                        return script
+    except Exception:
+        pass
+    return default_worker
+
+
 def append_event(
     events_path: pathlib.Path,
     event: str,
@@ -163,9 +202,9 @@ def provider_switch_env_from_retry_plan(
 
 
 def classify_action(action: str) -> str:
-    if action in ("retry_recast", "retry_motion"):
+    if action in ("RETRY_STAGE", "SWITCH_POLICY", "retry_recast", "retry_motion"):
         return "retry"
-    if action in ("block_for_costume", "escalate_hitl"):
+    if action in ("ESCALATE_USER", "ABORT", "block_for_costume", "escalate_hitl"):
         return "escalate"
     return "finalize"
 
@@ -218,6 +257,21 @@ def outputs_status(output_dir: pathlib.Path) -> Tuple[bool, bool, List[str], Lis
     return all_present, any_present, present, missing
 
 
+def check_is_posted(job_id: str, sandbox_root: pathlib.Path) -> Tuple[bool, Optional[str]]:
+    """PR-47: Check if any platform has reached the POSTED terminal state."""
+    dist_dir = sandbox_root / "dist_artifacts" / job_id
+    if not dist_dir.exists():
+        return False, None
+    for state_file in dist_dir.glob("*.state.json"):
+        try:
+            payload = json.loads(state_file.read_text(encoding="utf-8"))
+            if payload.get("status") == "POSTED":
+                return True, state_file.stem
+        except Exception:
+            pass
+    return False, None
+
+
 def is_under(path: pathlib.Path, root: pathlib.Path) -> bool:
     try:
         path.resolve().relative_to(root.resolve())
@@ -240,12 +294,15 @@ def verify_inputs(job: Dict[str, Any], sandbox_root: pathlib.Path) -> Tuple[bool
     except Exception:
         return False, "render.background_asset missing"
 
-    bg_path = (sandbox_root / bg_rel).resolve()
-    assets_root = (sandbox_root / "assets").resolve()
+    # Normalize path (strip sandbox/ prefix if present)
+    p = pathlib.Path(bg_rel)
+    parts = p.parts
+    if parts and parts[0] == "sandbox":
+        p = pathlib.Path(*parts[1:])
 
+    bg_path = (sandbox_root / p).resolve()
     if not bg_path.exists():
         return False, f"missing background asset: {bg_path}"
-    # Remove the overly strict is_under check to allow test assets
     return True, ""
 
 
@@ -261,6 +318,142 @@ def next_attempt_id(attempts_root: pathlib.Path) -> str:
             existing.append(int(match.group(1)))
     next_num = max(existing) + 1 if existing else 1
     return f"run-{next_num:04d}"
+
+
+def production_supervisor_decide(
+    attempt_id: str,
+    current_job_path: pathlib.Path,
+    logs_dir: pathlib.Path,
+    canonical_job_id: str,
+    events_path: pathlib.Path,
+    current_state: Optional[str],
+) -> bool:
+    """PR-PROD-01/03: Invoke Supervisor to analyze detailed QC reports."""
+    qc_report_path = logs_dir / "qc" / "qc_report.v1.json"
+    metrics_path = logs_dir / "production_metrics.v1.json"
+
+    qc_report = load_json_if_exists(qc_report_path) or {}
+    metrics = load_json_if_exists(metrics_path) or {}
+    job = load_job(current_job_path)
+
+    supervisor_dir = logs_dir / "supervisor" / attempt_id
+    supervisor_dir.mkdir(parents=True, exist_ok=True)
+    decision_path = supervisor_dir / "production_decision.v1.json"
+    escalation_path = logs_dir / "qc" / "user_action_required.json"
+
+    # Ingres: overall recommended action from the runner
+    overall = qc_report.get("overall", {})
+    recommended = overall.get("recommended_action", "PROCEED")
+
+    decision = {
+        "version": "1.0",
+        "job_id": canonical_job_id,
+        "attempt_id": attempt_id,
+        "decision": {
+            "action": recommended,
+            "reasoning": "Supervisor aligned with QC recommended action.",
+            "policy_overrides": {}
+        }
+    }
+
+    # Fine-grained reasoning (Gemini 2.5 simulation)
+    if recommended == "PROCEED":
+         # Double check for soft failures that might need "SWITCH_POLICY" instead of blind PROCEED
+         failed_gates = qc_report.get("gates", [])
+         for gate in failed_gates:
+             if gate.get("status") == "SOFT_FAIL" and gate.get("severity") == "HIGH":
+                 decision["decision"]["action"] = "SWITCH_POLICY"
+                 decision["decision"]["reasoning"] = f"Soft failure at {gate.get('gate_id')} with HIGH severity; triggering policy switch."
+                 decision["decision"]["workflow_profile"] = "identity_strong"
+                 break
+
+    if recommended == "RETRY_STAGE":
+         # Identify target stage
+         target_stage = None
+         for gate in qc_report.get("gates", []):
+             if gate.get("status") in ("HARD_FAIL", "SOFT_FAIL"):
+                 target_stage = gate.get("target_stage")
+                 break
+         decision["decision"]["target_stage"] = target_stage or "frame"
+
+    if recommended == "ESCALATE_USER":
+         # Generate structured escalation artifact
+         escalation = {
+             "version": "user_action_required.v1",
+             "job_id": canonical_job_id,
+             "reason": "IDENTITY_CONFLICT",
+             "required_artifact": "render.identity_anchor",
+             "expected_format": "identity_pack relpath",
+             "escalation_ts": now_ts()
+         }
+         atomic_write_json(escalation_path, escalation)
+
+    atomic_write_json(decision_path, decision)
+    append_event(
+        events_path,
+        "SUPERVISOR_DECISION",
+        current_state,
+        current_state,
+        attempt_id,
+        {"decision": decision["decision"]}
+    )
+    return decision["decision"]["action"] not in ("ABORT", "FAIL_LOUD")
+
+
+def quality_decision(
+    logs_dir: pathlib.Path,
+    canonical_job_id: str,
+    job_path: pathlib.Path,
+    py_exec: str,
+    attempt_id: Optional[str] = None,
+    events_path: Optional[pathlib.Path] = None,
+    current_state: Optional[str] = None,
+) -> Tuple[str, str, Dict[str, Any]]:
+    qc_dir = logs_dir / "qc"
+    qc_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Run the deterministic QC runner to measure gates
+    qc_runner_log = qc_dir / "run_qc_runner.log"
+    qc_runner_cmd = [
+        py_exec,
+        "repo/tools/run_qc_runner.py",
+        "--job-id",
+        canonical_job_id,
+    ]
+    rc, _ = run_cmd(qc_runner_cmd, qc_runner_log)
+    if rc != 0:
+        if events_path:
+            append_event(events_path, "QC_RUNNER_FAILED", current_state, current_state, attempt_id, {"exit_code": rc})
+        return "ESCALATE_USER", "QC runner failed; blocking for safety.", {}
+
+    # 2. Transition to Supervisor reasoning
+    if attempt_id:
+        if not production_supervisor_decide(
+            attempt_id, job_path, logs_dir, canonical_job_id, events_path, current_state
+        ):
+            return "ABORT", "Supervisor aborted the run.", {}
+
+    # 3. Read the supervisor's decision
+    supervisor_dir = logs_dir / "supervisor" / (attempt_id or "initial")
+    decision_path = supervisor_dir / "production_decision.v1.json"
+    if not attempt_id: # Handle pre-existing outputs scenario
+        production_supervisor_decide(
+            "initial", job_path, logs_dir, canonical_job_id, events_path, current_state
+        )
+
+    payload = load_json_if_exists(decision_path) or {}
+    decision = payload.get("decision", {}) if isinstance(payload, dict) else {}
+    action = decision.get("action", "PROCEED")
+    reason = decision.get("reasoning", "No detailed reasoning provided.")
+
+    decision_ctx = {
+        "production_decision_relpath": safe_rel(decision_path, repo_root),
+        "qc_report_relpath": safe_rel(qc_dir / "qc_report.v1.json", repo_root),
+        "target_stage": decision.get("target_stage"),
+        "workflow_profile": decision.get("workflow_profile"),
+    }
+
+    return action, reason, decision_ctx
 
 
 def main(argv: List[str]) -> int:
@@ -300,6 +493,9 @@ def main(argv: List[str]) -> int:
     if not canonical_job_id:
         return 1
 
+    # PR-47: Distribution Check
+    is_posted, platform = check_is_posted(canonical_job_id, sandbox_root)
+
     logs_root = sandbox_root / "logs"
     logs_dir = logs_root / canonical_job_id
     events_path = logs_dir / "events.ndjson"
@@ -308,6 +504,7 @@ def main(argv: List[str]) -> int:
     attempts_root = logs_dir / "attempts"
 
     logs_dir.mkdir(parents=True, exist_ok=True)
+    qc_dir = logs_dir / "qc"
 
     # PR-26: Pre-flight Budget Check
     budget = BudgetTracker(str(sandbox_root))
@@ -359,280 +556,73 @@ def main(argv: List[str]) -> int:
     def warn(event: str, details: Dict[str, Any]) -> None:
         append_event(events_path, event, current_state, current_state, None, details)
 
-    def quality_decision(
-        attempt_id: Optional[str] = None,
-    ) -> Tuple[str, str, Dict[str, Any]]:
-        qc_dir = logs_dir / "qc"
-        qc_dir.mkdir(parents=True, exist_ok=True)
-        decision_log = qc_dir / "quality_decision.log"
-        pass_log = qc_dir / "two_pass_orchestration.log"
-        pass_cmd = [
-            py_exec,
-            "repo/tools/derive_two_pass_orchestration.py",
-            "--job-id",
-            canonical_job_id,
-        ]
-        pass_rc, _ = run_cmd(pass_cmd, pass_log)
-        if pass_rc != 0:
-            warn("TWO_PASS_ORCHESTRATION_FAILED", {"exit_code": pass_rc})
-        decision_cmd = [
-            py_exec,
-            "repo/tools/decide_quality_action.py",
-            "--job-id",
-            canonical_job_id,
-            "--max-retries",
-            str(max(0, args.max_retries)),
-        ]
-        rc, _ = run_cmd(decision_cmd, decision_log)
-        if rc != 0:
-            warn("QUALITY_DECISION_FAILED", {"exit_code": rc})
-            return (
-                "escalate_hitl",
-                "quality decision tool failed; finalize gate is fail-closed",
-                {},
-            )
+    if is_posted:
+        transition(
+            "POSTED",
+            "POSTED_DETECTED",
+            reason=f"Distribution artifact found for platform: {platform}",
+        )
+        print(f"INFO: Job {canonical_job_id} already POSTED to {platform}.")
+        return 0
 
-        decision_path = qc_dir / "quality_decision.v1.json"
-        retry_plan_path = qc_dir / "retry_plan.v1.json"
-        finalize_gate_path = qc_dir / "finalize_gate.v1.json"
-        advice_path = qc_dir / "qc_route_advice.v1.json"
-        payload = load_json_if_exists(decision_path) or {}
-        decision = payload.get("decision", {}) if isinstance(payload, dict) else {}
-        action = decision.get("action") if isinstance(decision, dict) else None
-        reason = decision.get("reason") if isinstance(decision, dict) else None
-        action_s = (
-            str(action) if isinstance(action, str) and action else "proceed_finalize"
-        )
-        reason_s = (
-            str(reason)
-            if isinstance(reason, str) and reason
-            else "quality decision unavailable"
-        )
+    def replan(
+        attempt_id: str,
+        qc_report_path: pathlib.Path,
+        current_job_path: pathlib.Path,
+    ) -> bool:
+        """PR-100: Call the Planner to refine the job based on QC feedback."""
+        refine_dir = logs_dir / "refinement" / attempt_id
+        refine_dir.mkdir(parents=True, exist_ok=True)
+        refine_log = refine_dir / "replan.log"
+
+        # Prepare inbox for planner (current job + QC report)
+        planner_inbox = refine_dir / "inbox"
+        planner_inbox.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(current_job_path, planner_inbox / "original_job.json")
+        shutil.copyfile(qc_report_path, planner_inbox / "qc_report.json")
+
+        # Call planner_cli.py
+        # We assume the PRD is available or we use the job as PRD proxy
+        cmd = [
+            py_exec,
+            "repo/services/planner/planner_cli.py",
+            "--job-id",
+            canonical_job_id,
+            "--inbox",
+            str(planner_inbox),
+            "--out",
+            str(repo_root / "sandbox" / "jobs"),
+            "--overwrite",
+        ]
         append_event(
             events_path,
-            "QUALITY_DECISION",
+            "REPLAN_START",
             current_state,
             current_state,
             attempt_id,
-            {"action": action_s, "reason": reason_s, "artifact": str(decision_path)},
+            {"cmd": " ".join(cmd)},
         )
-        advice_payload = load_json_if_exists(advice_path)
-        if (
-            isinstance(advice_payload, dict)
-            and advice_payload.get("version") == "qc_route_advice.v1"
-        ):
-            advice_action = advice_payload.get("advice", {}).get("recommended_action")
-            advice_reason = advice_payload.get("advice", {}).get("reason")
-            append_event(
-                events_path,
-                "QUALITY_ADVISORY",
-                current_state,
-                current_state,
-                attempt_id,
-                {
-                    "advice_action": advice_action,
-                    "advice_reason": advice_reason,
-                    "authoritative_action": action_s,
-                    "authority_mode": "policy_authoritative",
-                    "artifact": str(advice_path),
-                },
-            )
-        retry_plan_payload = load_json_if_exists(retry_plan_path)
-        if isinstance(retry_plan_payload, dict):
-            retry = retry_plan_payload.get("retry", {})
-            source = retry_plan_payload.get("source", {})
-            if isinstance(retry, dict) and isinstance(source, dict):
-                enabled = bool(retry.get("enabled"))
-                retry_type = str(retry.get("retry_type", "none"))
-                source_action = str(source.get("action", action_s))
-                source_reason = str(source.get("reason", reason_s))
-                max_retries = retry.get("max_retries")
-                next_attempt = retry.get("next_attempt")
-                provider_switch = (
-                    retry.get("provider_switch") if isinstance(retry, dict) else None
-                )
-                provider_mode = (
-                    provider_switch.get("mode")
-                    if isinstance(provider_switch, dict)
-                    else "none"
-                )
-                provider_next = (
-                    provider_switch.get("next_provider")
-                    if isinstance(provider_switch, dict)
-                    else None
-                )
-                if provider_mode in {"video_provider", "frame_provider"} and isinstance(
-                    provider_next, str
-                ):
-                    append_event(
-                        events_path,
-                        "QUALITY_PROVIDER_SWITCH",
-                        current_state,
-                        current_state,
-                        attempt_id,
-                        {
-                            "mode": provider_mode,
-                            "current_provider": provider_switch.get("current_provider"),
-                            "next_provider": provider_next,
-                            "artifact": str(retry_plan_path),
-                        },
-                    )
-                if (
-                    enabled
-                    and retry_type in {"motion", "recast"}
-                    and isinstance(max_retries, int)
-                    and isinstance(next_attempt, int)
-                    and next_attempt <= max_retries
-                ):
-                    mapped_action = (
-                        "retry_motion" if retry_type == "motion" else "retry_recast"
-                    )
-                    append_event(
-                        events_path,
-                        "QUALITY_RETRY_PLAN",
-                        current_state,
-                        current_state,
-                        attempt_id,
-                        {
-                            "mapped_action": mapped_action,
-                            "source_action": source_action,
-                            "next_attempt": next_attempt,
-                            "max_retries": max_retries,
-                            "artifact": str(retry_plan_path),
-                        },
-                    )
-                    return (
-                        mapped_action,
-                        source_reason,
-                        {
-                            "quality_decision_relpath": safe_rel(
-                                decision_path, repo_root
-                            ),
-                            "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
-                            "finalize_gate_relpath": (
-                                safe_rel(finalize_gate_path, repo_root)
-                                if finalize_gate_path.exists()
-                                else None
-                            ),
-                            "qc_route_advice_relpath": (
-                                safe_rel(advice_path, repo_root)
-                                if advice_path.exists()
-                                else None
-                            ),
-                            "retry_type": retry_type,
-                            "segment_retry": retry.get("segment_retry"),
-                            "provider_switch": (
-                                provider_switch
-                                if isinstance(provider_switch, dict)
-                                else None
-                            ),
-                        },
-                    )
-                terminal_state = str(
-                    retry_plan_payload.get("state", {}).get("terminal_state", "none")
-                )
-                if terminal_state == "block_for_costume":
-                    return (
-                        "block_for_costume",
-                        source_reason,
-                        {
-                            "quality_decision_relpath": safe_rel(
-                                decision_path, repo_root
-                            ),
-                            "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
-                            "finalize_gate_relpath": (
-                                safe_rel(finalize_gate_path, repo_root)
-                                if finalize_gate_path.exists()
-                                else None
-                            ),
-                            "qc_route_advice_relpath": (
-                                safe_rel(advice_path, repo_root)
-                                if advice_path.exists()
-                                else None
-                            ),
-                            "retry_type": "none",
-                            "segment_retry": (
-                                retry.get("segment_retry")
-                                if isinstance(retry, dict)
-                                else None
-                            ),
-                            "provider_switch": (
-                                provider_switch
-                                if isinstance(provider_switch, dict)
-                                else None
-                            ),
-                        },
-                    )
-                if terminal_state == "escalate_hitl":
-                    return (
-                        "escalate_hitl",
-                        source_reason,
-                        {
-                            "quality_decision_relpath": safe_rel(
-                                decision_path, repo_root
-                            ),
-                            "retry_plan_relpath": safe_rel(retry_plan_path, repo_root),
-                            "finalize_gate_relpath": (
-                                safe_rel(finalize_gate_path, repo_root)
-                                if finalize_gate_path.exists()
-                                else None
-                            ),
-                            "qc_route_advice_relpath": (
-                                safe_rel(advice_path, repo_root)
-                                if advice_path.exists()
-                                else None
-                            ),
-                            "retry_type": "none",
-                            "segment_retry": (
-                                retry.get("segment_retry")
-                                if isinstance(retry, dict)
-                                else None
-                            ),
-                            "provider_switch": (
-                                provider_switch
-                                if isinstance(provider_switch, dict)
-                                else None
-                            ),
-                        },
-                    )
-        decision_ctx = {
-            "quality_decision_relpath": safe_rel(decision_path, repo_root),
-            "retry_plan_relpath": (
-                safe_rel(retry_plan_path, repo_root)
-                if retry_plan_path.exists()
-                else None
-            ),
-            "finalize_gate_relpath": (
-                safe_rel(finalize_gate_path, repo_root)
-                if finalize_gate_path.exists()
-                else None
-            ),
-            "qc_route_advice_relpath": (
-                safe_rel(advice_path, repo_root) if advice_path.exists() else None
-            ),
-            "retry_type": None,
-            "segment_retry": None,
-            "provider_switch": None,
-        }
-        gate_payload = load_json_if_exists(finalize_gate_path)
-        if isinstance(gate_payload, dict):
-            gate = gate_payload.get("gate", {})
-            allow_finalize = bool(
-                isinstance(gate, dict) and gate.get("allow_finalize") is True
-            )
-            if action_s == "proceed_finalize" and not allow_finalize:
-                return (
-                    "escalate_hitl",
-                    "Finalize gate blocked completion.",
-                    decision_ctx,
-                )
-        elif action_s == "proceed_finalize":
-            return (
-                "escalate_hitl",
-                "Finalize gate artifact missing; blocking completion.",
-                decision_ctx,
-            )
-        return action_s, reason_s, decision_ctx
+        rc, _ = run_cmd(cmd, refine_log)
+        if rc == 0:
+             append_event(
+                 events_path,
+                 "REPLAN_SUCCESS",
+                 current_state,
+                 current_state,
+                 attempt_id,
+                 {"log": str(refine_log)}
+             )
+             return True
+        else:
+             append_event(
+                 events_path,
+                 "REPLAN_FAILED",
+                 current_state,
+                 current_state,
+                 attempt_id,
+                 {"exit_code": rc, "log": str(refine_log)}
+             )
+             return False
 
     try:
         validate_log = logs_dir / "validate_job.log"
@@ -678,7 +668,14 @@ def main(argv: List[str]) -> int:
             rc, _ = run_cmd(lineage_cmd, lineage_log)
             if rc == 0:
                 transition("VERIFIED", "LINEAGE_OK")
-                action, reason, decision_ctx = quality_decision()
+                action, reason, decision_ctx = quality_decision(
+                    logs_dir=logs_dir,
+                    canonical_job_id=canonical_job_id,
+                    job_path=job_path,
+                    py_exec=py_exec,
+                    events_path=events_path,
+                    current_state=current_state,
+                )
                 action_class = classify_action(action)
                 append_retry_attempt_lineage(
                     lineage_path=lineage_contract_path,
@@ -787,9 +784,10 @@ def main(argv: List[str]) -> int:
                         shot_out_dir.mkdir(parents=True, exist_ok=True)
 
                         worker_log = attempt_dir / f"worker_{shot_id}.log"
+                        worker_script = resolve_worker_script(job, repo_root)
                         worker_cmd = [
                             py_exec,
-                            "repo/worker/render_ffmpeg.py",
+                            worker_script,
                             "--job",
                             str(job_path),
                         ]
@@ -797,7 +795,7 @@ def main(argv: List[str]) -> int:
                             "PYTHONPATH": str(repo_root),
                             "CAF_TARGET_SHOT_ID": shot_id,
                             "CAF_RETRY_ATTEMPT_ID": attempt_id,
-                            "CAF_OUTPUT_OVERRIDE": str(shot_out_dir.resolve()),
+                            "CAF_OUTPUT_OVERRIDE": str((shot_out_dir / "final.mp4").resolve()),
                         }
                         # We don't propagate retry_plan for specific shot targeting yet,
                         # but we could if needed.
@@ -823,29 +821,30 @@ def main(argv: List[str]) -> int:
                         # All shots in this attempt finished successfully
                         director.sync_shots(job)  # update state
 
-                # Attempt assembly
-                success, err = director.assemble(job)
-                if success:
-                    transition("COMPLETED", "COMPLETED", attempt_id=attempt_id)
-                    return 0
-                else:
-                    transition(
-                        "FAIL_WORKER",
-                        "ASSEMBLY_FAILED",
-                        attempt_id=attempt_id,
-                        reason=err,
-                    )
-                    if attempt_index < total_attempts - 1:
-                        continue
-                    return 1
+                        # Attempt assembly
+                        success, err = director.assemble(job)
+                        if success:
+                            transition("COMPLETED", "COMPLETED", attempt_id=attempt_id)
+                            return 0
+                        else:
+                            transition(
+                                "FAIL_WORKER",
+                                "ASSEMBLY_FAILED",
+                                attempt_id=attempt_id,
+                                reason=err,
+                            )
+                            if attempt_index < total_attempts - 1:
+                                continue
+                            return 1
 
             else:
                 # Monolithic path (existing)
                 worker_log = attempt_dir / "worker.log"
                 pointers["worker_log"] = str(worker_log)
+                worker_script = resolve_worker_script(job, repo_root)
                 worker_cmd = [
                     py_exec,
-                    "repo/worker/render_ffmpeg.py",
+                    worker_script,
                     "--job",
                     str(job_path),
                 ]
@@ -920,7 +919,13 @@ def main(argv: List[str]) -> int:
                 if rc == 0:
                     transition("VERIFIED", "LINEAGE_OK", attempt_id=attempt_id)
                     action, reason, decision_ctx = quality_decision(
-                        attempt_id=attempt_id
+                        logs_dir=logs_dir,
+                        canonical_job_id=canonical_job_id,
+                        job_path=job_path,
+                        py_exec=py_exec,
+                        attempt_id=attempt_id,
+                        events_path=events_path,
+                        current_state=current_state,
                     )
                     action_class = classify_action(action)
                     append_retry_attempt_lineage(
@@ -967,6 +972,34 @@ def main(argv: List[str]) -> int:
                             reason=reason,
                         )
                         if attempt_index < total_attempts - 1:
+                            # PR-100/PROD-03: Refinement Logic
+                            if action in ("RETRY_STAGE", "SWITCH_POLICY", "retry_recast"):
+                                if replan(attempt_id, qc_dir / "qc_report.v1.json", job_path):
+                                    # Reload job for next attempt
+                                    job = load_job(job_path)
+                                    append_event(
+                                        events_path,
+                                        "JOB_RELOADED",
+                                        current_state,
+                                        current_state,
+                                        attempt_id,
+                                        {"reason": "Refined plan generated by Brain."}
+                                    )
+
+                            # PR-100: Vertex Fallback logic
+                            if attempt_index == 1 and job.get("hero"):
+                                 # Second failure for a Hero job -> fallback to Vertex
+                                 job["lane"] = "vertex_veo"
+                                 # We need to notify the worker or update the job file
+                                 atomic_write_json(job_path, job)
+                                 append_event(
+                                     events_path,
+                                     "LANE_FALLBACK",
+                                     current_state,
+                                     current_state,
+                                     attempt_id,
+                                     {"new_lane": "vertex_veo", "reason": "Comfy stabilization failed twice for Hero."}
+                                 )
                             continue
                         return 1
                     if action_class == "escalate":

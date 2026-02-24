@@ -1,0 +1,52 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "LightPack",
+    "description": "Modular lighting setup definition (e.g. Studio, Golden Hour).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "light_pack_id",
+        "version",
+        "content"
+    ],
+    "properties": {
+        "light_pack_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Kebab-case ID for the lighting pack."
+        },
+        "version": {
+            "type": "string",
+            "const": "light_pack.v1"
+        },
+        "content": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "cues"
+            ],
+            "properties": {
+                "light_type": {
+                    "type": "string",
+                    "description": "Category of lighting (e.g. natural, artificial, stylistic)."
+                },
+                "cues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Tokens describing the lighting setup."
+                },
+                "intensity_hint": {
+                    "type": "string",
+                    "enum": [
+                        "low",
+                        "medium",
+                        "high"
+                    ],
+                    "description": "Optional hint for lighting intensity."
+                }
+            }
+        }
+    }
+}

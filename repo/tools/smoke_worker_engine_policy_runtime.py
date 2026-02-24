@@ -12,7 +12,7 @@ def main(argv: list[str]) -> int:
         "generation_policy": {
             "route_mode": "production",
             "selected_video_provider": "vertex_veo",
-            "selected_frame_provider": "grok_image",
+            "selected_frame_provider": "vertex_imagen",
             "motion_constraints": ["openpose_constraint"],
             "post_process_order": ["rife_film_post", "esrgan_selective_post"],
         }

@@ -1,0 +1,20 @@
+{
+    "identity_id": "snowy",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/snowy/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "adult female cat",
+            "white fur",
+            "blue eyes",
+            "light blue dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

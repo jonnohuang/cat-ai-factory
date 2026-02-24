@@ -1,0 +1,57 @@
+{
+  "job_id": "kitten-dancing-disco-24s-wanlocal",
+  "date": "2026-02-22",
+  "lane": "ai_video",
+  "niche": "cats",
+  "video": {
+    "model_family": "wan",
+    "model_version": "2.2",
+    "length_seconds": 24,
+    "aspect_ratio": "9:16",
+    "fps": 30,
+    "resolution": "1080x1920"
+  },
+  "script": {
+    "hook": "Wan 2.2 Motion Synthesis",
+    "voiceover": "Processing high-fidelity motion for: Kitten dancing disco 24s.",
+    "ending": "Grand finale loop."
+  },
+  "shots": [
+    {
+      "shot_id": "shot_0010",
+      "t": 0,
+      "visual": "opening sequence",
+      "action": "intro",
+      "caption": "Opening"
+    },
+    {
+      "shot_id": "shot_0020",
+      "t": 8,
+      "visual": "mid sequence",
+      "action": "main movement",
+      "caption": "Action"
+    },
+    {
+      "shot_id": "shot_0030",
+      "t": 16,
+      "visual": "closing sequence",
+      "action": "pose lock",
+      "caption": "Final Pose"
+    }
+  ],
+  "captions": [
+    "Wan2.2",
+    "Pose Locked",
+    "GCP GPU"
+  ],
+  "hashtags": [
+    "#wan22",
+    "#aiart",
+    "#cats"
+  ],
+  "render": {
+    "background_asset": "assets/demo/processed/dance_loop.mp4",
+    "subtitle_style": "minimal_glow",
+    "output_basename": "kitten-dancing-disco-24s-wanlocal"
+  }
+}

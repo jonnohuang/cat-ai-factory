@@ -1,0 +1,19 @@
+{
+    "template_id": "dance-loop-v1",
+    "version": "motion_template.v1",
+    "display_name": "Dance Loop v1",
+    "constraints": {
+        "pose_checkpoints_ref": "repo/canon/demo_analyses/dance-loop.pose_checkpoints.v1.json",
+        "beat_grid_ref": "repo/canon/demo_analyses/dance-loop.beat_grid.v1.json",
+        "motion_cues": [
+            "locked camera",
+            "energetic choreography",
+            "loop-friendly transition"
+        ]
+    },
+    "tags": [
+        "dance",
+        "loop",
+        "choreography"
+    ]
+}

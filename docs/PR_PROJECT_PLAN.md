@@ -1930,17 +1930,6 @@ Outcome:
 
 --- [ ] **PR-40: Hybrid Audio Strategy** - Standardized audio modes and beat alignment. [COMPLETED]
 
-# Phase 9: Media Architecture v2 (v0.2 Readiness)
-- [x] **PR-41: Production Plane Optimization** - Standardize dev master resolution (1080x1080) and optimize FFmpeg engine. [COMPLETED]
-- [x] **PR-42: Distribution Plane (Publish Pack Engine)** - Implement reframer, safe-zone enforcement, and platform-specific metadata. [COMPLETED]
-- [x] **PR-43: Distribution Runner** - Add poller and publisher orchestration logic. [COMPLETED]
-
-# Phase 10: Multi-Channel Launch (v0.3 Roadmap)
-- [ ] **PR-44: Handoff Registry** - Formalize the `POSTED` state and artifact registry for live content. [NEXT]
-- [ ] **PR-45: Cloud Archive Automation** - Implement automatic move-to-cloud for finalized bundles and production masters.
-- [ ] **PR-46: Feedback Loop Ingress** - Basic analytics ingestion from external platforms.
-**
-
 ### PR-40 — Hybrid Audio Strategy
 Status: **COMPLETED**
 
@@ -1954,6 +1943,41 @@ Outcome:
 - High-quality, beat-locked video output with zero copyright liability for trending audio paths.
 - Reusable brand-safe original audio library for paid/multi-platform campaigns.
 
+# Phase 9: Media Architecture v2 (v0.2 Readiness)
+- [x] **PR-41: Production Plane Optimization** - Standardize dev master resolution (1080x1080) and optimize FFmpeg engine. [COMPLETED]
+- [x] **PR-42: Distribution Plane (Publish Pack Engine)** - Implement reframer, safe-zone enforcement, and platform-specific metadata. [COMPLETED]
+- [x] **PR-43: Distribution Runner** - Add poller and publisher orchestration logic. [COMPLETED]
+
+# Phase 10: CAF Stabilization — Identity First (COMPLETED)
+- [x] **PR-44: Hero Identity Anchor** — Canonicalize stable identity baselines informed by reference samples. [COMPLETED]
+- [x] **PR-45: Asset Pack System** — Modularize selectable style/lighting/camera components. [COMPLETED]
+- [x] **PR-46: Motion Template Library** — Extract and formalize deterministic motion/beat sequences. [COMPLETED]
+
+# Phase 11: Multi-Channel Launch (COMPLETED)
+- [x] **PR-47: Handoff Registry** — Formalize the `POSTED` state and artifact registry for live content. [COMPLETED]
+- [x] **PR-48: Cloud Archive Automation** — Implement automatic move-to-cloud for finalized bundles. [COMPLETED]
+- [x] **PR-49: Feedback Loop Ingress** — Basic analytics ingestion from external platforms. [COMPLETED]
+- [x] **PR-PROD-02: Stage-Level QC Gates** — Deterministic contract verification at each engine stage. [COMPLETED]
+- [x] **PR-PROD-03: QC Ownership Model** — Supervisor-centric reasoning and structured escalation. [COMPLETED]
+
+# Phase 12: High-Performance Motion — GCP GPU (COMPLETED)
+- [x] **PR-50: GCP GPU Infrastructure** — Terraform Managed Instance Groups for L4 GPU workers. [COMPLETED]
+- [x] **PR-51: Wan 2.2 Worker Adapter** — High-fidelity motion engine with MediaPipe pose injection. [COMPLETED]
+- [x] **PR-52: Hybrid Control Strategy** — "Guided Seed" pattern (Wan draft -> Veo3 refine). [COMPLETED]
+
+# PR-53 — Hero Kitten Grand Finale (COMPLETED)
+Status: **COMPLETED**
+Scope: 24s 9:16 high-fidelity short featuring Mochi, Ronnie, and Mion. 
+Highlights: Single-lane ComfyUI synthesis, 6 discrete shots (shot_0010-0060), shot-specific trimming, 30fps post-interpolation.
+Outcome: Demonstrates the stabilization ceiling before shifting to GPU-native tracks.
+
+------------------------------------------------------------
+
+# Phase 13: Viral Story & Direction Architecture (COMPLETED)
+- [x] **PR-54: Story & Direction Subgraph** — Formalize narrative intent logic within LangGraph (Procedural Fallback enabled).
+- [x] **PR-55: Viral Pattern Library (VPL) v1** — Define schemas and repo structure for Hook, Shot, Loop templates.
+- [x] **PR-56: Narrative Template Selection** — Wire VPL selection and constraint-merging into the subgraph.
+- [x] **PR-57: Narrative-Driven QC Gates** — Established architecture for VPL scorecard integration.
 
 ------------------------------------------------------------
 

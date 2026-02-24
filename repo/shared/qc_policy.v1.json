@@ -3,73 +3,98 @@
   "policy_id": "default-motion-identity-v1",
   "generated_at": "2026-02-18T00:00:00Z",
   "max_retries_default": 2,
-  "default_action_on_missing_report": "escalate_hitl",
+  "default_action_on_missing_report": "ESCALATE_USER",
   "gates": [
     {
       "gate_id": "identity_consistency_gate",
       "metric": "identity_consistency",
       "dimension": "identity",
       "threshold": 0.7,
-      "failure_action": "retry_recast"
+      "severity": "HIGH",
+      "repairable": true,
+      "failure_action": "RETRY_STAGE",
+      "target_stage": "frame"
     },
     {
       "gate_id": "mask_edge_bleed_gate",
       "metric": "mask_edge_bleed",
       "dimension": "identity",
       "threshold": 0.6,
-      "failure_action": "retry_recast"
+      "severity": "MEDIUM",
+      "repairable": true,
+      "failure_action": "RETRY_STAGE",
+      "target_stage": "frame"
     },
     {
       "gate_id": "temporal_stability_gate",
       "metric": "temporal_stability",
       "dimension": "motion",
       "threshold": 0.7,
-      "failure_action": "retry_motion"
+      "severity": "MEDIUM",
+      "repairable": true,
+      "failure_action": "RETRY_STAGE",
+      "target_stage": "motion"
     },
     {
       "gate_id": "loop_seam_gate",
       "metric": "loop_seam",
       "dimension": "motion",
       "threshold": 0.7,
-      "failure_action": "retry_motion"
+      "severity": "LOW",
+      "repairable": true,
+      "failure_action": "RETRY_STAGE",
+      "target_stage": "motion"
     },
     {
       "gate_id": "audio_video_gate",
       "metric": "audio_video",
       "dimension": "audio",
       "threshold": 0.95,
-      "failure_action": "retry_recast"
+      "severity": "HIGH",
+      "repairable": true,
+      "failure_action": "RETRY_STAGE",
+      "target_stage": "video"
     },
     {
       "gate_id": "costume_fidelity_gate",
       "metric": "costume_fidelity",
       "dimension": "costume",
       "threshold": 1.0,
-      "failure_action": "block_for_costume"
+      "severity": "CRITICAL",
+      "repairable": false,
+      "failure_action": "ESCALATE_USER",
+      "target_stage": "artifact"
     },
     {
       "gate_id": "background_stability_gate",
       "metric": "background_stability",
       "dimension": "motion",
       "threshold": 0.8,
-      "failure_action": "retry_motion"
+      "severity": "MEDIUM",
+      "repairable": true,
+      "failure_action": "RETRY_STAGE",
+      "target_stage": "motion"
     },
     {
       "gate_id": "identity_drift_gate",
       "metric": "identity_drift",
       "dimension": "identity",
       "threshold": 0.8,
-      "failure_action": "retry_recast"
+      "severity": "HIGH",
+      "repairable": true,
+      "failure_action": "RETRY_STAGE",
+      "target_stage": "frame"
     }
   ],
   "routing": {
     "failure_action_priority": [
-      "block_for_costume",
-      "retry_motion",
-      "retry_recast",
-      "escalate_hitl"
+      "ABORT",
+      "ESCALATE_USER",
+      "RETRY_STAGE",
+      "SWITCH_POLICY",
+      "PROCEED"
     ],
-    "fallback_action": "escalate_hitl"
+    "fallback_action": "ESCALATE_USER"
   },
   "failure_classification": {
     "classes": [
@@ -80,42 +105,42 @@
           "mask_edge_bleed",
           "identity_drift"
         ],
-        "action": "retry_recast"
+        "action": "RETRY_STAGE"
       },
       {
         "class_id": "background_warping",
         "metrics": [
           "background_stability"
         ],
-        "action": "retry_motion"
+        "action": "RETRY_STAGE"
       },
       {
         "class_id": "pose_mismatch",
         "metrics": [
           "temporal_stability"
         ],
-        "action": "retry_motion"
+        "action": "RETRY_STAGE"
       },
       {
         "class_id": "seam_artifact",
         "metrics": [
           "loop_seam"
         ],
-        "action": "retry_motion"
+        "action": "RETRY_STAGE"
       },
       {
         "class_id": "audio_sync",
         "metrics": [
           "audio_video"
         ],
-        "action": "retry_recast"
+        "action": "RETRY_STAGE"
       },
       {
         "class_id": "costume_mismatch",
         "metrics": [
           "costume_fidelity"
         ],
-        "action": "block_for_costume"
+        "action": "ESCALATE_USER"
       }
     ]
   },
@@ -150,18 +175,18 @@
   "advisory_mode": {
     "enabled": true,
     "allowed_actions": [
-      "retry_motion",
-      "retry_recast",
-      "block_for_costume",
-      "escalate_hitl"
+      "RETRY_STAGE",
+      "SWITCH_POLICY",
+      "ESCALATE_USER",
+      "ABORT"
     ]
   },
   "authority_trial": {
     "enabled": false,
     "allowed_actions": [
-      "retry_motion",
-      "retry_recast"
+      "RETRY_STAGE",
+      "SWITCH_POLICY"
     ],
-    "rollback_action": "escalate_hitl"
+    "rollback_action": "ESCALATE_USER"
   }
 }

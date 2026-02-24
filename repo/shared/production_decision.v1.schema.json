@@ -1,0 +1,111 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Production Decision v1",
+    "description": "Structured decisions produced by the Production Supervisor to guide repair loops.",
+    "type": "object",
+    "properties": {
+        "version": {
+            "type": "string",
+            "const": "1.0"
+        },
+        "job_id": {
+            "type": "string"
+        },
+        "attempt_id": {
+            "type": "string"
+        },
+        "decision": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "PROCEED",
+                        "RETRY_STAGE",
+                        "SWITCH_POLICY",
+                        "ESCALATE_USER",
+                        "ABORT"
+                    ]
+                },
+                "target_stage": {
+                    "type": "string",
+                    "enum": [
+                        "artifact",
+                        "frame",
+                        "motion",
+                        "video",
+                        "editor"
+                    ]
+                },
+                "target_lane": {
+                    "type": "string"
+                },
+                "workflow_profile": {
+                    "type": "string"
+                },
+                "policy_overrides": {
+                    "type": "object",
+                    "properties": {
+                        "resolution_policy": {
+                            "type": "string",
+                            "enum": [
+                                "letterbox",
+                                "crop_center",
+                                "pad_reflect"
+                            ]
+                        },
+                        "motion_intensity": {
+                            "type": "string",
+                            "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                            ]
+                        },
+                        "fps_strategy": {
+                            "type": "string",
+                            "enum": [
+                                "preserve",
+                                "resample",
+                                "reduce"
+                            ]
+                        },
+                        "max_frames_override": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 256
+                        },
+                        "queue_management": {
+                            "type": "string",
+                            "enum": [
+                                "NORMAL",
+                                "CLEAR_STALE_ITEMS",
+                                "INTERRUPT_ACTIVE"
+                            ]
+                        }
+                    }
+                },
+                "parameter_adjustments": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    },
+                    "description": "High-level adjustments (e.g. blend_factor_offset) to be mapped to node IDs by the controller."
+                },
+                "reasoning": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "action",
+                "reasoning"
+            ]
+        }
+    },
+    "required": [
+        "version",
+        "job_id",
+        "attempt_id",
+        "decision"
+    ]
+}

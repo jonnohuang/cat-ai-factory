@@ -110,8 +110,8 @@ class ComfyUIVideoProvider(BaseProvider):
                         src_rel = source.get("video_relpath")
                         if isinstance(src_rel, str) and src_rel.strip():
                             src = src_rel.strip()
-                            if src.startswith("sandbox/"):
-                                src = src[len("sandbox/") :]
+                            if not src.startswith("sandbox/") and not src.startswith("repo/"):
+                                src = f"sandbox/{src}"
                             return src
 
         # Fail-loud for dance-loop intent: do not silently route to unrelated fight composite.
@@ -125,13 +125,17 @@ class ComfyUIVideoProvider(BaseProvider):
                 sandbox_root=sandbox_root, candidates=GENERAL_BACKGROUND_CANDIDATES
             )
         if selected:
+            if not selected.startswith("sandbox/") and not selected.startswith("repo/"):
+                return f"sandbox/{selected}"
             return selected
-        if dance_intent:
-            raise RuntimeError(
-                "Dance-loop brief requires dance reference asset; expected one of "
-                "sandbox/assets/demo/processed/dance_loop.mp4 or sandbox/assets/demo/dance_loop.mp4"
-            )
-        return "assets/demo/fight_composite.mp4"
+
+        # Fail loud early: do not provide a 'pretend' baseline video if resolution fails.
+        msg = (
+            f"Failed to resolve background asset for intent (dance={dance_intent}). "
+            f"Expected one of {GENERAL_BACKGROUND_CANDIDATES if not dance_intent else DANCE_LOOP_CANDIDATES} "
+            "to exist under sandbox/"
+        )
+        raise RuntimeError(msg)
 
     def _pick_identity_asset(self, quality_context: Optional[Dict[str, Any]]) -> str:
         # Prefer sample-ingest identity anchor when available.
@@ -151,8 +155,12 @@ class ComfyUIVideoProvider(BaseProvider):
                         rel = identity.get("relpath")
                         if isinstance(rel, str) and rel.strip():
                             return rel.strip()
-        # Fallback to demo Mochi anchor
-        return "sandbox/assets/demo/mochi_anchor.png"
+        # Fallback to repo-anchored Mochi portrait
+        rel = "repo/assets/identity/mochi/front.png"
+        full = self._repo_root() / rel
+        if not full.exists():
+            print(f"WARNING: Preferred identity anchor not found: {full}")
+        return rel
 
     def generate_job(
         self,
@@ -187,7 +195,9 @@ class ComfyUIVideoProvider(BaseProvider):
         )
         identity_asset = self._pick_identity_asset(quality_context)
         pose_video_asset = (
-            background_asset if is_dance else "sandbox/assets/demo/dance_loop.mp4"
+            background_asset
+            if is_dance
+            else "sandbox/assets/demo/processed/dance_loop.mp4"
         )
 
         # Resolve Hero and Costume (Existing Logic)
@@ -257,9 +267,20 @@ class ComfyUIVideoProvider(BaseProvider):
 
         style_suffix = ", ".join(style_tokens) if style_tokens else "high fidelity, 8k"
 
+        # Refined prompt for individual shots: strip "cast" and character lists to avoid hallucinations
+        refined_prompt = prompt
+        # 1. Strip "hero kitten cast"
+        pattern_cast = re.compile(re.escape("hero kitten cast"), re.IGNORECASE)
+        refined_prompt = pattern_cast.sub("Hero Kitten", refined_prompt)
+
+        # 2. Strip parenthetical character lists like "(Mochi, Ronnie, Mione)" or "(Ronnie, Mochi, Mione)"
+        # This prevents the single-hero AI from trying to generate multiple cats.
+        pattern_list = re.compile(r"\s*\(.*?\)", re.IGNORECASE)
+        refined_prompt = pattern_list.sub("", refined_prompt)
+
         comfy_positive = (
-            f"{prompt}. "
-            f"single hero character, {traits_str}, "
+            f"{refined_prompt}. "
+            f"masterpiece, best quality, single hero character, {traits_str}, "
             f"{costume_str}, "
             f"full body, smooth motion, {style_suffix}."
         )
@@ -270,13 +291,20 @@ class ComfyUIVideoProvider(BaseProvider):
             "blur, low detail, deformed face"
         )
         comfy_seed = 123456
+        # Duration extraction
+        length_seconds = 12
+        if "24s" in prompt_lower or "24 seconds" in prompt_lower:
+            length_seconds = 24
+        elif "16s" in prompt_lower or "16 seconds" in prompt_lower:
+            length_seconds = 16
+
         job: Dict[str, Any] = {
             "job_id": f"{basename[:34]}-comfy",
             "date": date,
             "lane": "ai_video",
             "niche": niche,
             "video": {
-                "length_seconds": 12,
+                "length_seconds": length_seconds,
                 "aspect_ratio": "9:16",
                 "fps": 30,
                 "resolution": "1080x1920",
@@ -291,26 +319,47 @@ class ComfyUIVideoProvider(BaseProvider):
             },
             "shots": [
                 {
+                    "shot_id": "shot_0010",
                     "t": 0,
-                    "visual": "wide stage",
+                    "visual": "wide stage, tracking motion",
                     "action": "start groove",
-                    "caption": "Mochi starts",
+                    "caption": "Intro buildup",
                 },
                 {
-                    "t": 2,
-                    "visual": "mid shot",
+                    "shot_id": "shot_0020",
+                    "t": int(length_seconds * 0.2),
+                    "visual": "mid shot, energetic vibe",
                     "action": "side step",
                     "caption": "On beat",
                 },
-                {"t": 4, "visual": "mid shot", "action": "spin", "caption": "Spin"},
                 {
-                    "t": 6,
-                    "visual": "wide stage",
-                    "action": "pose hit",
-                    "caption": "Pose",
+                    "shot_id": "shot_0030",
+                    "t": int(length_seconds * 0.4),
+                    "visual": "mid shot",
+                    "action": "spin",
+                    "caption": "Spin",
                 },
-                {"t": 8, "visual": "mid shot", "action": "bounce", "caption": "Bounce"},
-                {"t": 10, "visual": "wide stage", "action": "reset", "caption": "Loop"},
+                {
+                    "shot_id": "shot_0040",
+                    "t": int(length_seconds * 0.6),
+                    "visual": "wide stage, build up",
+                    "action": "pose hit",
+                    "caption": "Intensity build",
+                },
+                {
+                    "shot_id": "shot_0050",
+                    "t": int(length_seconds * 0.8),
+                    "visual": "mid shot, drop depth",
+                    "action": "bounce",
+                    "caption": "The drop",
+                },
+                {
+                    "shot_id": "shot_0060",
+                    "t": length_seconds - 1,
+                    "visual": "wide stage",
+                    "action": "reset",
+                    "caption": "Loop",
+                },
             ],
             "captions": ["Mochi", "On beat", "ComfyUI lane", "Loop"],
             "hashtags": ["#cat", "#shorts", "#dance"],
@@ -346,15 +395,15 @@ class ComfyUIVideoProvider(BaseProvider):
             "generation_policy": {
                 "registry_relpath": "repo/shared/engine_adapter_registry.v1.json",
                 "baseline_video_provider": "comfyui_video",
-                "baseline_frame_provider": "grok_image",
+                "baseline_frame_provider": "vertex_imagen",
                 "route_mode": os.environ.get("CAF_ENGINE_ROUTE_MODE", "production")
                 .strip()
                 .lower()
                 or "production",
                 "selected_video_provider": "comfyui_video",
-                "selected_frame_provider": "grok_image",
+                "selected_frame_provider": "vertex_imagen",
                 "video_provider_order": ["comfyui_video"],
-                "frame_provider_order": ["grok_image"],
+                "frame_provider_order": ["vertex_imagen"],
                 "lab_challenger_order": [],
                 "motion_constraints": [],
                 "post_process_order": [],

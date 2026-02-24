@@ -37,6 +37,9 @@ class AssetResolver:
                 continue
 
             asset_tags = [t.lower() for t in asset.get("tags", [])]
+            if asset.get("asset_id"):
+                asset_tags.append(asset.get("asset_id").lower())
+
             if all(t in asset_tags for t in search_tags):
                 matches.append(asset)
 

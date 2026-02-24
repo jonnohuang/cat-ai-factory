@@ -1,0 +1,21 @@
+{
+    "identity_id": "ginger",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/ginger/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "adult cat",
+            "lanky ginger tabby cat",
+            "green eyes",
+            "red dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting",
+            "grey fur"
+        ]
+    }
+}

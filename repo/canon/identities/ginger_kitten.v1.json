@@ -1,0 +1,20 @@
+{
+    "identity_id": "ginger-kitten",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/ginger-kitten/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "tiny kitten",
+            "ginger tabby kitten",
+            "large green eyes",
+            "red dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "adult cat proportions",
+            "extra limbs"
+        ]
+    }
+}

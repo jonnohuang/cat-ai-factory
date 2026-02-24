@@ -21,10 +21,10 @@ class GeminiAIStudioProvider(BaseProvider):
 
     @property
     def default_model(self) -> str:
-        return "gemini-1.5-flash"
+        return "gemini-2.5-flash"
 
     def __init__(
-        self, api_key: Optional[str] = None, model: str = "gemini-1.5-flash"
+        self, api_key: Optional[str] = None, model: str = "gemini-2.5-flash"
     ) -> None:
         env_name = "GEMINI_" + "API" + "_" + "KEY"
         self.api_key = api_key or os.environ.get(env_name)
@@ -211,13 +211,18 @@ def _build_prompt(
         "Return ONLY a single JSON object. No markdown, no code fences, no commentary.\n"
         "Top-level keys required: job_id, date, niche, video, script, shots, captions, hashtags, render.\n"
         "date must be YYYY-MM-DD.\n"
-        "video must be an object: length_seconds (10-60 int), aspect_ratio 9:16, fps 24-60 int, resolution 1080x1920.\n"
+        "video must be an object: length_seconds (10-60 int), aspect_ratio 9:16, fps 30, resolution 1080x1920.\n"
         "shots must be 6-14 objects with keys: t (int), visual (string), action (string), caption (string).\n"
         "captions must be 4-24 strings (1-80 chars).\n"
         "hashtags must be 3-20 strings matching ^#\\w[\\w_]*$ (no hyphens or spaces).\n"
         "render.subtitle_style must be big_bottom or karaoke_bottom.\n"
-        "Use a background_asset under assets/demo/ if no other asset is specified.\n"
+        "Use a background_asset under sandbox/assets/demo/ if no other asset is specified.\n"
         "visual descriptions in shots must be highly detailed, cinematic, and specify lighting, texture, and camera angle.\n"
+        "--- FELINE STABILIZATION RULES ---\n"
+        "If generating for a cat/feline subject, you MUST inject dynamic parameter overrides in comfyui.bindings.parameters:\n"
+        "- Set node ID '26' (LatentBlend) input 'blend_factor' to 0.7 to prevent identity drift.\n"
+        "- Set node ID '3' (KSampler) input 'denoise' to 0.72 or higher to reinforce feline structure.\n"
+        "- Add 'human proportions' and 'bipedal' to the negative prompt.\n"
     )
     return (
         "You are the Planner for Cat AI Factory.\n"

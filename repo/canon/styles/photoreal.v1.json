@@ -1,0 +1,20 @@
+{
+    "style_pack_id": "photoreal-v1",
+    "version": "style_pack.v1",
+    "content": {
+        "positive_cues": [
+            "photorealistic",
+            "high-fidelity",
+            "8k resolution",
+            "detailed fur texture",
+            "sharp focus"
+        ],
+        "negative_cues": [
+            "cartoon",
+            "anime",
+            "sketch",
+            "blurry",
+            "low-resolution"
+        ]
+    }
+}

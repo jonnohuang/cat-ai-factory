@@ -5,10 +5,7 @@ from typing import Dict, List, Type
 from .base import BaseProvider
 from .comfyui_video import ComfyUIVideoProvider
 from .gemini_ai_studio import GeminiAIStudioProvider
-from .grok_image import GrokImageProvider
 from .langgraph_demo import LangGraphDemoProvider
-from .meta_ai_lab import MetaAiLabProvider
-from .sora_lab import SoraLabProvider
 from .vertex_ai import VertexImagenProvider, VertexVeoProvider
 from .wan_2_2 import WanLocalProvider
 from .wan_dashscope import WanDashScopeProvider
@@ -22,9 +19,6 @@ PROVIDERS: Dict[str, Type[BaseProvider]] = {
     "wan_local": WanLocalProvider,
     "wan_2_2": WanLocalProvider,
     "wan_dashscope": WanDashScopeProvider,
-    "grok_image": GrokImageProvider,
-    "sora_lab": SoraLabProvider,
-    "meta_ai_lab": MetaAiLabProvider,
 }
 
 
