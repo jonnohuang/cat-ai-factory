@@ -1,0 +1,20 @@
+{
+    "identity_id": "snowy-kitten",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/snowy-kitten/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "tiny white kitten",
+            "white fur",
+            "large blue eyes",
+            "light blue dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

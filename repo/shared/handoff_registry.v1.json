@@ -1,0 +1,26 @@
+{
+  "version": "handoff_registry.v1",
+  "updated_at": "2026-02-24T07:13:38Z",
+  "entries": [
+    {
+      "job_id": "smoke-posted",
+      "platform": "youtube",
+      "post_url": "https://youtu.be/smoke",
+      "platform_post_id": null,
+      "posted_at": "2026-02-24T06:26:33Z",
+      "author": "local-tester",
+      "niche": "smoke-test",
+      "lane": "comfy_v14"
+    },
+    {
+      "job_id": "pr-val-01-dialogue",
+      "platform": "validation",
+      "post_url": "file:///Users/jonathanhuang/Developer/cat-ai-factory/sandbox/output/pr-val-01-dialogue/final.mp4",
+      "platform_post_id": null,
+      "posted_at": "2026-02-24T07:13:38Z",
+      "author": "antigravity",
+      "niche": "production-stabilization",
+      "lane": "vertex_veo_mock"
+    }
+  ]
+}

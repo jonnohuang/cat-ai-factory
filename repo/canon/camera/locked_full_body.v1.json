@@ -1,0 +1,14 @@
+{
+    "camera_pack_id": "locked-full-body-v1",
+    "version": "camera_pack.v1",
+    "content": {
+        "shot_type": "full-body",
+        "movement_type": "static",
+        "cues": [
+            "full body framing",
+            "centered subject",
+            "static camera",
+            "locked tripod shot"
+        ]
+    }
+}

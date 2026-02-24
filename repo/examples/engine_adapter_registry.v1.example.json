@@ -4,7 +4,7 @@
   "generated_at": "2026-02-18T00:00:00Z",
   "baseline": {
     "video_provider": "vertex_veo",
-    "frame_provider": "grok_image"
+    "frame_provider": "vertex_imagen"
   },
   "routing": {
     "video_provider_order": [
@@ -13,12 +13,9 @@
       "wan_local"
     ],
     "frame_provider_order": [
-      "grok_image"
+      "vertex_imagen"
     ],
-    "lab_challenger_order": [
-      "sora_lab",
-      "meta_ai_lab"
-    ],
+    "lab_challenger_order": [],
     "motion_constraints": [
       "openpose_constraint"
     ],
@@ -36,17 +33,6 @@
         "ai_video"
       ],
       "notes": "Baseline video lane."
-    },
-    {
-      "provider_id": "grok_image",
-      "kind": "frame",
-      "mode": "production",
-      "enabled": true,
-      "lane_support": [
-        "ai_video",
-        "image_motion"
-      ],
-      "notes": "Frame lane."
     },
     {
       "provider_id": "wan_local",

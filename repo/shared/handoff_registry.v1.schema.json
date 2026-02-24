@@ -1,0 +1,62 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Handoff Registry v1",
+    "type": "object",
+    "required": [
+        "version",
+        "updated_at",
+        "entries"
+    ],
+    "properties": {
+        "version": {
+            "type": "string",
+            "enum": [
+                "handoff_registry.v1"
+            ]
+        },
+        "updated_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "entries": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "job_id",
+                    "platform",
+                    "post_url",
+                    "posted_at"
+                ],
+                "properties": {
+                    "job_id": {
+                        "type": "string"
+                    },
+                    "platform": {
+                        "type": "string"
+                    },
+                    "platform_post_id": {
+                        "type": "string"
+                    },
+                    "post_url": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "posted_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "niche": {
+                        "type": "string"
+                    },
+                    "lane": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}

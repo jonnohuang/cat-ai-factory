@@ -1,0 +1,5 @@
+version: loop_template.v1
+opening_pose_intent: Mocchi standing on hind legs, paws up.
+closing_pose_intent: Mocchi returning to hind leg stand, matching start frame.
+seam_strategy: pose_match
+alignment_threshold: 0.95

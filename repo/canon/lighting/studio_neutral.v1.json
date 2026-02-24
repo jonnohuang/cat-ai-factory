@@ -1,0 +1,14 @@
+{
+    "light_pack_id": "studio-neutral-v1",
+    "version": "light_pack.v1",
+    "content": {
+        "light_type": "artificial",
+        "cues": [
+            "studio lighting",
+            "neutral white balance",
+            "soft shadows",
+            "three-point lighting setup"
+        ],
+        "intensity_hint": "medium"
+    }
+}

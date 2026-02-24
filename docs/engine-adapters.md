@@ -107,6 +107,14 @@ This guide covers the full CAF media stack:
 - Workflow authority:
   - `workflow_id -> repo/workflows/comfy/<workflow_id>.json`
 
+### `wan_2_2`
+- Type: high-performance motion generation lane (GPU-native)
+- Typical mode: production or hybrid-draft
+- Required env:
+  - `WAN_BASE_URL` (local GPU worker or DashScope API)
+  - `WAN_MODEL_VARIANT` (e.g. `1.4B`, `14B`)
+- Dependency: GCP MIG (ADR-0062) for local GPU execution.
+
 ## Route Mode
 
 Set in `.env`:

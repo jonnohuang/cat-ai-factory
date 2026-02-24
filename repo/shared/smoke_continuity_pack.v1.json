@@ -1,0 +1,6 @@
+{
+  "version": "episode_continuity_pack.v1",
+  "rules": {
+    "require_costume_fidelity": true
+  }
+}

@@ -43,6 +43,10 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
   - Read-only evaluation of contracts and outputs
   - May emit logs/results, but do not modify artifacts
 
+- Guided Seed Pattern (Hybrid Control):
+  - Draft Pass (Wan 2.2 / High-Motion) -> Refine Pass (Veo3 / High-Photo).
+  - Cross-engine coordination managed via artifact handoff (Draft frames = Refine seeds).
+
 - Ops/Distribution is outside the factory:
   - External, nondeterministic workflows (approval, notifications, publishing)
   - Must not mutate worker outputs
@@ -71,27 +75,58 @@ flowchart TB
 
   subgraph C[Control Plane — Ralph Loop (deterministic reconciler)]
     ORCH[Ralph Loop\nstate machine + retries\n+ audit logging]
+    SUP[Production Supervisor\n(Reasoning layer\n+ Repair Policies)]
     LOGS[/sandbox/logs/<job_id>/**/]
+    
+    ORCH -->|metrics| SUP
+    SUP -->|decision| ORCH
   end
 
   subgraph W[Production Plane — Worker (deterministic; no LLM)]
     ASSETS[/sandbox/assets/**/]
-    WORK[FFmpeg Worker\n(idempotent execution)]
-    OUTDIR[/sandbox/output/<job_id>/**/]
-    OUTMP4[final.mp4]
-    OUTSRT[final.srt]
-    RESULT[result.json]
+    
+    subgraph ENGINE[Production Engines]
+      ANALYZE[Artifact Analyzer]
+      FRAME[Frame Engine]
+      MOTION[Motion Engine]
+      VIDEO[Video Engine]
+      EDITOR[Editor Engine]
+    end
 
-    ASSETS --> WORK
-    WORK --> OUTDIR
-    OUTDIR --> OUTMP4
-    OUTDIR --> OUTSRT
-    OUTDIR --> RESULT
+    subgraph GATES[QC Gates]
+      G_ARTS[Artifact QC]
+      G_FRAME[Frame QC]
+      G_MOTION[Motion QC]
+      G_VIDEO[Video QC]
+      G_FINAL[Final QC]
+    end
+
+    ASSETS --> ANALYZE
+    ANALYZE --> G_ARTS
+    G_ARTS --> FRAME
+    FRAME --> G_FRAME
+    G_FRAME --> MOTION
+    MOTION --> G_MOTION
+    G_MOTION --> VIDEO
+    VIDEO --> G_VIDEO
+    G_VIDEO --> EDITOR
+    EDITOR --> G_FINAL
+    
+    OUTDIR[/sandbox/output/<job_id>/**/]
+    G_FINAL --> OUTDIR
   end
 
   JOB --> ORCH
   ORCH -->|invokes| WORK
   ORCH -->|writes logs only| LOGS
+
+  subgraph GPU[High-Performance Production Plane — GPU Worker]
+    G_WORK[GPU Worker\n(Wan 2.2 / MIG-enabled)]
+    G_OUT[/sandbox/output/<job_id>/**/]
+    G_WORK --> G_OUT
+  end
+
+  ORCH -->|invokes| G_WORK
 
   subgraph Q[Verification / QC (deterministic; read-only)]
     VERIFY[Verifier\n(lineage + output conformance)]
@@ -126,6 +161,11 @@ These are inputs only. The Planner MUST NOT modify them.
 - RAG (planner-only; deterministic, file-based):
   - `repo/shared/rag_manifest.v1.json`
   - `repo/shared/rag/**`
+
+- Experience Database (Control Plane metrics & decisions):
+  - `production_metrics.v1` (Technical diagnostics)
+  - `production_decision.v1` (Policy-based repair triggers)
+  - schema: `repo/shared/production_*.schema.json`
 
 - PlanRequest (UI-agnostic input contract):
   - `repo/examples/plan_request.v1.example.json`
@@ -170,6 +210,8 @@ flowchart LR
     LOGS[/sandbox/logs/<job_id>/**/]
     STATE[state.json]
     EVENTS[events.ndjson]
+    METRICS[production_metrics.v1.json]
+    DECISION[production_decision.v1.json]
     ATTEMPTS[/attempts/run-000N/**/]
   end
 

@@ -16,7 +16,7 @@ Authority:
 Cat AI Factory is a **headless, file-contract, deterministic** content factory for producing short-form videos.
 
 Core invariant:
-Planner (Clawdbot) → Production Plane (Worker) → Distribution Plane (Publish Pack Engine)
+Planner (Clawdbot) -> Story & Direction Plane (with VPL) -> Production Plane (Worker) -> Distribution Plane (Publish Pack Engine)
 
 - Planner is the only nondeterministic component (LLM-driven).
 - Control Plane + Production Plane (Worker) must remain deterministic and retry-safe.
@@ -436,14 +436,13 @@ The system MUST support a deterministic internal baseline quality path that is b
   - outputs and stage artifacts remain under `/sandbox/output/<job_id>/**`
   - `job.json` remains execution authority
 
-### FR-28.5 — Deterministic quality-controller loop (bounded retry + explicit escalation)
-The system MUST support an artifact-driven quality-controller loop that deterministically maps quality results to bounded next actions.
+### FR-28.5 — Deterministic quality-controller loop (Bounded Repair)
+The system MUST support an artifact-driven quality-controller loop that deterministically maps quality results to bounded next actions via the **Production Supervisor**.
 
 - Required behavior:
   - emit deterministic decision artifact under `/sandbox/logs/<job_id>/qc/quality_decision.v1.json`
-  - map failed quality dimensions to explicit policy actions (retry, block finalize, escalate)
-  - enforce bounded retry budgets and fail-loud escalation states
-  - keep all decision state auditable and reproducible from artifacts
+  - PRODUCTION SUPERVISOR (Gemini 2.5) evaluates metrics vs. policy to select repair actions.
+  - enforce bounded retry budgets and fail-loud escalation states.
 - Hard constraints:
   - no hidden autonomous/background agent behavior
   - no changes to write boundaries (Planner/Control/Worker remain separated)
@@ -720,6 +719,58 @@ The system MUST support rejecting generations where the motion/choreography dive
 ### FR-29 — Dev Master Resolution Lock
 The system MUST standardize on `1080x1080 @ 24fps` for the Production Plane dev master.
 - Rationale: High-quality square "canon" ensures stable motion/identity while shortening debug loops and simplifying 9:16/16:9 reframing in the Distribution Plane.
+
+### FR-30 — High-Performance GPU Infrastructure (MIG-first)
+The system MUST support GPU-enabled worker nodes for high-performance motion lanes.
+- Required hardware: **GCP L4 GPU (24GB VRAM)** or better.
+- Required orchestration: **Managed Instance Groups (MIGs)** with Cloud Monitoring autoscaling.
+- Required management: **Terraform** for reproducible environment provisioning.
+- Invariant: Non-GPU lanes MUST remain executable on Cloud Run / CPU nodes.
+
+### FR-31 — High-Performance Motion Lane (Wan 2.2)
+The system MUST support a performance-first motion lane that leverages token-native motion synthesis.
+- Core engine: **Wan 2.2 (DiT)**.
+- Core signal: **MediaPipe Pose** landmarks and beat-alignment tokens.
+- Requirement: Worker MUST support local model loading/execution from artifact-pointers.
+- Non-goal: No real-time training; inference-only deterministic lanes.
+### FR-32 — Production Supervisor (ADR-0068)
+The system MUST include a **Production Supervisor** reasoning layer within the Control Plane.
+- **Audit**: Ingests `production_metrics.v1.json` and job history.
+- **Reason**: Uses LLM-driven policy interpretation (Gemini 2.5) to diagnose failures.
+- **Act**: Selects `workflow_profile` or `parameter_adjustments` for the next repair attempt.
+- **Experience Database**: Persists all metrics and decisions for long-term optimization.
+
+### FR-33 — Stage-Level QC Gates (ADR-0069)
+The system MUST implement deterministic QC gates after each Production Plane engine stage.
+- **Stages**: Frame QC, Motion QC, Video QC, Final QC.
+- **Contracts**: Every gate MUST verify explicit Input/Output contracts.
+- **Metrics**: Gates MUST emit numeric, reproducible metrics.
+- **Determinism**: Computation MUST be local (CV/MediaPipe) without LLM calls.
+
+### FR-34 — Structured Escalation & Ownership (ADR-0070)
+The system MUST enforce strictly separated roles for quality management and escalation.
+- **Ownership**: The Production Supervisor is the SOLE authority for interpreting QC metrics.
+- **Actuation**: The Controller is the SOLE authority for executing repair or termination actions.
+- **Escalation**: Unrecoverable failures MUST be routed as structured `user_action_required.json` artifacts.
+- **No Self-Healing**: Workers/Engines MUST NOT attempt internal retries or dynamic parameter self-correction.
+
+### FR-35 — Story & Direction Plane (ADR-071)
+The system MUST formalize a **Story & Direction Plane** between the Planner and the Production Plane.
+- **Authority**: The Story & Direction Plane is the reasoning layer for narrative consistency and viral performance.
+- **Contracts**: Production workers MUST be gate-kept by structured Story artifacts (`storyline.json`, `storyboard.json`).
+- **Control Plane**: This plane MUST be implemented as a dedicated LangGraph subgraph.
+
+### FR-36 — Viral Engineering Requirements (Hooks & Loops)
+The system MUST support explicit viral optimization contracts.
+- **Hooks**: Optimization for the first 3 seconds MUST be defined in a versioned `hook_plan.json`.
+- **Loops**: Seamless transition engineering (pose alignment, seam strategy) MUST be defined in a `loop_plan.json`.
+- **Governance**: The Director MUST reject generations that violate the Hook or Loop constraints.
+
+### FR-37 — Viral Pattern Library (VPL) (ADR-072)
+The system MUST support a **Viral Pattern Library (VPL)** as a persistent metadata store.
+- **Location**: Patterns MUST be stored under `repo/canon/viral_patterns/`.
+- **Structure**: Every pattern MUST define Hook, Shot, Loop, and Audio templates plus a Scorecard.
+- **Automation**: The Story & Direction Plane MUST select and merge VPL constraints into the job contract.
 
 ------------------------------------------------------------
 

@@ -13,13 +13,18 @@ This is the single runbook for CAF’s full multi-stage pipeline:
 
 Canonical flow:
 1. User brief/intent input
-2. Planner writes `job.json`
-3. Controller runs deterministic worker
-4. Worker emits output artifacts
-5. QC runner + decision artifacts
-6. Controller routes (finalize/retry/fallback/escalate)
-7. Optional external HITL recast path
-8. Ops/distribution artifacts for publishing
+2. Planner performs **Discovery** (PRD/Inbox analysis)
+3. Story & Direction Plane generates **Narrative Contracts** (`storyboard`, `hook_plan`, `loop_plan`)
+4. Planner writes final `job.json` (Execution authority)
+5. Controller runs deterministic worker
+5. **Frame Stage**: Engine renders seed -> Frame QC gate.
+6. **Motion Stage**: Engine synthesizes motion -> Motion QC gate.
+7. **Video Stage**: Engine generates video -> Video QC gate.
+8. **Final Stage**: Engine assembles output -> Final QC gate.
+9. **Supervisor Loop**: Interprets gate metrics; routes RETRY or ESCALATE.
+10. **Escalation**: Structured `user_action_required.json` artifact for Category C failures.
+11. Optional external HITL recast path
+12. Ops/distribution artifacts for publishing
 
 ## 0.1) Stage Artifact Producer/Consumer Map
 
@@ -27,15 +32,20 @@ Canonical flow:
 |---|---|---|---|
 | `sandbox/PRD.json` | User/operator | Planner | High-level brief and constraints |
 | `sandbox/inbox/*.json` | Adapters/user/operator | Planner | Structured ingress inputs (optional) |
+| `repo/shared/storyboard.v1.json` | Story & Direction Plane | Worker, QC | Visual intent and director constraints |
+| `repo/canon/viral_patterns/<id>/**` | ARCH / Lab Analysis | Story & Direction Plane | **VPL**: Hook, Shot, Loop, Audio templates |
+| `repo/shared/hook_plan.v1.json` | Story & Direction Plane | Worker, QC | Viral-optimized hook strategy (frames 0-3s) |
+| `repo/shared/hook_plan.v1.json` | Story & Direction Plane (LangGraph) | Worker, QC | Viral-optimized hook strategy (frames 0-3s) |
+| `repo/shared/loop_plan.v1.json` | Story & Direction Plane (LangGraph) | Worker, QC | Loop seam engineering and pose alignment |
 | `sandbox/jobs/<job_id>.job.json` | Planner | Controller, Worker | Execution authority contract |
 | `sandbox/output/<job_id>/frames/**` | Worker (or analyzer tools when enabled) | QC tools, diagnostics, optional frame lanes | Frame snapshots / keyframe inspection |
 | `sandbox/output/<job_id>/segments/**` | Worker | QC decision engine, seam analysis | Segment and stitch evaluation inputs |
 | `sandbox/output/<job_id>/audio/**` | Worker | QC/audio checks | Audio extraction/mix diagnostics |
 | `sandbox/output/<job_id>/final.mp4` | Worker | QC tools, Ops/Distribution, HITL export | Main video output |
 | `sandbox/output/<job_id>/final.srt` | Worker | Ops/Distribution, posting bundles | Subtitle artifact |
-| `sandbox/output/<job_id>/result.json` | Worker | Controller/QC/ops tools | Render result metadata |
-| `sandbox/logs/<job_id>/qc/qc_report.v1.json` | `run_qc_runner` | Decision engine, controller | Normalized gate report |
-| `sandbox/logs/<job_id>/qc/quality_decision.v1.json` | `decide_quality_action` | Controller | Deterministic next action |
+| `sandbox/output/<job_id>/(result|production_metrics).v1.json` | Worker | Controller/Supervisor/QC | Render result & technical diagnostics |
+| `sandbox/logs/<job_id>/qc/qc_report.v1.json` | `run_qc_runner` | Supervisor, controller | Normalized gate report |
+| `sandbox/logs/<job_id>/qc/production_decision.v1.json` | `production_supervisor_decide` | Controller | Policy-driven repair decision |
 | `sandbox/dist_artifacts/<job_id>/viggle_pack/**` | HITL export tools | External recast operator | External recast package |
 | `sandbox/inbox/viggle-reingest-*.json` | Re-ingest pointer tool | Re-ingest processor | External result handoff |
 | `sandbox/inbox/approve-*.json` | User (via Telegram/CLI) | Distribution Runner | Human-in-the-loop publish approval |
@@ -55,6 +65,11 @@ Canonical flow:
   - reads: analyzer/reference assets and generated outputs
   - writes: analyzer contracts + motion metrics artifacts
   - consumed by: planner hints and QC scoring tools (not direct worker authority)
+
+- High-Performance Motion (Wan 2.2) feed:
+  - reads: `job.json`, pose-traces, identity anchors
+  - writes: token-native latent motion or frame-sequences
+  - consumed by: hybrid draft-refine lane (Guided Seed)
 
 - Audio engine feed:
   - reads: source audio/media
@@ -105,7 +120,13 @@ System tools required on PATH:
 ```bash
 ffmpeg -version
 ffprobe -version
+terraform -version (for GPU node provisioning)
 ```
+
+### 0.4) GPU Worker Requirements (High-Performance Lane)
+- Hardware: GCP L4 GPU (24GB VRAM) or better.
+- Orchestration: Managed Instance Groups (MIG) via Terraform.
+- Runtime: Python 3.10+, CUDA 12+, PyTorch 2.2+.
 
 Required/optional env vars:
 

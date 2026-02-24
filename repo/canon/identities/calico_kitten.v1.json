@@ -1,0 +1,19 @@
+{
+    "identity_id": "calico-kitten",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/calico-kitten/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "tiny calico kitten",
+            "black, orange, and white patches",
+            "yellow dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

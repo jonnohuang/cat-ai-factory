@@ -1,0 +1,59 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/jonnohuang/cat-ai-factory/repo/shared/viral_patterns/scorecard.v1.schema.json",
+    "title": "Scorecard v1",
+    "description": "Measurable QC metrics and thresholds for viral compliance.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "version",
+        "metrics"
+    ],
+    "properties": {
+        "version": {
+            "const": "scorecard.v1"
+        },
+        "metrics": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "required": [
+                    "threshold",
+                    "weight"
+                ],
+                "properties": {
+                    "threshold": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "weight": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "fail_loud": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "properties": {
+                "hook_clarity": {
+                    "type": "object"
+                },
+                "motion_cleanliness": {
+                    "type": "object"
+                },
+                "loop_seam_stability": {
+                    "type": "object"
+                },
+                "beat_alignment_sync": {
+                    "type": "object"
+                },
+                "composition_compliance": {
+                    "type": "object"
+                }
+            }
+        }
+    }
+}

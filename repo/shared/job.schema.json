@@ -738,6 +738,14 @@
             },
             "pose_video_path": {
               "type": "string"
+            },
+            "parameters": {
+              "type": "object",
+              "description": "Dynamic node-level parameter overrides (Brain-driven stabilization).",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": true
+              }
             }
           }
         },

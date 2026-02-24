@@ -1,0 +1,20 @@
+{
+    "identity_id": "calico",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/calico/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "adult calico cat",
+            "black, orange, and white patches",
+            "smart expression",
+            "yellow dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

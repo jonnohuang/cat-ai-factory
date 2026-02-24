@@ -175,6 +175,23 @@
                         }
                     }
                 },
+                "identity_pack": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "pack_id",
+                        "ref"
+                    ],
+                    "properties": {
+                        "pack_id": {
+                            "$ref": "#/definitions/kebab_id"
+                        },
+                        "ref": {
+                            "type": "string",
+                            "description": "Path to the identity pack JSON (sandbox/assets/identity/<hero_id>/identity.v1.json)"
+                        }
+                    }
+                },
                 "asset_hints": {
                     "type": "object",
                     "additionalProperties": false,

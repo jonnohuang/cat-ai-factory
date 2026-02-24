@@ -74,7 +74,7 @@ def _load_quality_targets_from_job(root: pathlib.Path, job_id: str) -> Dict[str,
         return defaults
     thresholds = contract.get("thresholds")
     if not isinstance(thresholds, dict):
-        return defaults
+        return thresholds if isinstance(thresholds, dict) else defaults
     merged = dict(defaults)
     for key in (
         "identity_consistency",
@@ -117,14 +117,17 @@ def _metric_gate_status(
     metric_payload: Any, threshold: float
 ) -> tuple[str, Optional[float], str]:
     if not isinstance(metric_payload, dict):
-        return "unknown", None, "metric_missing"
+        return "UNKNOWN", None, "metric_missing"
     score = metric_payload.get("score")
     if not isinstance(score, (int, float)):
-        return "unknown", None, "score_missing"
+        return "UNKNOWN", None, "score_missing"
     fscore = float(score)
     if fscore >= threshold:
-        return "pass", fscore, ""
-    return "fail", fscore, "score_below_threshold"
+        return "PASS", fscore, ""
+    # Hard failure if score is significantly below threshold (e.g., < 50% of threshold)
+    if fscore < (threshold * 0.5):
+        return "HARD_FAIL", fscore, "score_critically_low"
+    return "SOFT_FAIL", fscore, "score_below_threshold"
 
 
 def _choose_recommended_action(
@@ -133,7 +136,7 @@ def _choose_recommended_action(
     fallback_action: str,
 ) -> str:
     if not failed_actions:
-        return "proceed_finalize"
+        return "PROCEED"
     for action in priorities:
         if action in failed_actions:
             return action
@@ -145,10 +148,11 @@ def _normalize_missing_report_action(
 ) -> str:
     raw = policy.get("default_action_on_missing_report")
     if isinstance(raw, str) and raw in {
-        "retry_motion",
-        "retry_recast",
-        "block_for_costume",
-        "escalate_hitl",
+        "PROCEED",
+        "RETRY_STAGE",
+        "SWITCH_POLICY",
+        "ESCALATE_USER",
+        "ABORT",
     }:
         return raw
     return fallback_action
@@ -224,7 +228,7 @@ def main(argv: list[str]) -> int:
         if isinstance(x, str)
     ]
     fallback_action = str(
-        policy.get("routing", {}).get("fallback_action", "escalate_hitl")
+        policy.get("routing", {}).get("fallback_action", "ESCALATE_USER")
     )
     missing_report_action = _normalize_missing_report_action(policy, fallback_action)
 
@@ -242,25 +246,28 @@ def main(argv: list[str]) -> int:
         gate_id = str(gate.get("gate_id", "unknown_gate"))
         metric = str(gate.get("metric", "unknown_metric"))
         dimension = str(gate.get("dimension", "technical"))
-        failure_action = str(gate.get("failure_action", "escalate_hitl"))
+        severity = str(gate.get("severity", "MEDIUM"))
+        repairable = bool(gate.get("repairable", True))
+        failure_action = str(gate.get("failure_action", "ESCALATE_USER"))
+        target_stage = gate.get("target_stage")
         threshold = float(gate.get("threshold", 1.0))
         threshold = float(quality_targets.get(metric, threshold))
-        status = "unknown"
+        status = "UNKNOWN"
         score: Optional[float] = None
         reason = ""
 
         if metric == "costume_fidelity":
             if not require_costume:
-                status = "pass"
+                status = "PASS"
                 score = 1.0
                 reason = "not_required_by_continuity"
             elif isinstance(costume, dict):
                 passed = costume.get("pass")
-                status = "pass" if passed is True else "fail"
-                score = 1.0 if status == "pass" else 0.0
-                reason = "" if status == "pass" else "costume_fidelity_failed"
+                status = "PASS" if passed is True else "HARD_FAIL"
+                score = 1.0 if status == "PASS" else 0.0
+                reason = "" if status == "PASS" else "costume_fidelity_failed"
             else:
-                status = "fail"
+                status = "HARD_FAIL"
                 score = 0.0
                 reason = "costume_report_missing"
         else:
@@ -271,16 +278,20 @@ def main(argv: list[str]) -> int:
             "metric": metric,
             "dimension": dimension,
             "status": status,
+            "severity": severity,
+            "repairable": repairable,
             "score": score,
             "threshold": threshold,
             "failure_action": failure_action,
             "failure_class": None,
         }
+        if target_stage:
+            gate_entry["target_stage"] = target_stage
         if reason:
             gate_entry["reason"] = reason
         gates.append(gate_entry)
 
-        if status == "fail":
+        if status in ("HARD_FAIL", "SOFT_FAIL"):
             failed_gate_ids.append(gate_id)
             failure_class = _classify_failure(metric, failure_class_map)
             if failure_class:
@@ -291,7 +302,7 @@ def main(argv: list[str]) -> int:
                     failed_actions.append(mapped)
                     continue
             failed_actions.append(failure_action)
-        elif status == "unknown":
+        elif status == "UNKNOWN":
             failed_gate_ids.append(gate_id)
             failed_actions.append(missing_report_action)
 

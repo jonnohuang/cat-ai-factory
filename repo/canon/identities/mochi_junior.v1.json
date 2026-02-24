@@ -1,0 +1,26 @@
+{
+    "identity_id": "mochi-junior",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/mochi-junior/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "junior cat",
+            "teenager cat proportions",
+            "grey mackerel tabby cat",
+            "white chest bib",
+            "white paws",
+            "green dinosaur onesie",
+            "intermediate eye size",
+            "sleek fur",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "too fluffy kitten",
+            "fully mature adult cat",
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

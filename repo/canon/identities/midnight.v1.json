@@ -1,0 +1,20 @@
+{
+    "identity_id": "midnight",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/midnight/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "adult male cat",
+            "black fur",
+            "yellow eyes",
+            "dark purple dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

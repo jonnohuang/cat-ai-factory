@@ -6,17 +6,16 @@ import pathlib
 import shutil
 import sys
 import time
-import typing
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from google import genai
     from google.genai import types
+    HAS_GENAI = True
 except ImportError:
-    print(
-        "ERROR: google-genai package not found. Install with: pip install google-genai",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    HAS_GENAI = False
+    genai = None
+    types = None
 
 try:
     from PIL import Image
@@ -40,6 +39,12 @@ def load_env(env_path: pathlib.Path = pathlib.Path(".env")):
                 key, value = line.split("=", 1)
                 if not os.environ.get(key):
                     os.environ[key] = value
+
+
+def atomic_write_json(path: pathlib.Path, payload: Dict[str, Any]) -> None:
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    tmp_path.replace(path)
 
 
 def load_job(job_path: pathlib.Path) -> dict:
@@ -97,11 +102,21 @@ def render(
 
     print(f"Authenticating (project={project_id}, location={location})")
 
-    try:
-        client = genai.Client(vertexai=True, project=project_id, location=location)
-    except Exception as e:
-        print(f"ERROR: Failed to initialize google-genai client: {e}", file=sys.stderr)
-        sys.exit(1)
+    is_mock = os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes")
+    client = None
+
+    if not is_mock:
+        if not HAS_GENAI:
+            print(
+                "ERROR: google-genai package not found. Install with: pip install google-genai",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        try:
+            client = genai.Client(vertexai=True, project=project_id, location=location)
+        except Exception as e:
+            print(f"ERROR: Failed to initialize google-genai client: {e}", file=sys.stderr)
+            sys.exit(1)
 
     # --- I2V Logic ---
     veo_image = None
@@ -194,6 +209,13 @@ def render(
                 print(f"Mocking output by copying {source_demo} to {output_path}")
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source_demo, output_path)
+
+                result_json = output_path.parent / "result.json"
+                atomic_write_json(result_json, {
+                    "version": "1.0",
+                    "status": "success",
+                    "output_relpath": str(output_path.name)
+                })
                 return
             else:
                 print(f"ERROR: Mock source {source_demo} not found.", file=sys.stderr)
@@ -258,8 +280,10 @@ def render(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("job_json", type=pathlib.Path)
-    parser.add_argument("output_video", type=pathlib.Path)
+    parser.add_argument("job_json", type=pathlib.Path, nargs="?")
+    parser.add_argument("output_video", type=pathlib.Path, nargs="?")
+    parser.add_argument("--job", type=pathlib.Path, help="Path to job.json")
+    parser.add_argument("--output", type=pathlib.Path, help="Path to output video")
     parser.add_argument(
         "--project",
         default=os.environ.get("GOOGLE_CLOUD_PROJECT")
@@ -273,6 +297,16 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    job_json = args.job or args.job_json
+    output_video = args.output or args.output_video or os.environ.get("CAF_OUTPUT_OVERRIDE")
+
+    if not job_json:
+        parser.error("job_json is required (via positional or --job)")
+    if not output_video:
+        parser.error("output_video is required (via positional, --output, or CAF_OUTPUT_OVERRIDE)")
+
+    output_video = pathlib.Path(output_video)
 
     load_env()
 
@@ -298,4 +332,4 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    render(args.job_json, args.output_video, project_id, args.location)
+    render(job_json, output_video, project_id, args.location)

@@ -1,0 +1,20 @@
+{
+    "identity_id": "midnight-kitten",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/midnight-kitten/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "tiny black kitten",
+            "black fur",
+            "large yellow eyes",
+            "dark purple dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

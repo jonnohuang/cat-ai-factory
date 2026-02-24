@@ -1,0 +1,20 @@
+{
+    "identity_id": "ginger-junior",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/ginger-junior/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "junior cat",
+            "teenager ginger tabby cat",
+            "green eyes",
+            "red dinosaur onesie",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

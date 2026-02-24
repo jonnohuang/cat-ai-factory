@@ -11,6 +11,7 @@ Lane intent is represented via an optional `lane` field in `job.json`. If presen
 | Lane ID | Intent | Worker Behavior |
 |---|---|---|
 | `ai_video` | Premium / High Cost. Uses external generation APIs (Planner-side). | Standard deterministic render. |
+| `high_perf_motion` | High-Perf / High Quality. Uses Wan 2.2 on local GPUs. | **High-Perf GPU Worker** (MIG-enabled). |
 | `image_motion` | Low Cost / Scalable. Uses seed images + motion presets. | Standard deterministic render. |
 | `template_remix` | Near-Free / Scalable. Uses existing assets/templates. | Standard deterministic render. |
 
@@ -25,7 +26,8 @@ If `lane` is omitted, the job is treated as a generic/legacy job (fully supporte
   - `/sandbox/output/<job_id>/final.mp4` (locked to **1080x1080 @ 24fps**)
   - `/sandbox/output/<job_id>/final.srt` (if captions are present)
   - `/sandbox/output/<job_id>/result.json`
-- **No LLM in Worker**: "AI Video" generation happens in the Planner plane (or pre-worker), delivering video assets to the Worker. The Worker never calls generation APIs.
+- **No LLM in Worker**: "AI Video" or generative motion synthesis happens in the Planner plane or specialized GPU worker lanes. The standard Worker never calls generation APIs.
+- **Hardware Affinity**: Jobs explicitly requesting `high_perf_motion` or the `wan_2_2` engine MUST be routed to **MIG-enabled GPU nodes** (L4 or better). All other lanes remain CPU-compatible.
 - **Planner-side generation allowed**: Seed frames or templates MAY be generated planner-side and treated as explicit inputs. Worker remains deterministic.
 
 ## Template Registry (Lane C)

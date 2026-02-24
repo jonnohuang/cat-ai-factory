@@ -64,6 +64,10 @@
       "costume": {
         "id": "dinosaur-onesie-green",
         "notes": "Green dino hoodie; keep tabby ‘M’ mark visible if possible."
+      },
+      "identity_pack": {
+        "pack_id": "dino-engineer",
+        "ref": "repo/canon/identities/dino.v1.json"
       }
     },
     {
@@ -191,6 +195,10 @@
         "id": "dinosaur-onesie-green",
         "notes": "Green dino hoodie; same as dino-tabby for the demo loop."
       },
+      "identity_pack": {
+        "pack_id": "mochi-ops",
+        "ref": "repo/canon/identities/mochi.v1.json"
+      },
       "asset_hints": {
         "seed_frames": [
           "assets/generated/heroes/mochi-grey-tabby_dance_loop_dino_onesie.png",
@@ -198,6 +206,406 @@
           "assets/demo/mochi_profile.png"
         ],
         "style_notes": "Photoreal/semi-real; consistent face proportions; clean background; stable lighting; 9:16 safe composition."
+      }
+    },
+    {
+      "hero_id": "mochi-kitten",
+      "name": {
+        "en": "Kitten Mochi",
+        "zh-Hans": "小麻薯"
+      },
+      "role": "newcomer",
+      "series_tags": [
+        "office",
+        "kitten",
+        "chaos"
+      ],
+      "traits": {
+        "coat_type": "tabby",
+        "primary_color": "grey",
+        "secondary_color": "white",
+        "pattern": "mackerel",
+        "eye_color": "dark-green",
+        "distinguishing_marks": "oversized eyes; extra fluffy"
+      },
+      "personality_traits": [
+        "clumsy",
+        "adorable",
+        "high-energy"
+      ],
+      "costume": {
+        "id": "dinosaur-onesie-green",
+        "notes": "Green dino hoodie specifically for kittens."
+      },
+      "identity_pack": {
+        "pack_id": "mochi-kitten",
+        "ref": "repo/canon/identities/mochi_kitten.v1.json"
+      }
+    },
+    {
+      "hero_id": "mochi-junior",
+      "name": {
+        "en": "Junior Mochi",
+        "zh-Hans": "小麻薯 (青少版)"
+      },
+      "role": "trainee",
+      "series_tags": [
+        "office",
+        "junior",
+        "intern"
+      ],
+      "traits": {
+        "coat_type": "tabby",
+        "primary_color": "grey",
+        "secondary_color": "white",
+        "pattern": "mackerel",
+        "eye_color": "green",
+        "distinguishing_marks": "intermediate size; lanky frame; white bib and paws"
+      },
+      "personality_traits": [
+        "eager",
+        "curious",
+        "clumsy-but-learning"
+      ],
+      "costume": {
+        "id": "dinosaur-onesie-green",
+        "notes": "Green dino hoodie; sized for a junior cat."
+      },
+      "identity_pack": {
+        "pack_id": "mochi-junior",
+        "ref": "repo/canon/identities/mochi_junior.v1.json"
+      }
+    },
+    {
+      "hero_id": "ronnie-ginger",
+      "name": {
+        "en": "Ronnie",
+        "zh-Hans": "荣荣"
+      },
+      "role": "sidekick",
+      "series_tags": [
+        "office",
+        "sidekick",
+        "ginger-trio"
+      ],
+      "traits": {
+        "coat_type": "tabby",
+        "primary_color": "ginger",
+        "pattern": "mackerel",
+        "eye_color": "green",
+        "distinguishing_marks": "lanky frame; bright orange fur"
+      },
+      "personality_traits": [
+        "loyal",
+        "worry-wart",
+        "hungry",
+        "brave-when-needed"
+      ],
+      "costume": {
+        "id": "dinosaur-onesie-red",
+        "notes": "Red dino hoodie; Gryffindor vibes."
+      },
+      "identity_pack": {
+        "pack_id": "ginger",
+        "ref": "repo/canon/identities/ginger.v1.json"
+      }
+    },
+    {
+      "hero_id": "ronnie-junior",
+      "name": {
+        "en": "Junior Ronnie",
+        "zh-Hans": "小荣荣 (青少版)"
+      },
+      "role": "trainee",
+      "series_tags": [
+        "office",
+        "junior",
+        "ginger-trio"
+      ],
+      "traits": {
+        "coat_type": "tabby",
+        "primary_color": "ginger"
+      },
+      "identity_pack": {
+        "pack_id": "ginger-junior",
+        "ref": "repo/canon/identities/ginger_junior.v1.json"
+      }
+    },
+    {
+      "hero_id": "ronnie-kitten",
+      "name": {
+        "en": "Kitten Ronnie",
+        "zh-Hans": "荣荣 (幼儿版)"
+      },
+      "role": "newcomer",
+      "series_tags": [
+        "office",
+        "kitten",
+        "ginger-trio"
+      ],
+      "traits": {
+        "coat_type": "tabby",
+        "primary_color": "ginger"
+      },
+      "identity_pack": {
+        "pack_id": "ginger-kitten",
+        "ref": "repo/canon/identities/ginger_kitten.v1.json"
+      }
+    },
+    {
+      "hero_id": "mione-calico",
+      "name": {
+        "en": "Mione",
+        "zh-Hans": "密密"
+      },
+      "role": "researcher",
+      "series_tags": [
+        "office",
+        "researcher",
+        "calico-trio"
+      ],
+      "traits": {
+        "coat_type": "calico",
+        "primary_color": "multi",
+        "pattern": "patched",
+        "eye_color": "brown-gold",
+        "distinguishing_marks": "symmetrical facial patches; smart eyes"
+      },
+      "personality_traits": [
+        "brilliant",
+        "orderly",
+        "know-it-all",
+        "supportive"
+      ],
+      "costume": {
+        "id": "dinosaur-onesie-yellow",
+        "notes": "Yellow dino hoodie; Ravenclaw/Hufflepuff intellectual vibes."
+      },
+      "identity_pack": {
+        "pack_id": "calico",
+        "ref": "repo/canon/identities/calico.v1.json"
+      }
+    },
+    {
+      "hero_id": "mione-junior",
+      "name": {
+        "en": "Junior Mione",
+        "zh-Hans": "小密密 (青少版)"
+      },
+      "role": "trainee",
+      "series_tags": [
+        "office",
+        "junior",
+        "calico-trio"
+      ],
+      "traits": {
+        "coat_type": "calico"
+      },
+      "identity_pack": {
+        "pack_id": "calico-junior",
+        "ref": "repo/canon/identities/calico_junior.v1.json"
+      }
+    },
+    {
+      "hero_id": "mione-kitten",
+      "name": {
+        "en": "Kitten Mione",
+        "zh-Hans": "密密 (幼儿版)"
+      },
+      "role": "newcomer",
+      "series_tags": [
+        "office",
+        "kitten",
+        "calico-trio"
+      ],
+      "traits": {
+        "coat_type": "calico"
+      },
+      "identity_pack": {
+        "pack_id": "calico-kitten",
+        "ref": "repo/canon/identities/calico_kitten.v1.json"
+      }
+    },
+    {
+      "hero_id": "snowy-white",
+      "name": {
+        "en": "Snowy",
+        "zh-Hans": "小雪"
+      },
+      "role": "visionary",
+      "series_tags": [
+        "office",
+        "female",
+        "white-set"
+      ],
+      "traits": {
+        "coat_type": "solid",
+        "primary_color": "white",
+        "eye_color": "blue",
+        "distinguishing_marks": "pure white fur; elegant posture"
+      },
+      "personality_traits": [
+        "calm",
+        "visionary",
+        "precise",
+        "kind"
+      ],
+      "costume": {
+        "id": "dinosaur-onesie-blue",
+        "notes": "Light blue dino hoodie; clean and professional."
+      },
+      "identity_pack": {
+        "pack_id": "snowy",
+        "ref": "repo/canon/identities/snowy.v1.json"
+      }
+    },
+    {
+      "hero_id": "snowy-junior",
+      "name": {
+        "en": "Junior Snowy",
+        "zh-Hans": "小雪 (青少版)"
+      },
+      "role": "trainee",
+      "series_tags": [
+        "office",
+        "junior",
+        "white-set"
+      ],
+      "traits": {
+        "coat_type": "solid",
+        "primary_color": "white"
+      },
+      "identity_pack": {
+        "pack_id": "snowy-junior",
+        "ref": "repo/canon/identities/snowy_junior.v1.json"
+      }
+    },
+    {
+      "hero_id": "snowy-kitten",
+      "name": {
+        "en": "Kitten Snowy",
+        "zh-Hans": "小雪 (幼儿版)"
+      },
+      "role": "newcomer",
+      "series_tags": [
+        "office",
+        "kitten",
+        "white-set"
+      ],
+      "traits": {
+        "coat_type": "solid",
+        "primary_color": "white"
+      },
+      "identity_pack": {
+        "pack_id": "snowy-kitten",
+        "ref": "repo/canon/identities/snowy_kitten.v1.json"
+      }
+    },
+    {
+      "hero_id": "midnight-black",
+      "name": {
+        "en": "Midnight",
+        "zh-Hans": "大黑"
+      },
+      "role": "enforcer",
+      "series_tags": [
+        "office",
+        "male",
+        "black-set"
+      ],
+      "traits": {
+        "coat_type": "solid",
+        "primary_color": "black",
+        "eye_color": "yellow",
+        "distinguishing_marks": "sleek black fur; piercing eyes"
+      },
+      "personality_traits": [
+        "silent",
+        "efficient",
+        "mysterious",
+        "stoic"
+      ],
+      "costume": {
+        "id": "dinosaur-onesie-purple",
+        "notes": "Dark purple dino hoodie; stealthy vibes."
+      },
+      "identity_pack": {
+        "pack_id": "midnight",
+        "ref": "repo/canon/identities/midnight.v1.json"
+      }
+    },
+    {
+      "hero_id": "midnight-junior",
+      "name": {
+        "en": "Junior Midnight",
+        "zh-Hans": "大黑 (青少版)"
+      },
+      "role": "trainee",
+      "series_tags": [
+        "office",
+        "junior",
+        "black-set"
+      ],
+      "traits": {
+        "coat_type": "solid",
+        "primary_color": "black"
+      },
+      "identity_pack": {
+        "pack_id": "midnight-junior",
+        "ref": "repo/canon/identities/midnight_junior.v1.json"
+      }
+    },
+    {
+      "hero_id": "midnight-kitten",
+      "name": {
+        "en": "Kitten Midnight",
+        "zh-Hans": "大黑 (幼儿版)"
+      },
+      "role": "newcomer",
+      "series_tags": [
+        "office",
+        "kitten",
+        "black-set"
+      ],
+      "traits": {
+        "coat_type": "solid",
+        "primary_color": "black"
+      },
+      "identity_pack": {
+        "pack_id": "midnight-kitten",
+        "ref": "repo/canon/identities/midnight_kitten.v1.json"
+      }
+    },
+    {
+      "hero_id": "leo-boss",
+      "name": {
+        "en": "Leo",
+        "zh-Hans": "利奥"
+      },
+      "role": "boss",
+      "series_tags": [
+        "office",
+        "boss",
+        "lion-set"
+      ],
+      "traits": {
+        "coat_type": "lion",
+        "primary_color": "golden",
+        "distinguishing_marks": "full mane; imposing presence"
+      },
+      "personality_traits": [
+        "commanding",
+        "fair",
+        "loud",
+        "loyal"
+      ],
+      "costume": {
+        "id": "dragon-onesie-gold",
+        "notes": "Royal gold dragon onesie; the ultimate boss outfit."
+      },
+      "identity_pack": {
+        "pack_id": "leo-boss",
+        "ref": "repo/canon/identities/leo_boss.v1.json"
       }
     },
     {

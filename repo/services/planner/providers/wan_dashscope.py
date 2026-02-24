@@ -162,13 +162,18 @@ class WanDashScopeProvider(BaseProvider):
         basename = _safe_slug(prompt)
         date = prd.get("date") if isinstance(prd.get("date"), str) else today_utc()
         niche = prd.get("niche") if isinstance(prd.get("niche"), str) else "cats"
+        # Determine length based on prompt keywords
+        length_seconds = 12
+        if "24s" in prompt.lower() or "24 seconds" in prompt.lower():
+            length_seconds = 24
+
         job: Dict[str, Any] = {
             "job_id": f"{basename[:36]}-wands",
             "date": date,
             "lane": "ai_video",
             "niche": niche,
             "video": {
-                "length_seconds": 12,
+                "length_seconds": length_seconds,
                 "aspect_ratio": "9:16",
                 "fps": 30,
                 "resolution": "1080x1920",
@@ -180,26 +185,26 @@ class WanDashScopeProvider(BaseProvider):
             },
             "shots": [
                 {
+                    "shot_id": "shot_0010",
                     "t": 0,
-                    "visual": "wide stage",
-                    "action": "start groove",
-                    "caption": "Mochi starts",
+                    "visual": "opening sequence",
+                    "action": "intro",
+                    "caption": "Opening",
                 },
                 {
-                    "t": 2,
-                    "visual": "mid shot",
-                    "action": "side step",
-                    "caption": "On beat",
+                    "shot_id": "shot_0020",
+                    "t": length_seconds // 3,
+                    "visual": "mid sequence",
+                    "action": "main movement",
+                    "caption": "Action",
                 },
-                {"t": 4, "visual": "mid shot", "action": "spin", "caption": "Spin"},
                 {
-                    "t": 6,
-                    "visual": "wide stage",
-                    "action": "pose hit",
-                    "caption": "Pose",
+                    "shot_id": "shot_0030",
+                    "t": (length_seconds * 2) // 3,
+                    "visual": "closing sequence",
+                    "action": "pose lock",
+                    "caption": "Final Pose",
                 },
-                {"t": 8, "visual": "mid shot", "action": "bounce", "caption": "Bounce"},
-                {"t": 10, "visual": "wide stage", "action": "reset", "caption": "Loop"},
             ],
             "captions": ["Mochi", "On beat", "Clean motion", "Loop"],
             "hashtags": ["#cat", "#shorts", "#dance"],

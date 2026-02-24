@@ -4,7 +4,7 @@
   "generated_at": "2026-02-18T00:00:00Z",
   "baseline": {
     "video_provider": "vertex_veo",
-    "frame_provider": "grok_image"
+    "frame_provider": "vertex_imagen"
   },
   "routing": {
     "video_provider_order": [
@@ -14,13 +14,9 @@
       "comfyui_video"
     ],
     "frame_provider_order": [
-      "grok_image",
       "vertex_imagen"
     ],
-    "lab_challenger_order": [
-      "sora_lab",
-      "meta_ai_lab"
-    ],
+    "lab_challenger_order": [],
     "motion_constraints": [
       "openpose_constraint"
     ],
@@ -88,40 +84,6 @@
         "dance_swap"
       ],
       "notes": "ComfyUI adapter lane for controlled generation."
-    },
-    {
-      "provider_id": "grok_image",
-      "kind": "frame",
-      "mode": "production",
-      "enabled": true,
-      "lane_support": [
-        "ai_video",
-        "image_motion",
-        "dance_swap"
-      ],
-      "notes": "Storyboard/seed/hero reference frame lane."
-    },
-    {
-      "provider_id": "sora_lab",
-      "kind": "video",
-      "mode": "lab",
-      "enabled": true,
-      "lane_support": [
-        "ai_video",
-        "dance_swap"
-      ],
-      "notes": "Lab challenger lane only; budget-capped."
-    },
-    {
-      "provider_id": "meta_ai_lab",
-      "kind": "video",
-      "mode": "lab",
-      "enabled": true,
-      "lane_support": [
-        "ai_video",
-        "dance_swap"
-      ],
-      "notes": "Lab challenger lane only; advisory-first."
     },
     {
       "provider_id": "openpose_constraint",

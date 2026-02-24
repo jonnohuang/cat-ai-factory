@@ -1,0 +1,53 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "MotionTemplate",
+    "description": "Deterministic motion template bundling pose constraints, rhythm metadata, and motion cues.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "template_id",
+        "version",
+        "constraints"
+    ],
+    "properties": {
+        "template_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Unique kebab-case ID for the motion template."
+        },
+        "version": {
+            "type": "string",
+            "const": "motion_template.v1"
+        },
+        "display_name": {
+            "type": "string"
+        },
+        "constraints": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "pose_checkpoints_ref": {
+                    "type": "string",
+                    "description": "Relative path to pose_checkpoints.v1.json"
+                },
+                "beat_grid_ref": {
+                    "type": "string",
+                    "description": "Relative path to beat_grid.v1.json"
+                },
+                "motion_cues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Motion-specific prompt fragments (e.g. 'energetic dance', 'locked framing')."
+                }
+            }
+        },
+        "tags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    }
+}

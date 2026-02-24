@@ -45,6 +45,9 @@ Non-authoritative:
 - If a new binding decision is needed:
   - propose an ADR
   - wait for approval before finalizing
+- **Walkthrough Archival**:
+  - Every PR completion MUST include a `walkthrough.md` artifact.
+  - A copy of this walkthrough MUST be archived in `docs/record/` (e.g., `docs/record/pr_54_narrative.md`).
 - Prefer stable contracts and deterministic semantics.
 - Preserve:
   - files-as-bus
@@ -144,13 +147,25 @@ Lane rules:
 - hero registry is metadata, not agents
 - no story-memory engine authority
 
-### 12) LangGraph
-- required portfolio demo
-- planner-plane workflow adapter only
-- must NOT replace Ralph or Worker
+### 12) LangGraph & Procedural Nodes
+- Required portfolio demo.
+- Multi-node reasoning MUST support isolation testing (smoke tests).
+- Procedural Fallback is MANDATORY if binary dependencies (LangGraph/Pydantic) fail in the host environment.
 
-### 13) Optional providers remain optional
+### 13) Narrative Artifacts (Files-as-Bus)
+- `storyline.json`, `storyboard.json`, `hook_plan.json`, and `loop_plan.json` are strict files-as-bus artifacts.
+- They MUST be stored in the job's log/state directory before job drafting.
+- The Planner MUST NOT share narrative state via in-memory objects between the Story Plane and the Gemini Provider.
+
+### 14) Optional providers remain optional
 - Seedance (or any other provider) must not become a roadmap dependency
+
+### 14) Narrative-Driven Planning (Phase 13)
+- Story & Direction Plane is the primary reasoning layer.
+- **Viral Pattern Library (VPL)** is the authoritative source for hook/loop templates.
+- Planner MUST resolve a `viral_pattern_id` before drafting job contracts.
+- Narrative artifacts (`storyline.v1`, `storyboard.v1`, `hook_plan.v1`) are required for viral-lan jobs.
+- Procedural Fallback is allowed if LangGraph binary compatibility fails (Python 3.14+).
 
 ------------------------------------------------------------
 
@@ -180,6 +195,11 @@ ARCH duties in Phase 7:
 - propose Firestore schema
 - lock infra choices via ADRs
 - update PR plan without scope creep
+
+ARCH duties for Antigravity Agent Architecture:
+- Ensure `PlannerState` consistency across all narrative nodes.
+- Validate VPL artifact resolution in `repo/canon/viral_patterns/`.
+- Enforce Director QC Gate logic using VPL scorecards.
 
 ------------------------------------------------------------
 
@@ -212,6 +232,25 @@ All ARCH outputs must still:
   - produce a crisp PR-scoped prompt
   - include acceptance criteria + contract references
   - avoid implementation details unless required
+
+------------------------------------------------------------
+
+## Standard Workflows
+
+### 1) Wrap Up Current PR
+When the user says "wrap up current PR", execute these steps in order:
+1.  **Status Check**: Update `docs/now.md` to `Status: COMPLETED / HAND-OFF` and update `docs/PR_PROJECT_PLAN.md` (check off items).
+2.  **Archival**: Copy `walkthrough.md` to `docs/record/<timestamp>_<feature_name>.md`.
+3.  **Linting**: Run `ruff check . --fix` and ensure no blocking errors remain.
+4.  **Provide to user with Git Sequence**:
+    -   `git checkout -b pr/<number>-<short-description>`
+    -   `git add .`
+    -   `git commit -m "feat/fix/docs: <description>"`
+    -   `git push origin pr/<number>-<short-description>`
+5.  **Output PR Metadata**: Provide to user with a formatted textbox with:
+    -   **Title**: `[PR-<number>] <Title>`
+    -   **Description**: A summary of changes, ADRs touched, and testing results.
+6.  **Cleanup Instructions**: Provide to user with the commands to return to `main` and delete the branch after merge.
 
 ------------------------------------------------------------
 

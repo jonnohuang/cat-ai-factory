@@ -1420,9 +1420,23 @@ def _apply_pointer_resolver_hints(
     if (
         isinstance(rel, str)
         and rel
-        and not isinstance(job.get("continuity_pack"), dict)
+        and job.get("continuity_pack", {}).get("relpath") is None
     ):
         job["continuity_pack"] = {"relpath": rel}
+
+    # 3. Hero Identity Pack (ADR-0061 Stabilization)
+    # If a hero's identity pack was resolved, attach it to the job.
+    # We prefer the first hero found in the brief if multi-hero.
+    brief_heroes = resolver_artifact.get("brief_intent", {}).get("heroes", [])
+    if isinstance(brief_heroes, list) and brief_heroes:
+        target_hero = brief_heroes[0]
+        id_pack_key = f"identity_pack_{target_hero}"
+        rel = pointers.get(id_pack_key)
+        if isinstance(rel, str) and rel:
+            if "hero" not in job:
+                job["hero"] = {}
+            job["hero"]["hero_id"] = target_hero
+            job["hero"]["identity_pack_ref"] = rel
 
     # 3. Motion / Pose Checkpoints
     rel = pointers.get("pose_checkpoint")
@@ -1592,7 +1606,7 @@ def main(argv: List[str]) -> int:
         # Use a temporary job_id if not yet determined; the artifact will stay in quality_context.
         job_id_for_resolution = args.job_id or "job-resolving"
         resolver = PointerResolver(pathlib.Path(project_root))
-        pointer_resolution = resolver.resolve(job_id_for_resolution, prd)
+        pointer_resolution = resolver.resolve(job_id_for_resolution, prd, hero_registry=hero_registry)
         quality_context["pointer_resolver"] = pointer_resolution
 
         job = provider.generate_job(

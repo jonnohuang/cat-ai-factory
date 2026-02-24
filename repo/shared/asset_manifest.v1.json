@@ -124,6 +124,18 @@
             "priority": 100
         },
         {
+            "asset_id": "motion-template-dance-loop",
+            "type": "contract",
+            "relpath": "repo/canon/motion/dance_loop.v1.json",
+            "tags": [
+                "motion",
+                "template",
+                "dance",
+                "loop"
+            ],
+            "priority": 110
+        },
+        {
             "asset_id": "hero-registry",
             "type": "contract",
             "relpath": "repo/shared/hero_registry.v1.json",
@@ -168,6 +180,17 @@
             "priority": 100
         },
         {
+            "asset_id": "style-registry",
+            "type": "contract",
+            "relpath": "repo/shared/style_registry.v1.json",
+            "tags": [
+                "style",
+                "registry",
+                "canon"
+            ],
+            "priority": 100
+        },
+        {
             "asset_id": "quality-target-strict",
             "type": "contract",
             "relpath": "repo/examples/quality_target.motion_strict.v1.example.json",
@@ -195,6 +218,41 @@
             "tags": [
                 "audio",
                 "manifest"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "style-pack-photoreal",
+            "type": "contract",
+            "relpath": "repo/canon/styles/photoreal.v1.json",
+            "tags": [
+                "style",
+                "pack",
+                "photoreal"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "light-pack-studio",
+            "type": "contract",
+            "relpath": "repo/canon/lighting/studio_neutral.v1.json",
+            "tags": [
+                "lighting",
+                "pack",
+                "studio",
+                "neutral"
+            ],
+            "priority": 100
+        },
+        {
+            "asset_id": "camera-pack-locked-full-body",
+            "type": "contract",
+            "relpath": "repo/canon/camera/locked_full_body.v1.json",
+            "tags": [
+                "camera",
+                "pack",
+                "locked",
+                "full-body"
             ],
             "priority": 100
         }

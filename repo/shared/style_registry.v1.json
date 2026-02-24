@@ -8,9 +8,9 @@
       "provider": "placeholder",
       "workflow_ref": "workflow-dance-loop-demo",
       "prompt_fragments": [
-        "single locked full-body framing",
-        "clear beat-level choreography changes",
-        "loop-friendly ending pose"
+        "style-pack-photoreal",
+        "light-pack-studio",
+        "camera-pack-locked-full-body"
       ],
       "lane_hints": [
         "template_remix",

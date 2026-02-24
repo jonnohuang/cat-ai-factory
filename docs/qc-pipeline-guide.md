@@ -10,25 +10,43 @@ Production routing authority is contract-based:
   - `repo/shared/qc_policy.v1.json`
 - measured report (per attempt):
   - `sandbox/logs/<job_id>/qc/qc_report.v1.json`
-- deterministic controller decision:
-  - `sandbox/logs/<job_id>/qc/quality_decision.v1.json`
+- deterministic supervisor decision:
+  - `sandbox/logs/<job_id>/qc/production_decision.v1.json`
 
-Controller routing (`pass/retry/fallback/escalate`) must derive from these artifacts plus retry budget.
+### Responsibility Model
+| Component | Responsibility |
+|---|---|
+| **QC Gate** | Deterministic measurement + `qc_report.v1.json` |
+| **Production Supervisor** | Interpret metrics + select repair policy |
+| **Director QC Gate** | Verify storyboard/hook/loop compliance |
+| **Controller** | Execute `production_decision.v1.json` |
+| **Engine** | Deterministic transformation (No self-healing) |
 
-## Main QC Flow
+## Pre-Inference QC Gate (Fail-Loud)
 
-1. Worker/render produces runtime artifacts.
-2. QC runner builds normalized report:
-   - `python3 -m repo.tools.run_qc_runner --job-id <job_id>`
-3. Decision engine chooses next action:
-   - `python3 -m repo.tools.decide_quality_action --job-id <job_id> --max-retries 2`
-4. Controller consumes decision and executes deterministic route.
+Before expensive GPU/Inference execution, the system MUST pass a "Pre-flight" gate. Failure at this stage terminates the job immediately to prevent resource waste.
+
+- **Check 1: Asset Existence**: Verify `background_asset`, `identity_anchor`, and `pose_guide` exist at their resolved locations.
+- **Check 2: Duration Alignment**: Verify that `shot_duration` matches the requested script timing (vs. global video length).
+- **Check 3: Contract Validity**: Verify the `motion_contract` is reachable and parsed.
+- **Action on Failure**: Exit with error code > 0 and log explicitly as `FAIL_PREFLIGHT_QC`.
+
+1. **Artifact Stage**: `artifact_analyzer` validates inputs -> **Artifact QC**.
+2. **Frame Stage**: `frame_engine` (ComfyUI) renders seed -> **Frame QC**.
+3. **Motion Stage**: `motion_engine` (Wan) synthesizes motion -> **Motion QC**.
+4. **Video Stage**: `video_engine` (Veo3/Stitch) generates video -> **Video QC**.
+5. **Final Stage**: `editor_engine` (FFmpeg) assembles output -> **Final QC**.
+
+At each stage:
+- **Production Supervisor** (Gemini 2.5) evaluates metrics.
+- **Controller** (Ralph Loop) executes repair or proceeds.
 
 ## Typical QC Inputs
 
 Depending on lane and enabled features, QC runner/decision engine may consume:
 - `sandbox/logs/<job_id>/qc/recast_quality_report.v1.json`
 - `sandbox/logs/<job_id>/qc/costume_fidelity.v1.json`
+- `repo/canon/viral_patterns/<id>/scorecard.json` (VPL thresholds)
 - `sandbox/output/<job_id>/segments/segment_stitch_report.v1.json`
 - continuity/quality target contracts referenced by `job.json`
 
@@ -41,15 +59,16 @@ Depending on lane and enabled features, QC runner/decision engine may consume:
   - `overall.failed_failure_classes`
   - `overall.recommended_action`
 
-- `quality_decision.v1.json`:
-  - normalized action used by controller
-  - input contract pointers/errors
-  - `inputs.failed_failure_classes`
-  - retry/fallback metadata
+- `production_decision.v1.json`:
+  - `decision.action`: pass/retry/fallback/escalate
+  - `decision.workflow_profile`: (e.g., `identity_strong`, `hero_safe`)
+  - `decision.parameter_adjustments`: Dynamic overrides (e.g., `max_frames`, `denoise`)
+  - `decision.policy_overrides`: (e.g., `pose_coverage_threshold`)
 
-- `retry_plan.v1.json`:
-  - `retry.provider_switch` (engine provider switching)
-  - `retry.workflow_preset` (failure-class -> ComfyUI preset mapping)
+- `production_metrics.v1.json` (Experience Database):
+  - `visual_metrics.pose_detection_ratio`
+  - `visual_metrics.feline_confidence`
+  - `engine_metrics.stage_durations`
 
 - optional lab artifacts:
   - `qc_route_advice.v1.json` (advisory)
@@ -59,15 +78,19 @@ Depending on lane and enabled features, QC runner/decision engine may consume:
 
 Common gate dimensions:
 - **Technical/Production Lock**: Resolution must be exactly `1080x1080` and frame rate `24 fps`.
-- identity consistency
-- motion/temporal stability
+- **Infrastructure Check**: High-performance lanes MUST verify MIG GPU availability (L4+).
+- **Director / Storyboard Compliance**: Every shot must align with the vision prompts in `storyboard.json`.
+- **Viral Engineering (Hook/Loop)**: Verify rhythmic onsets (0-3s) and seamless loop seams as defined in `hook_plan.json` and `loop_plan.json`.
+- identity consistency (Hero Anchor similarity)
+- motion/temporal stability (Wan 2.2 / Veo3 consistency)
+- pose/motion similarity (vs. MediaPipe dance-trace)
 - seam/loop quality
-- audio-video alignment
+- audio-video alignment (Beat-sync check)
 - costume/continuity constraints (when required)
 
 For dance/identity-critical jobs, policy should include both:
-- identity gates
-- pose/motion similarity gates against deterministic dance-trace contracts
+- identity gates (repo/canon/identities)
+- pose/motion similarity gates against deterministic dance-trace contracts (extracted via MediaPipe or Wan 2.2 tokens).
 
 ## Validation Commands
 

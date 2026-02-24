@@ -208,7 +208,38 @@ def main():
             check_json_integrity["details"].append(msg)
             critical_failures.append("result_json_integrity_decode_error")
             check_json_integrity["status"] = "FAIL"
-    summary["checks"].append(check_json_integrity)
+    # 5. Likeness Check (Fidelity Gate)
+    check_likeness_gate = {"name": "content_likeness", "status": "FAIL"}
+    likeness_target = "cat"
+    try:
+        with open(job_path, "r") as f:
+             job_data = json.load(f)
+             likeness_target = (job_data.get("video") or {}).get("likeness_target") or "cat"
+    except Exception:
+        pass
+
+    # Check a representative frame (usually middle or first)
+    target_frame = output_dir / "generated" / "motion_frames" / "frame_0001.png"
+    if not target_frame.exists():
+         # Fallback to source frame if motion_frames missing (diagnostic)
+         target_frame = output_dir / "generated" / "motion_source_frames" / "frame_0001.png"
+
+    if target_frame.exists():
+        likeness_log = log_dir / "likeness.log"
+        likeness_cmd = [sys.executable, str(repo_root / "repo" / "tools" / "qc_likeness.py"), str(target_frame), "--target", likeness_target]
+        if run_subprocess(likeness_cmd, likeness_log, str(repo_root)):
+            check_likeness_gate["status"] = "PASS"
+        else:
+            msg = f"CRITICAL: Likeness check failed for {likeness_target}. See {likeness_log}"
+            logging.error(msg)
+            critical_failures.append("content_likeness_fail")
+    else:
+        msg = "WARN: No frames found for likeness check."
+        logging.warning(msg)
+        check_likeness_gate["status"] = "WARN"
+        warnings.append("missing_likeness_frames")
+
+    summary["checks"].append(check_likeness_gate)
 
     # Finalize and write summary
     duration = time.time() - start_time

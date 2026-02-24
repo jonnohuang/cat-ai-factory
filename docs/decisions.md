@@ -1818,3 +1818,289 @@ References:
 - Moves reframing out of the core Worker.
 - Directory separation: `/master` (Factory) vs `/dist` (Publish Packs).
 - ADR-0021 (Bundles) survives but is relocated to the Distribution Plane.
+
+------------------------------------------------------------
+
+------------------------------------------------------------
+
+## ADR-0062 — GCP GPU Worker Nodes (Infrastructure)
+Date: 2026-02-22
+Status: Proposed
+
+Context:
+- High-fidelity motion engines (e.g., Wan 2.2) require modern GPU compute (L4/A100/H100) that exceeds the capabilities of standard CPU-bound Cloud Run workers.
+- Manual instance management is prone to drift and doesn't scale with job demand.
+- Cost control is critical for long-running GPU processes.
+
+Decision:
+- Utilize **GCP Managed Instance Groups (MIGs)** for GPU-enabled worker nodes.
+- Standardize on **G2 machine types (L4 GPUs)** as the baseline "performance per dollar" target.
+- Implement a **Scale-to-Zero** autoscaling policy based on custom Cloud Monitoring metrics (e.g., queue depth or GPU utilization).
+- Infrastructure must be managed via **Terraform** to ensure reproducibility.
+
+Consequences:
+- Enables high-performance generation lanes while maintaining cost predictability.
+- Maintains the "Files-as-Bus" invariant: Workers pull from GCS and push to GCS.
+- Prevents vendor lock-in by using standard GCE/container abstractions.
+
+References:
+- infra/terraform/gpu_worker.tf
+- docs/system-requirements.md
+
+------------------------------------------------------------
+
+## ADR-0063 — High-Performance Motion Lane (Wan 2.2)
+Date: 2026-02-22
+Status: Proposed
+
+Context:
+- Current motion quality in stable lanes (ComfyUI/Veo3) often exhibits "flicker" or structural drift during high-energy dance sequences.
+- Wan 2.2 provides a state-of-the-art DiT (Diffusion Transformer) foundation with native support for high-fidelity motion tokens.
+
+Decision:
+- Establish the **High-Performance Motion Lane** utilizing Wan 2.2.
+- Integrate **MediaPipe Pose** as the primary motion extraction signal for this lane.
+- Workers MUST support model weights provided via artifact-pointers, allowing for prompt-less, constraint-first synthesis.
+
+Consequences:
+- Materially increases the motion fidelity ceiling.
+- Requires dedicated GPU infrastructure (indexed in ADR-0062).
+- Complements Veo3 photorealism via the Hybrid Control pattern (ADR-0064).
+
+References:
+- repo/worker/render_wan.py
+- repo/services/planner/providers/wan_2_2.py
+
+------------------------------------------------------------
+
+## ADR-0064 — Guided Seed Pattern (Hybrid Control)
+Date: 2026-02-22
+Status: Proposed
+
+Context:
+- No single model currently excels at both ultra-precise motion (Wan) and ultra-stable identity/photorealism (Veo3).
+- We need a pattern to leverage the strengths of both without violating the three-plane authority.
+
+Decision:
+- Implement the **Guided Seed Pattern**:
+  1. **Draft Pass**: High-performance engine (Wan) generates the motion skeleton/dynamics.
+  2. **Refine Pass**: High-photorealism engine (Veo3/Comfy) uses the Draft frames as visual conditioning (I2V/ControlNet).
+- The **DirectorService** is the authority for orchestrating these cross-engine handoffs via file-bus artifacts.
+
+Consequences:
+- Achieves "Production-Grade" results that are currently impossible with single-pass generation.
+- Increases time-to-delivery but lowers rework rate for high-stakes content like PR-100.
+- Preserves authority boundaries: Each pass is a deterministic job contract.
+
+References:
+- docs/architecture.md
+- docs/video-workflow-end-to-end.md
+
+------------------------------------------------------------
+
+## ADR-0065 — Stabilized Feline Generation Strategy (ComfyUI)
+Date: 2026-02-23
+Status: Approved
+
+Context:
+- Video generation for feline subjects (e.g., Mochi) often "hallucinates" human proportions due to motion data (MediaPipe) overriding feline identity anchors.
+- Hardcoding parameters in the workflow is brittle and fails to adapt to different prompt pressures.
+
+Decision:
+- Implement **Brain-Driven Dynamic Stabilization**.
+- The Planner (Brain) is responsible for injecting node-level parameter overrides into the job contract (`comfyui.bindings.parameters`).
+- Recommended Defaults for Feline Identity:
+    - **LatentBlend Suppression**: Cap `blend_factor` at `0.7`.
+    - **Identity Anchoring**: Increase `denoise` to `0.72`+.
+    - **Negative Prompt Reinforcement**: Automatically include tokens like "human proportions", "bipedal", and "human anatomy".
+
+Consequences:
+- Moves stabilization intelligence to the Planner (Plane 1), keeping the Worker (Plane 2) deterministic and thin.
+- Allows for job-specific tuning without workflow deployments.
+
+------------------------------------------------------------
+
+## ADR-0066 — Content Likeness QC Gate (Gemini Vision)
+Date: 2026-02-23
+Status: Approved
+
+Context:
+- We need an automated way to verify that feline identity is preserved and "human hallucinations" are rejected before distribution.
+
+Decision:
+- Implement a Content Likeness QC Gate using **Gemini 2.5 Flash**.
+- The gate will assess generated frames against the target description (e.g., "cat").
+- Rejection Criteria: If `is_hallucination` is true (human features detected) or `likeness_score` is below 0.6.
+
+Consequences:
+- Prevents "cat-human hybrids" from reaching Plane 3 (Ops).
+- Provides structured feedback to the Orchestrator for potential correction runs.
+
+------------------------------------------------------------
+
+## ADR-0067 — Gemini-Guided Refinement Loop (Strategy)
+Date: 2026-02-23
+Status: Approved
+
+Context:
+- If a generation fails the Likeness QC Gate, simple retry logic is often insufficient.
+
+Decision:
+- Implement a **Gemini-Guided Refinement Loop**:
+    - Upon rejection, Gemini analyzes the failure reason.
+    - Gemini generates a "Refined Plan" with adjusted parameters (e.g., lower `blend_factor`, stronger feline prompts).
+    - The system executes a "Correction Run" with the refined plan.
+- Fallback: If stabilization fails after 2 refined attempts, the job is routed to the **Vertex AI (Veo3)** High-Photorealism lane as a "Hero" fallback.
+
+Consequences:
+- Increases successful delivery rate for complex feline motion.
+- Efficiently uses local compute (Comfy) before escalating to cloud-priced fallbacks.
+
+------------------------------------------------------------
+
+## ADR-0068 — Production Supervisor (Dynamic Orchestration)
+Date: 2026-02-23
+Status: Proposed
+
+Context:
+- Current video stabilization (PR-100) relies on ad-hoc parameter tuning in the Planner or hardcoding in the Worker.
+- This results in "pretend-good" outputs or overfitting to specific hero clips (e.g., Mochi).
+- We lack a structured way to diagnose failures (metrics) and select repair policies (decisions) across different engines (Comfy, Wan, Veo3).
+
+Decision:
+- Introduce the **Production Supervisor** as a bounded reasoning layer within the **Control Plane** (Orchestrator side).
+- Features:
+  1. **Deterministic Metrics**: `artifact_analyzer` produces a `metrics.v1.json` for every run attempt.
+  2. **Bounded Reasoning**: A Supervisor Agent (LLM-assisted) inspects metrics and selects a `production_decision.v1.json`.
+  3. **Policy-Based Control**: The Supervisor cannot freestyle parameters; it selects from an approved `workflow_registry.v1.json` and predefined `resolution_policies`.
+  4. **Experience Database**: Decisions and metrics are logged as persistent artifacts to enable long-term optimization and "Director-level" memory.
+  5. **Max-3-Attempt Repair**: Orchestration follows a strict [Try -> Audit -> Refine -> Fail] loop.
+
+Consequences:
+- Standardizes "feline identity" and "human hallucination" fixes across all felines, not just Mochi.
+- Keeps the Production Plane (Worker) thin and deterministic.
+- Enables the "Experience Database" to become the source of truth for high-fidelity content generation.
+
+References:
+- docs/architecture.md
+- repo/shared/production_metrics.v1.schema.json
+- repo/shared/production_decision.v1.schema.json
+
+------------------------------------------------------------
+
+## ADR-0069 — Stage-Level QC Gates (Production Plane Stabilization)
+Date: 2026-02-23
+Status: Accepted
+
+Context:
+- Production Plane failures currently propagate downstream undetected, leading to late-stage discovery of defects (e.g., identity drift caught only at final render).
+- Parameter tuning is reactive and often overfits to specific jobs.
+- We lack formal I/O contract verification between internal Production Plane engines (Frame, Motion, Video, Editor).
+
+Decision:
+- Introduce deterministic QC gates after each Production Plane engine stage.
+- Update the Production Plane lifecycle: Artifact Analyzer -> Frame Engine -> **Frame QC** -> Motion Engine -> **Motion QC** -> Video Engine -> **Video QC** -> Editor Engine -> **Final QC**.
+- Each stage must define explicit Input/Output contracts and deterministic metrics (numeric/reproducible).
+- Use local CV-based tools (e.g., MediaPipe, OpenCV) for metric calculation; preserve the "No LLM in Worker" invariant.
+
+Consequences:
+- Catch defects (identity drift, resolution mismatch, motion instability) at the point of origin.
+- Enables granular stage-level retries by the Production Supervisor.
+- Shifts Production Plane from "trial-and-error" to contract-driven.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-PROD-02)
+
+------------------------------------------------------------
+
+## ADR-0070 — QC Ownership & Structured Escalation
+Date: 2026-02-23
+Status: Accepted
+
+Context:
+- Responsibility for interpreting QC results and triggering repairs is currently ambiguous.
+- Risks include "Engine Self-Healing" (nondeterministic internal retries) or "Logic Leakage" (Planner logic moving into Production).
+- Input failures (Artifact Analyzer) need a structured path for user-in-the-loop remediation.
+
+Decision:
+- Formalize the **Production Supervisor** (Control Plane) as the SOLE reasoning authority for QC interpretation.
+- Engines (Production Plane) MUST NOT self-heal, retry internally, or change parameters dynamically.
+- Implement strictly separated roles:
+  - **QC Gate**: Deterministic measurement only (emits `qc_report.v1.json`).
+  - **Production Supervisor**: Interpret reports and select repair policy or escalation.
+  - **Controller**: Execute the Supervisor's chosen action.
+- Introduce **Structured Escalation** for unrecoverable input/contract failures via `user_action_required.json`.
+
+Consequences:
+- Eliminates hidden decision logic and overlapping responsibilities.
+- Preserves "Thin Worker" and "Deterministic Loop" invariants.
+- Prevents expensive compute waste on known-bad input artifacts.
+
+References:
+- docs/PR_PROJECT_PLAN.md (PR-PROD-03)
+
+------------------------------------------------------------
+
+## ADR-0071 — Formalizing the Story & Direction Plane
+Date: 2026-02-23
+Status: Approved
+
+Context:
+- The Cat AI Factory (CAF) currently separates Planning and Production.
+- Narrative intent (e.g., "why this shot is funny" or "how the loop should feel") is often lost between the Planner and the Render worker, leading to "mechanical" videos and identity drift.
+- Viral optimization (hooks, loop seams) is currently handled via heuristics rather than structured contracts.
+
+Decision:
+- Formalize a **Story & Direction Plane** as a dedicated subgraph within the LangGraph control plane.
+- The Story & Direction Plane sits between the Planner (Discovery) and the Production Plane (Execution).
+- Introduce first-class **Story Artifacts** (JSON contracts) that gate-keep production:
+  - `storyline.json`: Macro-narrative and emotional pacing.
+  - `storyboard.json`: Frame-by-frame visual intent and director constraints.
+  - `hook_plan.json`: Optimized strategy for the first 3 seconds.
+  - `loop_plan.json`: Explicit seam engineering for viral rewatchability.
+  - `audio_plan.json`: BPM alignment and sync anchor frames.
+- Formalize the **Director QC Gate**: ProductionSupervisor must verify rendered artifacts against the Storyboard/Constraints contract before assembly.
+
+Consequences:
+- Separates narrative intent from engine-specific execution.
+- Enables scalable, automated viral optimization.
+- Improves identity stability by providing a "narrative anchor" across multiple shots.
+- Increases upfront control-plane complexity but reduces late-stage rework and manual tuning.
+
+References:
+- docs/architecture.md
+- repo/shared/storyboard.v1.schema.json
+- repo/services/planner/providers/langgraph_demo.py
+
+
+------------------------------------------------------------
+
+## ADR-0072 — Viral Pattern Library (VPL)
+Date: 2026-02-23
+Status: Approved
+
+Context:
+- While ADR-071 established the Story & Direction Plane, reasoning within that plane currently relies on ad-hoc LLM analysis per job.
+- To achieve deterministic replication of viral structures (hooks, loop seams, beat drops), we need a persistent library of proven patterns extracted from reference videos.
+
+Decision:
+- Introduce the **Viral Pattern Library (VPL)** as a first-class asset layer within the Story & Direction Plane.
+- The VPL resides in the Repository (Canon) as authoritative metadata: `repo/canon/viral_patterns/`.
+- Every "Viral Pattern" is a collection of versioned artifacts:
+  - `demo_profile.json`: Descriptive truth (BPM, Energy curve).
+  - `hook_template.yaml`: Directive intent for the first 3 seconds.
+  - `shot_template.yaml`: Narrative/camera grammar.
+  - `loop_template.yaml`: Seam engineering constraints.
+  - `audio_template.yaml`: Beat alignment rules.
+  - `scorecard.json`: Thresholds for Director QC Gates.
+- Integration: The Story & Direction subgraph selects a `viral_pattern_id` and merges its constraints into the final job contract.
+
+Consequences:
+- Transforms demo analysis from "inspiration" to "executable system contract."
+- Enables systematic optimization of viral features and reduces creative drift.
+- Adds an onboarding requirement to formalize new demo videos into VPL artifacts before production use.
+
+References:
+- docs/PR_PROJECT_PLAN.md (Phase 13)
+- docs/system-requirements.md (FR-37)
+

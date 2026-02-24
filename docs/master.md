@@ -87,6 +87,7 @@ Planned (ADR-0034):
 
 ### 2) Control Plane (Ralph Loop)
 - Deterministic reconciler / state machine.
+- **Production Supervisor**: Reasoning layer for run audit and repair policy selection.
 - Enforces retries, idempotency, and audit logging.
 - Writes **ONLY**:
   - `sandbox/logs/<job_id>/**`
