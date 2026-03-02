@@ -1,0 +1,18 @@
+version: shot_template.v1
+template_id: reaction-cut
+shot_type: reaction-counter
+constraints:
+  transition_type: hard-cut
+  audio_sync: beat-match
+  pacing_notes: "Cut on the punchline or reaction beat"
+  camera_language: "Medium close-up for emotional clarity"
+  director_requirements:
+    - "shot_id: mandatory (NNNN pattern)"
+    - "segment_generation_contract: shot_by_shot"
+    - "hero_reinforcement: every shot MUST mention the hero name and 'cat' in the first 10 words of visual/action."
+    - "narrative_context: Construction Site (High-vis vest, workplace chaos)"
+viral_reasoning:
+  hook: "Establish authority vs incompetence (Mochi vs Ronnie) in a detailed setting."
+  pacing: "Sync comedy beats to the 8.8s and 11s marks discovered in the demo analysis."
+  reaction: "The 16s mark must feature a high-fidelity 'done' expression to mimic the demo's successful closer."
+  motion_remix: "Use dialogue_reaction.mp4 as a V2V reference to replicate the specific head-turn and timing."

@@ -15,6 +15,18 @@ This page is explanatory. Binding architectural changes must be recorded in `doc
   - Distribution Plane (Publish Pack Engine) → Platform-specific packaging (reframing/metadata).
 - Master Resolution Lock: `1080x1080 @ 24fps` for dev/stabilization.
 
+- **Golden Baseline Path (Tier-1)** (Principal Invariant):
+  - The default generation path MUST be monolithic: **Script -> Storyboard (Contact Sheet) -> Split Panels -> VLM Video Engine (Tier-1)**.
+  - Storyboard contact sheets lock visual/narrative identity before animation.
+  - **Multi-Act Partitioning (Long Mode)**: Videos > 10s MUST be segmented into architectural "Acts" (approx 8s) with explicit **Continuity Contracts** (Identity Lock, Emotional State, Environment Baseline) to prevent temporal decay.
+  - Multi-engine orchestration (e.g., ComfyUI / Wan / separate Frame-to-Motion passes) is relegated to **Tier-2 (Modular Recovery)**.
+  - Recovery is only triggered by the Control Plane if the Golden Baseline fails QC or hits specific threshold drift.
+
+- **Iteration Lane (Tier-0)** (Optional Performance Invariant):
+  - A budget-optimized high-velocity lane (**LTX-2**) exists for motion/style selection before finalization.
+  - Tier-0 artifacts MUST be audited by the Supervisor before promotion to Tier-1.
+  - **Fast-Track Promotion**: High-quality Tier-0 drafts (QC > 0.92) MAY bypass Tier-1 and transition directly to `COMPLETED` if approved by the Supervisor.
+
 - Files are the bus:
   - No shared memory
   - No agent-to-agent RPC
@@ -86,18 +98,31 @@ flowchart TB
     ASSETS[/sandbox/assets/**/]
     
     subgraph ENGINE[Production Engines]
-      ANALYZE[Artifact Analyzer]
-      FRAME[Frame Engine]
-      MOTION[Motion Engine]
-      VIDEO[Video Engine]
-      EDITOR[Editor Engine]
+      subgraph T0[Tier-0: Iteration Lane]
+        LTX[LTX-2 Draft Engine]
+      end
+
+      subgraph T1[Tier-1: Golden Baseline]
+        STORY[Storyboard Gen]
+        SPLIT[Panel Splitter]
+        VLM[VLM Video Engine]
+      end
+      
+      subgraph T2[Tier-2: Modular Recovery]
+        ANALYZE[Artifact Analyzer]
+        FRAME[Frame Engine]
+        MOTION[Motion Engine]
+        VIDEO[Video Engine]
+        EDITOR[Editor Engine]
+      end
     end
 
     subgraph GATES[QC Gates]
       G_ARTS[Artifact QC]
-      G_FRAME[Frame QC]
-      G_MOTION[Motion QC]
-      G_VIDEO[Video QC]
+      G_T0[Iteration QC]
+      G_T1[Baseline QC]
+      G_T2[Modular QC]
+    end
       G_FINAL[Final QC]
     end
 

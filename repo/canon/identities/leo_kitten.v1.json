@@ -1,0 +1,23 @@
+{
+    "identity_id": "leo-kitten",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/leo-kitten/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "tiny lion cub",
+            "no mane",
+            "royal gold dragon onesie",
+            "large expressive eyes",
+            "soft fluffy fur",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "adult lion proportions",
+            "any mane",
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

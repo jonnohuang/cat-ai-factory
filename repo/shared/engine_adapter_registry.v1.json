@@ -32,7 +32,8 @@
       "enabled": true,
       "lane_support": [
         "ai_video",
-        "dance_swap"
+        "dance_swap",
+        "template_remix"
       ],
       "notes": "Baseline production lane.",
       "config": {
@@ -81,9 +82,23 @@
       "enabled": true,
       "lane_support": [
         "image_motion",
-        "dance_swap"
+        "dance_swap",
+        "template_remix"
       ],
       "notes": "ComfyUI adapter lane for controlled generation."
+    },
+    {
+      "provider_id": "vertex_imagen",
+      "kind": "frame",
+      "mode": "production",
+      "enabled": true,
+      "lane_support": [
+        "ai_video",
+        "image_motion",
+        "template_remix",
+        "dance_swap"
+      ],
+      "notes": "Baseline frame generation provider."
     },
     {
       "provider_id": "openpose_constraint",

@@ -2104,3 +2104,137 @@ References:
 - docs/PR_PROJECT_PLAN.md (Phase 13)
 - docs/system-requirements.md (FR-37)
 
+
+------------------------------------------------------------
+
+## ADR-0073 — Generative Fidelity & Narrative Safeguards
+Date: 2026-02-25
+Status: Accepted
+
+Context:
+- Previous generative runs exhibited "Identity Drift" (hallucinating humans/dogs instead of cats) and "Narrative Misalignment" (defaulting to office settings instead of requested themes like Construction). 
+- High costs of Video Generation API (Veo) necessitated early failure detection.
+
+Decision:
+Implement a three-layer safeguard system:
+1. **Planner Layer (Narrative Critic)**: A dual-pass generation flow where a dedicated agent audits every draft job for species compliance, narrative pinning, and "viral reasoning" (comedy timing) before production begins.
+2. **Worker Layer (Identity & Motion Anchoring)**:
+    - **I2V**: Force canonical hero image as the primary reference frame for every shot.
+    - **V2V**: Support optional video reference (remixing) to replicate specific choreography from demo videos.
+3. **Orchestrator Layer (Early-Stop QC)**: Extract thumbnails from *every* rendered shot mid-production and run hallucination checks. Fail the entire production attempt immediately if likeness score < 0.85 or species-mismatch is detected.
+
+Consequences:
+- Prevents technical waste by aborting bad generations early.
+- Ensures narrative and visual consistency across all shots in a job.
+- Increases Planner latency due to dual-pass audit.
+
+References:
+- docs/qc-pipeline-guide.md
+- docs/video-workflow-end-to-end.md
+- repo/services/planner/providers/gemini_ai_studio.py
+
+------------------------------------------------------------
+
+## ADR-0074 — Golden Baseline Architecture (Tier-1 Monolithic VLM vs Tier-2 Modular Fallback)
+Date: 2026-02-26
+Status: Accepted
+
+Context:
+- Multi-engine pipelines (ComfyUI / Wan / Veo orchestration) increase coherence fragmentation, identity drift, and hallucination.
+- "Golden baseline" testing demonstrated that forcing a Video Language Model (VLM) to adhere to a rigidly generated "contact sheet" storyboard reduces hallucination dramatically.
+- Coherence is the hardest problem to solve; modular optimization is secondary.
+
+Decision:
+- Elevate the Monolithic VLM Contact-Sheet path to **Tier-1 (Golden Baseline)**.
+- Introduce `generate_storyboard.py` to create a 12-panel contact sheet, and `split_contact_sheet.py` to deterministically slice it into image files on the bus.
+- Feed the resulting discrete panels sequentially into a primary Video Engine to produce `video_master.mp4`.
+- Relegate all multi-engine orchestrations (e.g., ComfyUI / Wan shot-by-shot rendering) to **Tier-2 (Recovery mode)**.
+- Tier-2 is ONLY invoked by the Orchestrator (`ralph_loop.py`) if `qc_overall.py` triggers an `ESCALATE_USER` condition on the Tier-1 master video.
+
+Consequences:
+- Simplifies default execution and heavily isolates complex generation routines to fallback scenarios.
+- Reduces identity drift natively using model self-attention across the contact sheet grid.
+- Keeps existing QA, Artifact Analyzers, and Experience Databases directly attached to Tier-1 outputs.
+
+References:
+- docs/PR_PROJECT_PLAN.md (Phase 14)
+- docs/architecture.md
+
+------------------------------------------------------------
+
+## ADR-0075 — LTX-2 Draft/Iteration Engine (Tier-0 Selection Path)
+Date: 2026-02-26
+Status: Accepted
+
+Context:
+- High-fidelity finishing engines (Veo3/Wan) are expensive to run for pure motion experiments.
+- LTX-2 (Lightricks) provides a high-velocity, audio-capable generation path that is well-suited for draft iterations.
+- We need a way to "fail fast" on narrative or style experiments without consuming Tier-1 production budget.
+
+Decision:
+- Introduce **Tier-0 (Draft/Iteration Engine)** powered by LTX-2.
+- Tier-0 is integrated via a ComfyUI-based worker adapter (`ltx2_draft_engine`).
+- **Promotion Gate**: Outputs from Tier-0 MUST be audited by the **Production Supervisor**.
+  - If QC passes: The iteration is promoted to Tier-1 (Golden Baseline) for high-fidelity finalization.
+  - If QC fails: The orchestrator performs a bounded retry in Tier-0 or escalates to the user for constraint adjustment.
+- **Budget Isolation**: Tier-0 execution happens in a separate Billing Project (`caf-motion-ltx2`) to prevent draft experiments from exhausting production credits.
+
+Consequences:
+- Improves iteration velocity for motion and style experiments.
+- Protects Tier-1 budget by ensuring only "validated" drafts proceed to expensive finalization.
+- Adds a new "Tier-0 Draft" artifact path: `sandbox/output/<job_id>/iteration/`.
+
+References:
+- docs/PR_PROJECT_PLAN.md (Phase 15)
+- docs/system-requirements.md (FR-39)
+
+------------------------------------------------------------
+
+## ADR-0076 — Multi-Act Narrative Partitioning (Long Mode)
+Date: 2026-03-02
+Status: Accepted
+
+Context:
+- Generation models (Veo, LTX-2) currently decay in temporal quality and identity coherence beyond ~8-10 seconds.
+- Single-clip 16-32s renders often suffer from "identity drift" (e.g., cat turning into a human) or backgrounds melting.
+- We need a structural way to generate long-mode content (16-32s) that preserves Golden Baseline quality across the entire duration.
+
+Decision:
+- Partition long videos into self-contained architectural "Acts" (typically ~8s each).
+- **Act Planner**: A new service (`act_planner.py`) segments the high-level intent into unique act-level instructions.
+- **Continuity Contract**: Each transition between acts must enforce an explicit contract (Identity Lock, Emotional State, Environment Baseline) provided to the prompt engine.
+- **Orchestrator Looping**: `ralph_loop.py` iterates through scheduled acts, generating unique storyboards and renders per act.
+- **Lossless Stitching**: Final acts are combined using FFmpeg `concat` (copy-codec) to produce the final deliverable.
+
+Consequences:
+- Enables stable 16-32s video generation while maintaining the "storyboard-first" visual grounding.
+- Acts are rendered in isolation but anchored by continuity contracts, preventing cross-act drift.
+- Adds act-specific artifact paths: `sandbox/output/<job_id>/<act_id>/`.
+
+References:
+- docs/PR_PROJECT_PLAN.md (Phase 16)
+- repo/services/planner/act_planner.py
+
+------------------------------------------------------------
+
+## ADR-0077 — Tier-0 Fast-Track Promotion
+Date: 2026-03-02
+Status: Accepted
+
+Context:
+- Tier-0 (LTX-2) is primarily intended for draft iteration, but some drafts exceed production quality thresholds on the first pass.
+- Forcing a redundant Tier-1 (Golden Baseline) render for high-quality drafts wastes budget and time.
+
+Decision:
+- Implement a **Fast-Track** promotion shortcut in the orchestrator (`ralph_loop.py`).
+- **PROCEED Action**: If the **Production Supervisor** identifies a Tier-0 draft as "Golden" (QC scores > threshold), it returns a `PROCEED` recommendation instead of `PROMOTE`.
+- **Direct Completion**: The orchestrator intercepts `PROCEED` specifically for the `ltx2_draft` lane and transitions the job directly to `COMPLETED`, skipping the storyboard and Tier-1 render stages.
+
+Consequences:
+- Significant budget savings (up to 80% per clip) when LTX-2 "hits the mark" early.
+- Faster delivery times for high-quality iterations.
+- Preserves the quality gate invariant: only human/supervisor audited content reaches completion.
+
+References:
+- docs/decisions.md (ADR-0075)
+- repo/services/orchestrator/ralph_loop.py

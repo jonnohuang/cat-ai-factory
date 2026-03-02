@@ -31,15 +31,26 @@ Before expensive GPU/Inference execution, the system MUST pass a "Pre-flight" ga
 - **Check 3: Contract Validity**: Verify the `motion_contract` is reachable and parsed.
 - **Action on Failure**: Exit with error code > 0 and log explicitly as `FAIL_PREFLIGHT_QC`.
 
-1. **Artifact Stage**: `artifact_analyzer` validates inputs -> **Artifact QC**.
-2. **Frame Stage**: `frame_engine` (ComfyUI) renders seed -> **Frame QC**.
-3. **Motion Stage**: `motion_engine` (Wan) synthesizes motion -> **Motion QC**.
-4. **Video Stage**: `video_engine` (Veo3/Stitch) generates video -> **Video QC**.
-5. **Final Stage**: `editor_engine` (FFmpeg) assembles output -> **Final QC**.
+## The Golden Baseline Tiers
+
+CAF generation is bifurcated based on quality outcomes and cost-optimization:
+
+### **Tier-0: Iteration Lane (Optional Draft)**
+1. **Iteration Stage**: `ltx2_draft_engine` generates a high-velocity draft (`draft_*.mp4`) -> **Promotion QC Gate**.
+2. **Promotion**: If the draft passes (motion/identity/style lock), it is promoted to Tier-1. If it fails, the system retries Tier-0 within a budget or escalates.
+
+### **Tier-1: Monolithic Golden Baseline (Primary)**
+3. **Storyboard Stage**: `generate_storyboard.py` creates a 12-panel contact sheet -> **Storyboard QC**.
+4. **Video Stage**: `video_engine` (Veo) generates `video_master.mp4` from panels -> **Tier-1 Master QC**.
+
+### **Tier-2: Modular Recovery (Escalated Fallback)**
+5. **Escalation**: If Tier-1 fails Master QC (notably identity drift or motion jitter), the **Production Supervisor** triggers Tier-2.
+6. **Frame Stage**: `frame_engine` (Comfy) renders seed -> **Frame QC**.
+7. **Motion Stage**: `motion_engine` (Wan) synthesizes motion -> **Motion QC**.
+8. **Video Stage**: `video_engine` (Stitch) generates video -> **Video QC**.
 
 At each stage:
-- **Production Supervisor** (Gemini 2.5) evaluates metrics.
-- **Controller** (Ralph Loop) executes repair or proceeds.
+- **Production Supervisor** (Gemini 2.5) evaluates metrics and decides whether to RE-GEN within the current tier, PROMOTE to the next tier, or ESCALATE to the user.
 
 ## Typical QC Inputs
 

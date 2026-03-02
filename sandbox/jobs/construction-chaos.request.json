@@ -1,0 +1,25 @@
+{
+    "version": "PlanRequest.v1",
+    "request_id": "e2e-construction-chaos-01",
+    "timestamp": "2026-02-25T18:40:00Z",
+    "tags": [
+        "construction",
+        "chaos",
+        "clumsy",
+        "cat-fight",
+        "mochi",
+        "ronnie"
+    ],
+    "brief": "A 16-second viral-style video. Set in a bustling construction site with structural beams and cranes. Mochi (grey tabby) is the site supervisor in a high-vis vest, trying to maintain order. Ronnie (ginger tabby) is a clumsy worker who causes a series of goofy accidents (tripping, dropping things), leading to a funny but intense cat-play-fight finale. The video ends with Mochi looking directly at the camera with a 'totally done' expression of exasperation.",
+    "duration_seconds": 16,
+    "heroes": [
+        "mochi-grey-tabby",
+        "ronnie-ginger"
+    ],
+    "constraints": {
+        "style": "dialogue_reaction",
+        "target_resolution": "1080x1920",
+        "fps": 30,
+        "feline_reinforcement": true
+    }
+}

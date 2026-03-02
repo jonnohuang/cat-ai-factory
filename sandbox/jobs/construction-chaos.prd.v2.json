@@ -1,0 +1,22 @@
+{
+    "brief": "A 16-second viral-style video. Set in a bustling construction site with structural beams and cranes. Mochi (grey tabby) is the site supervisor in a high-vis vest, trying to maintain order. Ronnie (ginger tabby) is a clumsy worker who causes a series of goofy accidents (tripping, dropping things), leading to a funny but intense cat-play-fight finale. The video ends with Mochi looking directly at the camera with a 'totally done' expression of exasperation.",
+    "duration_seconds": 16,
+    "heroes": [
+        "mochi-grey-tabby",
+        "ronnie-ginger"
+    ],
+    "storyboard_rules": [
+        "Shot 1: ESTABLISHING - wide shot of construction site. Mochi (supervisor) is visible.",
+        "Shot 2: REACTION - Mochi watches Ronnie's clumsiness.",
+        "Shot 3: ACTION - Shot-specific close-up on Ronnie tripping over pipes. NO humans.",
+        "Shot 4-7: ESCALATION - Sequence of accidents leading to the fight.",
+        "Shot 8: RESOLUTION - Mochi's direct-to-camera exasperated look."
+    ],
+    "constraints": {
+        "style": "dialogue_reaction",
+        "target_resolution": "1080x1920",
+        "fps": 30,
+        "feline_reinforcement": true,
+        "frame_control": "strict_continuity"
+    }
+}

@@ -1949,7 +1949,7 @@ Outcome:
 - [x] **PR-43: Distribution Runner** - Add poller and publisher orchestration logic. [COMPLETED]
 
 # Phase 10: CAF Stabilization — Identity First (COMPLETED)
-- [x] **PR-44: Hero Identity Anchor** — Canonicalize stable identity baselines informed by reference samples. [COMPLETED]
+- [x] **PR-44: Hero Identity Anchor** — Canonicalize stable identity baselines informed by reference samples. (Completed: Includes missing Leo-Boss Junior & Kitten Identities patch) [COMPLETED]
 - [x] **PR-45: Asset Pack System** — Modularize selectable style/lighting/camera components. [COMPLETED]
 - [x] **PR-46: Motion Template Library** — Extract and formalize deterministic motion/beat sequences. [COMPLETED]
 
@@ -1978,6 +1978,31 @@ Outcome: Demonstrates the stabilization ceiling before shifting to GPU-native tr
 - [x] **PR-55: Viral Pattern Library (VPL) v1** — Define schemas and repo structure for Hook, Shot, Loop templates.
 - [x] **PR-56: Narrative Template Selection** — Wire VPL selection and constraint-merging into the subgraph.
 - [x] **PR-57: Narrative-Driven QC Gates** — Established architecture for VPL scorecard integration.
+
+------------------------------------------------------------
+
+# Phase 14: Golden Baseline Architecture (COMPLETED)
+- [x] **PR-58: Golden Baseline Pipeline** — Refactor CAF to default to a monolithic VLM sequence rooted in a storyboard contact sheet.
+  - [x] Create `generate_storyboard.py` worker for 12-panel contact sheet generation.
+  - [x] Create `split_contact_sheet.py` to isolate deterministic panels.
+  - [x] Update `ralph_loop.py` to default to Tier-1 monolithic assembly, pushing multi-engine logic to Tier-2 recovery pathways.
+
+------------------------------------------------------------
+
+# Phase 15: Iteration Speed — Draft Engines (COMPLETED)
+- [x] **PR-59: LTX-2 Draft Engine** — Integrate LTX-2 as a budget-first draft/iteration layer.
+  - [x] Implement `ltx2_draft_engine` adapter (ComfyUI).
+  - [x] Add `mode=draft` support to `ralph_loop.py` for iteration-selection logic.
+  - [x] Establish **Promotion Gate** in Production Supervisor to trigger Tier-1 finalization only for successful drafts.
+  - [x] Implement **Fast-Track** promotion shortcut for high-quality drafts (ADR-0077).
+
+------------------------------------------------------------
+
+# Phase 16: Multi-Act Golden Baseline (COMPLETED)
+- [x] **PR-60: Multi-Act — Long Mode** — Support 16-32s videos via structural narrative partitioning.
+  - [x] Create `act_planner.py` service for Act-level boundary calculation and instruction generation.
+  - [x] Implement **Continuity Contracts** (ADR-0076) to maintain consistency across segment boundaries.
+  - [x] Update `ralph_loop.py` for Act-based iteration, act-specific storyboard generation, and lossless FFmpeg stitching.
 
 ------------------------------------------------------------
 

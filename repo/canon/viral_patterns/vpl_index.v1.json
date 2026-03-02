@@ -19,6 +19,25 @@
                 "audio": "repo/canon/viral_patterns/dance_loop_v1/audio_template.yaml",
                 "scorecard": "repo/canon/viral_patterns/dance_loop_v1/scorecard.json"
             }
+        },
+        {
+            "pattern_id": "dialogue_reaction_v1",
+            "name": "Split-Screen Dialogue Reaction",
+            "description": "Two characters in dialogue; optimized for pacing and reaction timings.",
+            "tags": [
+                "dialogue",
+                "reaction",
+                "story"
+            ],
+            "bpm": 120,
+            "artifacts": {
+                "profile": "repo/canon/demo_analyses/dialogue_reaction.v1.json",
+                "hook": "repo/canon/viral_patterns/dialogue_reaction_v1/hook_template.yaml",
+                "shot": "repo/canon/viral_patterns/dialogue_reaction_v1/shot_template.yaml",
+                "loop": "repo/canon/viral_patterns/dialogue_reaction_v1/loop_template.yaml",
+                "audio": "repo/canon/viral_patterns/dialogue_reaction_v1/audio_template.yaml",
+                "scorecard": "repo/canon/viral_patterns/dialogue_reaction_v1/scorecard.json"
+            }
         }
     ]
 }

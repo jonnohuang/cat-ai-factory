@@ -99,6 +99,11 @@ Cat AI Factory supports a small registry of deterministic production archetypes.
 - Core: Guided Seed pattern (Wan 2.2 draft -> Veo3 refine)
 - Worker: generative lane orchestration + artifact handoff
 
+### 6) golden_baseline (Tier-1 Monolithic)
+- Source: script + hero anchors
+- Core: Storyboard Contact Sheet -> Monolithic VLM Animation (Veo)
+- Worker: single-lane generation with storyboard-locked identity
+
 ### Non-core (not a factory primitive)
 cozy_real_life:
 - Source: real footage
@@ -286,9 +291,8 @@ v0.2:
 
 ## Explicit Non-Goals
 
-- No prompt→video generation model pipeline.
-- No nondeterministic rendering.
+- No nondeterministic rendering (Generation must follow fixed contract prompts/seeds).
 - No LLM usage in the worker.
-- No “creative” worker decisions.
+- No “creative” worker decisions (All creative intent resides in Planning/Story planes).
 - No hidden state or shared-memory coordination.
 

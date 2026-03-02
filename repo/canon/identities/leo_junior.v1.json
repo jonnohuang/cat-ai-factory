@@ -1,0 +1,22 @@
+{
+    "identity_id": "leo-junior",
+    "version": "identity_pack.v1",
+    "references": {
+        "front": "repo/assets/identity/leo-junior/front.png"
+    },
+    "contract": {
+        "canonical_descriptors": [
+            "junior male lion",
+            "small learning mane",
+            "royal gold dragon onesie",
+            "teenager proportions",
+            "neutral studio lighting"
+        ],
+        "negative_descriptors": [
+            "full adult mane",
+            "too fluffy kitten",
+            "extra limbs",
+            "unstable lighting"
+        ]
+    }
+}

@@ -22,6 +22,19 @@
       "lane_hints": [
         "template_remix"
       ]
+    },
+    {
+      "analysis_id": "dialogue-reaction",
+      "relpath": "repo/canon/demo_analyses/dialogue_reaction.v1.json",
+      "tags": [
+        "dialogue",
+        "reaction",
+        "mochi",
+        "ginger"
+      ],
+      "lane_hints": [
+        "template_remix"
+      ]
     }
   ]
 }

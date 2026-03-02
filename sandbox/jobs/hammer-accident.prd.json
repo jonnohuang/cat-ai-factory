@@ -1,0 +1,21 @@
+{
+    "brief": "A 5-second viral-style video. Set in a dusty construction site with structural steel beams. Mochi (grey tabby) is holding a large nail against a beam. Ronnie (ginger tabby) raises a heavy hammer but accidentally hammers Mochi's paws instead of the nail. The two kittens immediately start an intense cat-play-fight. Funny, chaotic, and high-fidelity.",
+    "duration_seconds": 5.0,
+    "heroes": [
+        "mochi-grey-tabby",
+        "ronnie-ginger"
+    ],
+    "storyboard_rules": [
+        "Shot 1: PREPARATION - Mochi holding nail, Ronnie raising hammer. Focus on the 'scary' hammer height.",
+        "Shot 2: THE ACCIDENT - Close-up on the hammer hitting paws. Mochi's shock.",
+        "Shot 3: REACTION - Mochi's initial yowl/leap.",
+        "Shot 4: THE FIGHT - Chaotic cat fight using fight_composite.mp4 V2V reference."
+    ],
+    "constraints": {
+        "style": "dialogue_reaction",
+        "target_resolution": "1080x1920",
+        "fps": 30,
+        "feline_reinforcement": true,
+        "frame_control": "strict_continuity"
+    }
+}

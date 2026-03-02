@@ -700,6 +700,56 @@
         "id": "kimono-flow",
         "notes": "Loose fitting kimono; very relaxed fit."
       }
+    },
+    {
+      "hero_id": "leo-junior",
+      "name": {
+        "en": "Junior Leo",
+        "zh-Hans": "小利奥 (青少版)"
+      },
+      "role": "trainee",
+      "series_tags": [
+        "office",
+        "junior",
+        "lion-set"
+      ],
+      "traits": {
+        "coat_type": "lion",
+        "primary_color": "golden"
+      },
+      "costume": {
+        "id": "dragon-onesie-gold",
+        "notes": "Royal gold dragon onesie; sized for a junior."
+      },
+      "identity_pack": {
+        "pack_id": "leo-junior",
+        "ref": "repo/canon/identities/leo_junior.v1.json"
+      }
+    },
+    {
+      "hero_id": "leo-kitten",
+      "name": {
+        "en": "Kitten Leo",
+        "zh-Hans": "小利奥 (幼儿版)"
+      },
+      "role": "newcomer",
+      "series_tags": [
+        "office",
+        "kitten",
+        "lion-set"
+      ],
+      "traits": {
+        "coat_type": "lion",
+        "primary_color": "golden"
+      },
+      "costume": {
+        "id": "dragon-onesie-gold",
+        "notes": "Royal gold dragon onesie; sized for a kitten."
+      },
+      "identity_pack": {
+        "pack_id": "leo-kitten",
+        "ref": "repo/canon/identities/leo_kitten.v1.json"
+      }
     }
   ]
 }

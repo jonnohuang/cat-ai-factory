@@ -12,40 +12,47 @@ Update rules:
 
 ------------------------------------------------------------
 
-### 4. Current PR Status (PR-44..57: Stabilization & Narrative Architecture)
+### 4. Current PR Status (PR-58: Golden Baseline Architecture)
+Status: **COMPLETED**
+
+#### Phase 14: Golden Baseline Pipeline
+- **Status**: **COMPLETE**
+- **Action**: Refactored the factory default execution path to a monolithic VLM sequence rooted in a storyboard contact sheet.
+- **Outcome**: Deterministic narrative and identity coherence, isolating complex multi-engine routing to Tier-2 recovery pathways.
+
+### 5. Current PR Status (PR-59: LTX-2 Draft Engine)
+Status: **COMPLETED**
+
+#### Phase 15: Iteration Speed — Draft Engines
+- **Status**: **COMPLETE**
+- **Action**: Integrated LTX-2 as a budget-first draft/iteration layer with automated Promotion Gate logic and "Fast-Track" bypass.
+- **Outcome**: Faster iteration on motion and style experiments with budget isolation. High-quality drafts can now bypass Tier-1 rendering entirely.
+
+### 6. Current PR Status (PR-60: Multi-Act Golden Baseline)
 Status: **COMPLETED / HAND-OFF**
 
-| Role | Status | Blocking |
-| :--- | :--- | :--- |
-| **ARCH** | **DONE** | **NO** |
-| **CODEX** | **DONE** | **NO** |
-| **CLOUD** | **N/A** | **NO** |
-
-#### Phase 13: Viral Story & Direction (Architecture + Impl)
+#### Phase 16: Multi-Act — Long Mode
 - **Status**: **COMPLETE**
-- **Action**: Formalized Story & Direction Plane (ADR-071) and VPL (ADR-072). Implemented procedural fallback for LangGraph compatibility.
-- **Outcome**: Narrative-driven planning is now local-ready and verified.
+- **Action**: Implemented structural narrative partitioning (Acts) and continuity contracts for 16-32s video generation.
+- **Outcome**: Stable, cohesive long-form content with identity-lock and temporal consistency through segment-based rendering and stitching.
 
 ### Decisions / ADRs Touched
-- ADR-0071 (Story & Direction Plane) [NEW]
-- ADR-0072 (Viral Pattern Library) [NEW]
+- ADR-0074: Golden Baseline Architecture (Tier-1 Monolithic VLM vs Tier-2 Modular Fallback)
+- ADR-0075: LTX-2 Draft/Iteration Engine (Tier-0 Selection Path)
+- ADR-0076: Multi-Act Narrative Partitioning (Long Mode)
+- ADR-0077: Tier-0 Fast-Track Promotion
 
 ### What Changed (Diff Summary)
-- Created `repo/canon/viral_patterns/` and initial `dance_loop_v1` artifacts.
-- Defined 6 VPL JSON schemas for contract enforcement.
-- Upgraded `LangGraphDemoProvider` with narrative enrichment nodes and procedural fallback.
-- Archived walkthrough in `docs/record/viral_story_direction_implementation.md`.
-- **Bootstrap Update**: Added `Wrap Up Current PR` workflow and Narrative-Driven Planning invariants to `BOOTSTRAP-ARCH.md`.
+- Core architectural documentation updated (ADR-0076, ADR-0077).
+- `act_planner.py` service implemented for long-mode segmentation.
+- `ralph_loop.py` updated with act-based iteration, lossless stitching, and fast-track promotion logic.
+- Storyboard and video workers updated to be act-aware and support continuity contracts.
 
 ### Open Findings / Conditions
-- **Python 3.14 Compatibility**: LangGraph/Pydantic v1 collision requires a procedural fallback in the current environment. 
-- **Director Gate**: Future work needed to wire up the VPL scorecard to the `ProductionSupervisor`.
-
-### Next Action (Owner + Task)
-- ARCH: Initiate Phase 7 (Cloud Migration) design thread.
-- USER: Review VPL schema extensibility for future lanes.
+- None. Verification complete with mock workers.
 
 ### ARCH Invariant Status
-1) **Three-plane separation**: **LOCKED** (Procedural flow preserves boundaries)
-2) **Files-as-bus**: **LOCKED** (VPL templates resolved via file system)
-3) **Narrative Intent**: **ENFORCED** (VPL artifacts resolution is mandatory)
+1) **Three-plane separation**: **LOCKED**
+2) **Files-as-bus**: **LOCKED** (Act-specific folders and contracts)
+3) **Narrative Intent**: **ENFORCED** (Acts + Continuity Contracts)
+4) **Budget Safety**: **ENFORCED** (Fast-Track promotion for early successes)
