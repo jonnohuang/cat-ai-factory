@@ -30,7 +30,9 @@
         "ai_video",
         "image_motion",
         "template_remix",
-        "dance_swap"
+        "dance_swap",
+        "golden_baseline",
+        "ltx2_draft"
       ]
     },
     "prompt": {
@@ -110,6 +112,7 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "shot_id",
           "t",
           "visual",
           "action",
@@ -134,6 +137,15 @@
           },
           "caption": {
             "type": "string"
+          },
+          "hero_id": {
+            "type": "string",
+            "description": "Optional hero_id to anchor this specific shot's identity."
+          },
+          "background_asset": {
+            "type": "string",
+            "pattern": "^(assets|sandbox/assets|sandbox/inbox)/.+",
+            "description": "Optional per-shot V2V motion reference or storyboard panel."
           }
         }
       }
@@ -168,7 +180,7 @@
       "properties": {
         "background_asset": {
           "type": "string",
-          "pattern": "^(assets|sandbox/assets)/.+"
+          "pattern": "^(assets|sandbox/assets|sandbox/inbox)/.+"
         },
         "subtitle_style": {
           "type": "string",
@@ -787,6 +799,36 @@
             "high",
             "medium"
           ]
+        }
+      }
+    },
+    "storyboard": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contact_sheet_relpath": {
+          "type": "string",
+          "pattern": "^(output|sandbox/output)/.+\\.png$"
+        },
+        "panels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "panel_index",
+              "relpath"
+            ],
+            "properties": {
+              "panel_index": {
+                "type": "integer"
+              },
+              "relpath": {
+                "type": "string",
+                "pattern": "^(output|sandbox/output)/.+\\.png$"
+              }
+            }
+          }
         }
       }
     }

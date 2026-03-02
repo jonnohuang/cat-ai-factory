@@ -1,0 +1,7 @@
+version: loop_template.v1
+template_id: conversation-seam
+seam_type: pose-match
+constraints:
+  seam_sec: 0.2
+  matching_threshold: 0.85
+  notes: "Ensure the dialogue flow is natural across the loop seam."

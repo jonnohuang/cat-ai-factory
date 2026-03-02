@@ -772,6 +772,25 @@ The system MUST support a **Viral Pattern Library (VPL)** as a persistent metada
 - **Structure**: Every pattern MUST define Hook, Shot, Loop, and Audio templates plus a Scorecard.
 - **Automation**: The Story & Direction Plane MUST select and merge VPL constraints into the job contract.
 
+### FR-38 — Golden Baseline Architecture (Tier-1 Monolithic VLM, Tier-2 Recovery) (ADR-074)
+The system MUST default to generating videos via a single monolithic Video Language Model (VLM) directed by a storyboard contact sheet.
+- **Tier-1**: A deterministic contact sheet is generated, split, and fed iteratively into a VLM engine (e.g., Veo) to produce `video_master.mp4`.
+- **Tier-2**: Complex multi-engine pipelines (e.g., ComfyUI / Wan shot-by-shot generation) MUST be relegated to **Recovery Mode**.
+- **Orchestration**: Tier-2 is ONLY triggered if the Production Supervisor / `qc_overall.py` emits an `ESCALATE_USER` condition due to identity or motion failure on the Tier-1 master video.
+
+### FR-39 — Iteration Lanes (Tier-0 Draft Engines) (ADR-075, ADR-077)
+The system MUST support a budget-optimized iteration lane (Tier-0) for motion and style experiments.
+- **Tier-0 (Draft)**: High-velocity generation via Tier-0 engines (e.g., LTX-2) to validate narrative and motion before production credits are consumed.
+- **Promotion Gate**: Outputs from Tier-0 MUST be audited by a Promotion Gate. Successful iterations are promoted to Tier-1 (Golden Baseline) for finalization.
+- **Fast-Track Promotion**: If a Tier-0 draft exceeds a specific quality threshold (QC scores > 0.92), the system MUST support a "Fast-Track" bypass to transition directly to `COMPLETED`, skipping Tier-1.
+- **Billing Isolation**: Execution of Tier-0 engines MUST be capable of isolation in a separate billing project.
+
+### FR-40 — Multi-Act Narrative Partitioning (Long Mode) (ADR-076)
+The system MUST support generating long-duration videos (16-32s) through structural narrative partitioning.
+- **Acts**: The system MUST segment long briefs into self-contained architectural "Acts" (typically ~8s each) to mitigate temporal decay and identity drift.
+- **Continuity Contracts**: Each act transition MUST enforce a contract containing Identity Lock, Emotional State, and Environment Baseline to ensure visual coherence across segments.
+- **Stitching**: Acts MUST be rendered independently and stitched using a lossless media concatenation stage (e.g., FFmpeg `concat` with copy-codec).
+
 ------------------------------------------------------------
 
 ## 3) Non-Functional Requirements (NFR)

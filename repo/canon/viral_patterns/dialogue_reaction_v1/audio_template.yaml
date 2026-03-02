@@ -1,0 +1,11 @@
+version: audio_template.v1
+template_id: dialogue-ambient
+audio_type: licensed_pack
+constraints:
+  pack_id: standard-office-v1
+  bpm: 120
+  beat_offset_sec: 0.125
+  mix_strategy: background-dimmed
+  ducking:
+    target_lane: voiceover
+    reduction_db: 12

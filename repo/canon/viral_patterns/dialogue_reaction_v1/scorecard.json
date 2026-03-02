@@ -1,0 +1,25 @@
+{
+    "version": "scorecard.v1",
+    "pattern_id": "dialogue_reaction_v1",
+    "gates": [
+        {
+            "gate_id": "identity_mochi",
+            "gate_type": "likeness",
+            "threshold": 0.85,
+            "target_hero": "mochi-grey-tabby"
+        },
+        {
+            "gate_id": "identity_ginger",
+            "gate_type": "likeness",
+            "threshold": 0.85,
+            "target_hero": "ronnie-ginger"
+        },
+        {
+            "gate_id": "pacing_match",
+            "gate_type": "timing",
+            "threshold": 0.85,
+            "metric": "beat_alignment_error"
+        }
+    ],
+    "overall_threshold": 0.75
+}

@@ -1,0 +1,9 @@
+version: hook_template.v1
+template_id: zoom-intro
+hook_type: dynamic-zoom
+constraints:
+  initial_motion: zoom-in
+  duration_sec: 3.0
+  anchor_id: hero-01
+  focal_point: face
+  visual_intent: "Immediate eye contact and engagement"

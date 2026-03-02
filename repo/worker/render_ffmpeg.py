@@ -530,6 +530,7 @@ def _prepare_comfy_seed_image(
     job: dict[str, Any],
     repo_root: pathlib.Path,
     sandbox_root: pathlib.Path,
+    target_shot: dict[str, Any] | None = None,
 ) -> str:
     comfy_home_s = os.environ.get("COMFYUI_HOME", "").strip()
     comfy_home = (
@@ -541,8 +542,13 @@ def _prepare_comfy_seed_image(
     input_dir.mkdir(parents=True, exist_ok=True)
     seed_png = input_dir / "caf_seed_input.png"
 
-    # Prefer current render background as seed when present.
-    bg_rel = str((job.get("render") or {}).get("background_asset") or "").strip()
+    # Prefer target_shot background as seed when present, then render background.
+    bg_rel = ""
+    if target_shot:
+        bg_rel = str(target_shot.get("background_asset") or "").strip()
+    if not bg_rel:
+        bg_rel = str((job.get("render") or {}).get("background_asset") or "").strip()
+
     bg_path: pathlib.Path | None = None
     if bg_rel:
         try:
@@ -765,9 +771,10 @@ def _prepare_motion_frames(
     elif ffmpeg_preprocess in {"gray", "grayscale"}:
         vf = f"{vf},format=gray,format=rgb24"
 
+    is_image = bg_path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
+
     cmd = ["ffmpeg", "-y"]
 
-    # Shot timing logic
     if target_shot:
         t_start = float(target_shot.get("t", 0))
         shots = job.get("shots", [])
@@ -779,13 +786,22 @@ def _prepare_motion_frames(
                 t_end = float(job.get("video", {}).get("length_seconds", t_start + 4))
             t_duration = t_end - t_start
             if t_duration > 0:
-                cmd.extend(["-ss", str(t_start), "-t", str(t_duration)])
+                if is_image:
+                    cmd.extend(["-loop", "1", "-t", str(t_duration), "-i", str(bg_path)])
+                else:
+                    cmd.extend(["-ss", str(t_start), "-t", str(t_duration), "-i", str(bg_path)])
         except (StopIteration, ValueError):
-            pass
+            if is_image:
+                cmd.extend(["-loop", "1", "-t", "3.0", "-i", str(bg_path)])
+            else:
+                cmd.extend(["-i", str(bg_path)])
+    else:
+        if is_image:
+            cmd.extend(["-loop", "1", "-t", "3.0", "-i", str(bg_path)])
+        else:
+            cmd.extend(["-i", str(bg_path)])
 
     cmd.extend([
-        "-i",
-        str(bg_path),
         "-vf",
         vf,
         str(tmp_dir / "frame_%04d.png"),
@@ -1462,7 +1478,10 @@ def generate_comfyui_video_asset(
             supervisor_adjustments=decision.get("parameter_adjustments")
         )
     seed_filename = _prepare_comfy_seed_image(
-        job=job, repo_root=repo_root, sandbox_root=sandbox_root
+        job=job,
+        repo_root=repo_root,
+        sandbox_root=sandbox_root,
+        target_shot=target_shot,
     )
     _inject_comfy_seed_image(prompt_graph, seed_filename)
 
@@ -2149,7 +2168,11 @@ def emit_media_stack_artifacts(
             str(out_png),
         ]
         run_subprocess(cmd)
-        frame_files.append(str(out_png))
+        if out_png.exists():
+            frame_files.append(str(out_png))
+
+    if not frame_files:
+        print("WARNING: FFmpeg failed to extract any frames from final.mp4. Returning an empty frame manifest.", file=sys.stderr)
 
     frame_manifest = {
         "version": "frame_manifest.v1",

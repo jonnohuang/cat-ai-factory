@@ -77,7 +77,7 @@ class LangGraphDemoProvider(BaseProvider):
                 "job_id": state["prd"].get("job_id", "demo_job"),
                 "frames": [
                     {
-                        "shot_id": "shot_001",
+                        "shot_id": "shot_0001",
                         "anchor_id": "mochi-stabilized",
                         "image_asset": "assets/mochi_hero.png",
                         "prompt": f"Mochi dancing according to {vpl_id} pattern.",

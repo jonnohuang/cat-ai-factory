@@ -60,7 +60,13 @@ def main():
 
     # Outputs must exist at canonical location keyed by job_id.
     out_dir = output_root / job_id
-    for name in ["final.mp4", "final.srt", "result.json"]:
+    lane = job.get("lane", "")
+    if lane == "ltx2_draft":
+        required_outputs = ["draft_video.mp4", "result.json"]
+    else:
+        required_outputs = ["final.mp4", "final.srt", "result.json"]
+
+    for name in required_outputs:
         out_file = out_dir / name
         if not out_file.exists():
             missing.append(f"output: {out_file}")

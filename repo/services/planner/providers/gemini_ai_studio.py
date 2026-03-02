@@ -67,17 +67,38 @@ class GeminiAIStudioProvider(BaseProvider):
             return job
 
         ok, err = _validate_job(job)
-        if ok:
-            return job
+        if not ok:
+            fix_prompt = _build_schema_fix_prompt(prompt, raw, err)
+            fixed = self._generate_content(fix_prompt)
+            self._last_raw_text = fixed
+            job = extract_json_object(fixed)
+            ok2, err2 = _validate_job(job)
+            if not ok2:
+                 raise RuntimeError(f"Job failed validation after schema fix: {err2}")
 
-        fix_prompt = _build_schema_fix_prompt(prompt, raw, err)
-        fixed = self._generate_content(fix_prompt)
-        self._last_raw_text = fixed
-        fixed_job = extract_json_object(fixed)
-        ok2, err2 = _validate_job(fixed_job)
-        if not ok2:
-            raise RuntimeError(f"Job failed validation after schema fix: {err2}")
-        return fixed_job
+        # --- PHASE 2: Narrative Critic (PR-39 Enhancement) ---
+        critic_prompt = _build_critic_prompt(prd, job)
+        critic_raw = self._generate_content(critic_prompt)
+        critic_eval = extract_json_object(critic_raw)
+
+        if critic_eval.get("status") == "FAIL":
+            print(f"CRITIC FAIL: {critic_eval.get('reason')}")
+            # Re-generate once with critic feedback
+            regen_prompt = _build_regen_prompt(prompt, job, critic_eval)
+            regen_raw = self._generate_content(regen_prompt)
+            job = extract_json_object(regen_raw)
+            # final safety check
+            ok3, err3 = _validate_job(job)
+            if not ok3:
+                # Apply schema fix to regen output
+                fix_prompt = _build_schema_fix_prompt(regen_prompt, regen_raw, err3)
+                fixed = self._generate_content(fix_prompt)
+                job = extract_json_object(fixed)
+                ok4, err4 = _validate_job(job)
+                if not ok4:
+                    raise RuntimeError(f"Job failed validation after narrative regen + schema fix: {err4}")
+
+        return job
 
     def _generate_content(self, prompt: str) -> str:
         base = (
@@ -87,7 +108,7 @@ class GeminiAIStudioProvider(BaseProvider):
         url = base + "?" + urllib.parse.urlencode({"key": self.api_key})
         payload = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 4096},
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -110,7 +131,9 @@ class GeminiAIStudioProvider(BaseProvider):
             safe = redact_text(f"Invalid JSON response: {ex}", [self.api_key])
             raise RuntimeError(safe) from ex
 
-        return _extract_text_from_response(data)
+        text = _extract_text_from_response(data)
+        print(f"DEBUG: gemini raw text length: {len(text)}")
+        return text
 
     def debug_snapshot(self) -> Dict[str, Any]:
         return {
@@ -212,17 +235,25 @@ def _build_prompt(
         "Top-level keys required: job_id, date, niche, video, script, shots, captions, hashtags, render.\n"
         "date must be YYYY-MM-DD.\n"
         "video must be an object: length_seconds (10-60 int), aspect_ratio 9:16, fps 30, resolution 1080x1920.\n"
-        "shots must be 6-14 objects with keys: t (int), visual (string), action (string), caption (string).\n"
+        "shots must be 6-14 objects with keys: shot_id (string shot_NNNN), t (int), visual (string), action (string), caption (string), hero_id (string, e.g. 'mochi-grey-tabby').\n"
         "captions must be 4-24 strings (1-80 chars).\n"
         "hashtags must be 3-20 strings matching ^#\\w[\\w_]*$ (no hyphens or spaces).\n"
         "render.subtitle_style must be big_bottom or karaoke_bottom.\n"
-        "Use a background_asset under sandbox/assets/demo/ if no other asset is specified.\n"
-        "visual descriptions in shots must be highly detailed, cinematic, and specify lighting, texture, and camera angle.\n"
-        "--- FELINE STABILIZATION RULES ---\n"
+        "--- NARRATIVE & SPECIES REINFORCEMENT (CRITICAL) ---\n"
+        "1. In EVERY shot's 'visual' description, the FIRST WORD must be the hero's name (e.g. 'Mochi') and the word 'cat' MUST appear within the first 5 words.\n"
+        "2. FORBIDDEN SUBJECTS: Absolutely NO dogs, NO humans, NO human hands, and NO other animals. Every character in every shot MUST be a cat. This is non-negotiable.\n"
+        "3. STORY CONTINUITY: Ensure the background setting (e.g. 'Construction Site') is consistent across all shots. Describe structural beams, cranes, and high-vis vests in every 'visual' field.\n"
+        "4. DETAILED PROMPTS: visual descriptions must be highly detailed, cinematic, and specify lighting, texture (fur), and camera angle.\n"
+        "--- FELINE STABILIZATION & SPECIES LOCK (PR-PROD-03) ---\n"
         "If generating for a cat/feline subject, you MUST inject dynamic parameter overrides in comfyui.bindings.parameters:\n"
-        "- Set node ID '26' (LatentBlend) input 'blend_factor' to 0.7 to prevent identity drift.\n"
-        "- Set node ID '3' (KSampler) input 'denoise' to 0.72 or higher to reinforce feline structure.\n"
-        "- Add 'human proportions' and 'bipedal' to the negative prompt.\n"
+        "- Add 'human', 'human face', 'human hand', 'person', 'woman', 'man', 'dog', 'canine', 'bipedal' to the negative prompt.\n"
+        "--- STYLE & CONTINUITY ANCHORS (PR-PROD-02) ---\n"
+        "1. Every single 'visual' field MUST end with this exact suffix: \", photorealistic, 8k, cinematic lighting, highly detailed fur, no cartoon, no 2D, no drawing.\"\n"
+        "2. VISUAL THEME: The setting 'Construction Site' must be prominent in every shot (cranes, structural beams, dust).\n"
+        "3. MOTION PRECISION: Only assign 'background_asset' (assets/demo/fight_composite.mp4) to shots that require intense feline wrestling/fighting. For all other shots, omit background_asset to maintain identity stability.\n"
+        "--- STORYBOARD & CONTINUITY (PR-PROD-04) ---\n"
+        "1. VISUAL FLOW: Every shot after shot_0001 MUST reference the previous shot's outcome in its 'visual' description (e.g. 'Mochi glares at Ronnie, who is still tangled in the pipes').\n"
+        "2. STORYBOARD ALIGNMENT: Strictly follow the 'storyboard_rules' provided in the PRD JSON. Each shot MUST map to a storyboard beat.\n"
     )
     return (
         "You are the Planner for Cat AI Factory.\n"
@@ -272,6 +303,41 @@ def _build_schema_fix_prompt(
         f"{original_prompt}\n\n"
         "Previous response (to fix):\n"
         f"{prior_response}\n"
+    )
+
+
+def _build_critic_prompt(prd: Dict[str, Any], job: Dict[str, Any]) -> str:
+    return (
+        "You are the NARRATIVE CRITIC for Cat AI Factory.\n"
+        "Your role is to audit the DRAFT JOB for viral potential, identity consistency, and species safety.\n\n"
+        "### AUDIT CRITERIA:\n"
+        "1. SPECIES SAFETY: Are there ANY mentions of humans, human parts, dogs, or other animals? If you see 'man', 'woman', 'hand', or 'person', it is a CRITICAL FAIL.\n"
+        "2. IDENTITY CONTINUITY: Does every shot specify the correct hero_id? Are the visual descriptions consistent with the character traits?\n"
+        "3. NARRATIVE PINNING: Does the job strictly follow the provided brief (e.g., Construction Site)? Is the setting consistent every shot? Are the visual style descriptions uniform (no mix of 'cinematic' and 'cartoon')?\n"
+        "4. MOTION OVER-CONTAMINATION: Are setup shots (standing, surveying) incorrectly assigned a fight-motion background_asset? If so, FAIL.\n"
+        "5. VIRAL IMPACT: Is the sequence funny? Does it have a clear 'Hook' and 'Viral Punchline'?\n\n"
+        "### DRAFT JOB:\n"
+        f"{json.dumps(job, indent=2)}\n\n"
+        "### ORIGINAL BRIEF:\n"
+        f"{prd.get('brief')}\n\n"
+        "Return ONLY a JSON object:\n"
+        '{"status": "PASS" | "FAIL", "reason": "...", "suggestions": "..."}'
+    )
+
+
+def _build_regen_prompt(original_prompt: str, job: Dict[str, Any], evaluation: Dict[str, Any]) -> str:
+    return (
+        f"{original_prompt}\n\n"
+        "### CRITIC FEEDBACK (MANDATORY FIX):\n"
+        f"Status: {evaluation.get('status')}\n"
+        f"Reason: {evaluation.get('reason')}\n"
+        f"Suggestions: {evaluation.get('suggestions')}\n\n"
+        "Return a NEW and CORRECTED Job JSON that addresses all feedback.\n"
+        "### SCHEMA REQUIREMENTS (MANDATORY):\n"
+        "- 'render' MUST be an object with background_asset, subtitle_style, and output_basename.\n"
+        "- 'captions' MUST be an array of 4-24 strings.\n"
+        "- 'shots' MUST be an array of 6-14 objects.\n"
+        "Return ONLY the JSON object. No markdown, no commentary."
     )
 
 

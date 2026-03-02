@@ -12,16 +12,21 @@ This is the single runbook for CAF’s full multi-stage pipeline:
 ## 0) Pipeline Summary
 
 Canonical flow:
-1. User brief/intent input
-2. Planner performs **Discovery** (PRD/Inbox analysis)
-3. Story & Direction Plane generates **Narrative Contracts** (`storyboard`, `hook_plan`, `loop_plan`)
-4. Planner writes final `job.json` (Execution authority)
-5. Controller runs deterministic worker
-5. **Frame Stage**: Engine renders seed -> Frame QC gate.
-6. **Motion Stage**: Engine synthesizes motion -> Motion QC gate.
-7. **Video Stage**: Engine generates video -> Video QC gate.
-8. **Final Stage**: Engine assembles output -> Final QC gate.
-9. **Supervisor Loop**: Interprets gate metrics; routes RETRY or ESCALATE.
+1. User brief/intent input.
+2. Planner performs **Discovery** (PRD/Inbox analysis).
+3. **Tier-0: Iteration Lane (Optional)**:
+   - High-velocity generation via **LTX-2**.
+   - **Promotion QC**: Supervisor audits the draft for motion/identity.
+   - If promoted: Proceed to Tier-1.
+   - If failed: Retry Tier-0 or Escalate.
+4. **Tier-1: Golden Baseline (Principal Path)**:
+   - Story & Direction Plane generates a **Storyboard Contact Sheet**.
+   - **Monolithic Generation**: Contact sheet panels are split and fed into the VLM (Veo) to produce `video_master.mp4`.
+5. **Quality Control (QC Gate)**: Supervisor audits `video_master.mp4` against narrative constraints.
+6. **Tier-2: Modular Recovery (Fallback Path)**:
+   - If Tier-1 fails QC (Identity drift / Motion instability), the system escalates to the granular 12-segment multi-engine path (ComfyUI / Wan / Finish).
+7. **Final Assembly & QC**: Stitching, subtitling, and watermarking.
+8. **Distribution**: Reframing and publish packaging.
 10. **Escalation**: Structured `user_action_required.json` artifact for Category C failures.
 11. Optional external HITL recast path
 12. Ops/distribution artifacts for publishing
@@ -38,10 +43,11 @@ Canonical flow:
 | `repo/shared/hook_plan.v1.json` | Story & Direction Plane (LangGraph) | Worker, QC | Viral-optimized hook strategy (frames 0-3s) |
 | `repo/shared/loop_plan.v1.json` | Story & Direction Plane (LangGraph) | Worker, QC | Loop seam engineering and pose alignment |
 | `sandbox/jobs/<job_id>.job.json` | Planner | Controller, Worker | Execution authority contract |
-| `sandbox/output/<job_id>/frames/**` | Worker (or analyzer tools when enabled) | QC tools, diagnostics, optional frame lanes | Frame snapshots / keyframe inspection |
-| `sandbox/output/<job_id>/segments/**` | Worker | QC decision engine, seam analysis | Segment and stitch evaluation inputs |
-| `sandbox/output/<job_id>/audio/**` | Worker | QC/audio checks | Audio extraction/mix diagnostics |
-| `sandbox/output/<job_id>/final.mp4` | Worker | QC tools, Ops/Distribution, HITL export | Main video output |
+| `sandbox/output/<job_id>/storyboard/contact_sheet.png` | `generate_storyboard.py` | `split_contact_sheet.py` | Tier-1 visual lock (12-panel grid) |
+| `sandbox/output/<job_id>/iteration/draft_*.mp4` | `ltx2_draft_engine` | QC / Supervisor | Tier-0 high-velocity iteration draft |
+| `sandbox/output/<job_id>/storyboard/panels/*.png` | `split_contact_sheet.py` | VLM Video Engine | Discrete image seeds for monolithic generation |
+| `sandbox/output/<job_id>/video_master.mp4` | Tier-1 Video Engine | QC tools, Assembly | Principal video output (Golden Baseline) |
+| `sandbox/output/<job_id>/final.mp4` | Worker (Final Finish) | QC, Ops/Distribution | Final assembled output |
 | `sandbox/output/<job_id>/final.srt` | Worker | Ops/Distribution, posting bundles | Subtitle artifact |
 | `sandbox/output/<job_id>/(result|production_metrics).v1.json` | Worker | Controller/Supervisor/QC | Render result & technical diagnostics |
 | `sandbox/logs/<job_id>/qc/qc_report.v1.json` | `run_qc_runner` | Supervisor, controller | Normalized gate report |
@@ -182,6 +188,29 @@ python3 -m repo.services.planner.planner_cli \
 
 ### Outputs
 - `sandbox/jobs/<job_id>.job.json`
+
+## 2.1) Stage: Tier-0 Iteration (Optional)
+
+### Inputs
+- `sandbox/jobs/<job_id>.job.json` (with `lane=ltx2_draft`)
+- `sandbox/assets/**`
+
+### Command
+```bash
+python3 -m repo.services.orchestrator.ralph_loop \
+  --job sandbox/jobs/<job_id>.job.json \
+  --max-retries 1
+```
+
+### Process
+1. Orchestrator detects `ltx2_draft` lane.
+2. Invokes `repo/worker/render_ltx2.py` (Draft Engine).
+3. **Promotion Gate**: Successful drafts must pass identity/motion thresholds in `qc_report.v1.json`.
+4. If successful, state machine transitions to `PROMOTABLE`.
+
+### Outputs
+- `sandbox/output/<job_id>/draft_video.mp4`
+- `sandbox/logs/<job_id>/qc/qc_report.v1.json` (with Promotion recommendation)
 
 ## 3) Stage: Controller (Ralph Loop)
 

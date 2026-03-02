@@ -4,9 +4,14 @@ import json
 import os
 import pathlib
 import shutil
+import subprocess
 import sys
 import time
+import uuid
 from typing import Any, Dict, List, Optional, Tuple
+
+from repo.services.budget.pricing import COST_VERTEX_VEO_VIDEO_SEC
+from repo.services.budget.tracker import BudgetTracker
 
 try:
     from google import genai
@@ -41,6 +46,11 @@ def load_env(env_path: pathlib.Path = pathlib.Path(".env")):
                     os.environ[key] = value
 
 
+def repo_root_from_here() -> pathlib.Path:
+    # repo/worker/render_veo.py -> <repo_root>
+    return pathlib.Path(__file__).resolve().parents[2]
+
+
 def atomic_write_json(path: pathlib.Path, payload: Dict[str, Any]) -> None:
     tmp_path = path.with_suffix(path.suffix + ".tmp")
     tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
@@ -58,28 +68,58 @@ def render(
     job = load_job(job_path)
 
     target_shot_id = os.environ.get("CAF_TARGET_SHOT_ID", "").strip()
+    target_act_id = os.environ.get("CAF_TARGET_ACT_ID", "").strip()
 
     # Extract prompt from job
     prompt = None
+    target_duration = None
 
-    if target_shot_id:
+    if target_act_id:
+        acts = job.get("acts", [])
+        act_data = next((a for a in acts if a.get("act_id") == target_act_id), None)
+        if act_data:
+            print(f"INFO: Targeting act_id='{target_act_id}'")
+            prompt = act_data.get("prompt_override")
+            target_duration = float(act_data.get("end_t", 0)) - float(act_data.get("start_t", 0))
+
+            # Continuity Contract reinforcement
+            continuity = act_data.get("continuity_contract", {})
+            if continuity:
+                contract_str = f" [CONTINUITY: {continuity.get('final_emotional_state', '')} | {continuity.get('environment_baseline', '')}]"
+                prompt = f"{prompt}{contract_str}"
+        else:
+            print(f"WARNING: act_id '{target_act_id}' not found in job.", file=sys.stderr)
+
+    if target_shot_id and not prompt:
         shots = job.get("shots", [])
-        target_shot = next(
-            (s for s in shots if s.get("shot_id") == target_shot_id), None
-        )
-        if target_shot:
+        matched_idx = next((i for i, s in enumerate(shots) if s.get("shot_id") == target_shot_id), -1)
+        if matched_idx != -1:
+            target_shot = shots[matched_idx]
             print(f"INFO: Targeting granular shot_id='{target_shot_id}'")
             prompt = target_shot.get("visual")
             # In Director mode, we may want to append action tokens
             action = target_shot.get("action")
             if action:
                 prompt = f"{prompt} | {action}"
+
+            t_start = float(target_shot.get("t", 0))
+            if matched_idx < len(shots) - 1:
+                t_end = float(shots[matched_idx + 1].get("t"))
+                target_duration = t_end - t_start
+            else:
+                video_len = float(job.get("video", {}).get("length_seconds", 12))
+                target_duration = video_len - t_start
+
+            target_duration = max(0.5, target_duration) # safety minimum
         else:
             print(
                 f"ERROR: shot_id '{target_shot_id}' specified via CAF_TARGET_SHOT_ID but not found in job.",
                 file=sys.stderr,
             )
             sys.exit(1)
+
+    if target_duration is None:
+        target_duration = float(job.get("video", {}).get("length_seconds", 5))
 
     if not prompt:
         prompt = job.get("prompt")
@@ -120,12 +160,23 @@ def render(
 
     # --- I2V Logic ---
     veo_image = None
+    seed_frames: List[str] = []
     if Image:
         # 1. Check image_motion (deterministic planner path)
         image_motion = job.get("image_motion", {})
-        seed_frames = image_motion.get("seed_frames", [])
+        if not seed_frames:
+            seed_frames = image_motion.get("seed_frames", [])
 
         # 2. Check storyboard logic (fallback/direct pointer)
+        if not seed_frames and target_act_id:
+            # ADR-0076: Discover act-specific storyboard panel
+            act_storyboard_panels = output_path.parent / "storyboard" / "panels"
+            if act_storyboard_panels.exists():
+                panels = sorted(list(act_storyboard_panels.glob("panel_*_HD.png")))
+                if panels:
+                    print(f"INFO: Detected act storyboard panels in {act_storyboard_panels}. Using first panel as seed.")
+                    seed_frames = [str(panels[0])]
+
         if not seed_frames:
             pass
 
@@ -196,19 +247,54 @@ def render(
         if veo_image:
             kwargs["image"] = veo_image
 
+        # 1.5. V2V Motion Reference (PR-39 Enhancement)
+        # Check target_shot first for per-shot motion precision
+        bg = None
+        target_shot_id = os.environ.get("CAF_TARGET_SHOT_ID", "").strip()
+        if target_shot_id:
+            shots = job.get("shots", [])
+            s = next((s for s in shots if s.get("shot_id") == target_shot_id), None)
+            if s:
+                bg = s.get("background_asset")
+            # --- CRITICAL FIX: If shot-level control is active, do NOT fall back to global ---
+            # This prevents setup shots from picking up the "fight" motion global reference.
+        else:
+            bg = job.get("render", {}).get("background_asset")
+
+        if bg and (bg.endswith(".mp4") or bg.endswith(".mov")):
+            print(f"INFO: Using {bg} as V2V motion reference.")
+            bg_p = pathlib.Path(bg).resolve()
+            if not bg_p.exists():
+                bg_p = (repo_root_from_here() / bg).resolve()
+
+            if bg_p.exists():
+                with open(bg_p, "rb") as f:
+                    bg_bytes = f.read()
+                kwargs["video"] = types.Video(video_bytes=bg_bytes, mime_type="video/mp4")
+            else:
+                print(f"WARNING: V2V reference {bg} not found.")
+                print(f"WARNING: V2V reference {bg} not found.", file=sys.stderr)
+
         if os.environ.get("CAF_VEO_MOCK", "").strip().lower() in ("1", "true", "yes"):
             print(
                 "INFO: CAF_VEO_MOCK enabled. Skipping Vertex AI API call and copying demo video."
             )
-            source_demo = pathlib.Path("sandbox/assets/demo/dance_loop.mp4")
+            mock_source = os.environ.get("CAF_VEO_MOCK_SOURCE", "sandbox/assets/demo/dance_loop.mp4")
+            source_demo = pathlib.Path(mock_source)
             if not source_demo.exists():
                 # Try higher up if running from worker dir
-                source_demo = pathlib.Path("../../sandbox/assets/demo/dance_loop.mp4")
+                source_demo = (repo_root_from_here() / mock_source).resolve()
 
             if source_demo.exists():
-                print(f"Mocking output by copying {source_demo} to {output_path}")
+                print(f"Mocking output by copying {source_demo} and trimming to {target_duration}s")
                 output_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source_demo, output_path)
+
+                if target_duration > 0:
+                    cmd = ["ffmpeg", "-y", "-i", str(source_demo), "-t", str(target_duration), "-c", "copy", str(output_path)]
+                    print(f"Running: {' '.join(cmd)}")
+                    subprocess.run(cmd, check=True, capture_output=False)
+                else:
+                    shutil.copy2(source_demo, output_path)
 
                 result_json = output_path.parent / "result.json"
                 atomic_write_json(result_json, {
@@ -221,7 +307,15 @@ def render(
                 print(f"ERROR: Mock source {source_demo} not found.", file=sys.stderr)
                 sys.exit(1)
 
+        # Budget Enforcement
+        est_cost = max(5.0, target_duration) * COST_VERTEX_VEO_VIDEO_SEC
+        budget = BudgetTracker()
+        if not budget.check_budget(est_cost):
+            print(f"ERROR: Budget exceeded for veo video (cost=${est_cost:.4f})", file=sys.stderr)
+            sys.exit(1)
+
         response = client.models.generate_videos(**kwargs)
+        budget.record_spending(est_cost, f"veo-video-{uuid.uuid4()}")
 
         print(f"Operation started: {response.name}")
 
@@ -248,10 +342,27 @@ def render(
 
                     if inner_video and inner_video.video_bytes:
                         print(
-                            f"Writing {len(inner_video.video_bytes)} bytes to {output_path}"
+                            f"Writing {len(inner_video.video_bytes)} bytes and trimming to {target_duration}s"
                         )
-                        with open(output_path, "wb") as f:
-                            f.write(inner_video.video_bytes)
+                        output_path.parent.mkdir(parents=True, exist_ok=True)
+                        if target_duration > 0:
+                            tmp_path = output_path.with_suffix(".tmp.mp4")
+                            with open(tmp_path, "wb") as f:
+                                f.write(inner_video.video_bytes)
+                            cmd = ["ffmpeg", "-y", "-i", str(tmp_path), "-t", str(target_duration), "-c", "copy", str(output_path)]
+                            print(f"Running: {' '.join(cmd)}")
+                            subprocess.run(cmd, check=True, capture_output=False)
+                            tmp_path.unlink(missing_ok=True)
+                        else:
+                            with open(output_path, "wb") as f:
+                                f.write(inner_video.video_bytes)
+
+                        result_json_path = output_path.parent / "result.json"
+                        atomic_write_json(result_json_path, {
+                            "version": "1.0",
+                            "status": "success",
+                            "output_relpath": str(output_path.name)
+                        })
                     elif inner_video and inner_video.uri:
                         print(
                             f"WARNING: No bytes returned, but URI is {inner_video.uri}. Downloading not yet implemented.",
